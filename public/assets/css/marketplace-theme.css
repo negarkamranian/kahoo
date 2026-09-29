@@ -1,0 +1,62 @@
+/* Kahoo: warm marketplace utility */
+:root{
+  --red:#247a4b;
+  --red-dark:#185b38;
+  --red-soft:#edf6f0;
+  --ink:#262925;
+  --muted:#737872;
+  --line:#dde1dc;
+  --surface:#fff;
+  --page:#f4f5f2;
+  --shadow:0 10px 30px rgba(31,45,36,.07);
+}
+body{background:var(--page)}
+.site-header{background:#fff;border-color:var(--line);backdrop-filter:none}
+.header-main,.site-header nav,.catalog{width:100%;max-width:1480px}
+.header-main{height:70px;gap:22px}
+.header-actions{margin-right:auto}
+.kahoo-icon,.leaf-b{animation:none}
+.brand:hover .kahoo-icon{animation:none;transform:translateY(-1px)}
+.search{height:43px;border-color:#d9ddd8;border-radius:8px;background:#f6f7f5}
+.search:focus-within{background:#fff;border-color:#79a98c;box-shadow:0 0 0 3px rgba(36,122,75,.08)}
+.login-button{border-color:#d7dbd6;border-radius:7px}
+.site-header nav{height:38px;border-top:1px solid #f0f1ef}.site-header nav .admin-link{margin-right:auto}
+.catalog{padding:26px 20px 64px}
+.market-layout{display:block}
+.catalog-bar{display:flex;align-items:stretch;gap:10px;position:relative}
+.category-dropdown{position:relative;flex:0 0 230px}
+.category-menu-trigger{width:100%;height:100%;min-height:51px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);cursor:pointer;font-size:11px;font-weight:700;text-align:right}
+.category-menu-trigger i{color:#878c87;font-size:15px;font-style:normal}
+.category-menu-trigger[aria-expanded="true"]{border-color:#94b6a0;box-shadow:0 0 0 3px rgba(36,122,75,.07)}
+.category-panel{top:calc(100% + 7px);right:0;width:320px;max-height:min(560px,calc(100vh - 160px));padding:13px 10px 10px;border-color:var(--line);border-radius:9px;box-shadow:var(--shadow)}
+.category-popover{position:absolute;z-index:25}
+.category-popover[hidden]{display:none}
+.tree-heading{padding:1px 7px 12px}.tree-heading h2{font-size:13px}
+.tree-node{border-radius:5px}.tree-node:hover{background:#f2f4f1}.tree-node.selected{background:#e8f3ec}
+.tree-select{font-weight:500}.tree-node.selected .tree-select{color:var(--red)}
+.result-toolbar{min-height:51px;flex:1;padding:10px 13px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.result-toolbar h2{font-size:15px}.result-toolbar>div>span{background:#f0f2ef}
+.shop-grid{gap:12px;padding-top:12px}
+.shop-card{padding:14px;border-color:var(--line);border-radius:9px;box-shadow:none;transform:none}
+.shop-card:hover{border-color:#a9c2b2;box-shadow:0 5px 18px rgba(31,45,36,.055);transform:none}
+.shop-card:focus-visible{outline-color:#4d9169}
+.shop-info{margin-bottom:11px}.shop-avatar{width:42px;height:42px}
+.shop-copy h3{font-size:12px}.shop-description{color:#636862;font-size:8.5px}
+.visit-link{border-color:#d8ddd8;border-radius:6px;background:#fff}.visit-link:hover{background:var(--red);border-color:var(--red)}
+.post-grid{border-radius:6px}.post:hover img{transform:scale(1.025)}
+.shop-meta{border-top:1px solid #f0f1ef;margin-top:10px;padding-top:9px}
+.merchant-dialog{border:1px solid rgba(255,255,255,.7);border-radius:12px}.merchant-dialog::backdrop{background:rgba(25,31,27,.46)}
+.merchant-trust-grid{border-color:var(--line);border-radius:7px}.merchant-dialog-posts a{border-radius:5px}
+.merchant-dialog-actions{margin-right:auto;display:flex;align-items:center;gap:7px}
+.merchant-dialog-actions .merchant-instagram{margin-right:0}
+.merchant-save{height:38px;padding:0 13px;border:1px solid #d8ddd8;border-radius:7px;background:#fff;color:#555;cursor:pointer;font-size:9px;font-weight:700}
+.merchant-save:hover,.merchant-save.saved{border-color:#86ad94;background:var(--red-soft);color:var(--red)}
+.saved-post-tile{position:relative;aspect-ratio:1;min-width:0;overflow:hidden;border-radius:5px;background:#eee}
+.merchant-dialog-posts .saved-post-tile>a{width:100%;height:100%;display:block}
+.post-save{position:absolute;top:7px;left:7px;width:30px;height:30px;padding:0;border:1px solid rgba(255,255,255,.7);border-radius:50%;background:rgba(25,29,27,.7);color:#fff;cursor:pointer;font-size:16px;line-height:28px;backdrop-filter:blur(4px)}
+.post-save.saved{background:var(--red);border-color:var(--red)}
+.connect-dialog,.login-dialog{border-radius:12px}
+@media(min-width:1280px){.results-panel .shop-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:850px){.header-actions{display:flex}.header-actions .merchant-trigger{display:none}.login-button{display:block}.category-panel{position:absolute}}
+@media(max-width:700px){.catalog{padding-top:18px}.catalog-bar{display:grid;grid-template-columns:1fr}.category-dropdown{width:100%;flex-basis:auto}.category-menu-trigger{min-height:45px}.category-panel{right:0;left:0;width:100%;max-height:min(430px,calc(100vh - 170px));border-radius:8px}.result-toolbar{padding-inline:10px}.shop-card{border-radius:8px}.merchant-dialog-actions{width:100%;margin:0}.merchant-dialog-actions>*{flex:1;justify-content:center}}
+@media(prefers-reduced-motion:reduce){.brand:hover .kahoo-icon{transform:none}}
