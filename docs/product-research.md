@@ -10,6 +10,7 @@ Kahoo should be a search and discovery layer for Iranian social shops: shoppers 
 
 | Product / research | Useful pattern | Apply to Kahoo |
 |---|---|---|
+| [Basaliro](https://basaliro.com/) | Direct Iranian competitor: handle-based shop lookup, profile/post counts, reviews, owner verification and an automated trust score | Compete on product-level Persian retrieval, fresh carousel media, visible freshness and official Meta ingestion. Its public payload proves stored follower/post snapshots, but does not disclose the collection mechanism or expose following counts. |
 | [Torob](https://torob.com/) | Search-first marketplace with familiar category navigation | Keep search primary and the GS1 tree secondary. Preserve the compact, information-dense result style. |
 | [ShopMy](https://shopmy.us/home/creators) | A creator gets one organized, shoppable storefront instead of scattered links | Give every merchant a stable Kahoo profile with collections and searchable descriptions. |
 | [LTK](https://company.shopltk.com/en-gb/how-it-works-creators) | Existing social content becomes a shop; tagging and analytics create merchant value | Import content automatically, then add lightweight product tagging and merchant analytics. |

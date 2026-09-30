@@ -1,0 +1,36 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: kahoo
+      POSTGRES_USER: kahoo
+      POSTGRES_PASSWORD: kahoo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kahoo -d kahoo"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - kahoo-postgres:/var/lib/postgresql/data
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://kahoo:kahoo@db:5432/kahoo
+      KAHOO_HOST: 0.0.0.0
+      KAHOO_PORT: 4173
+      KAHOO_SEED_DEMO: "1"
+      META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v26.0}
+      META_IG_USER_ID: ${META_IG_USER_ID:-}
+      META_ACCESS_TOKEN: ${META_ACCESS_TOKEN:-}
+      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-m3}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${KAHOO_PORT:-4173}:4173"
+
+volumes:
+  kahoo-postgres:

@@ -52,7 +52,6 @@ body{background:var(--page)}
 .visit-link{border-color:#d8ddd8;border-radius:999px;background:#fff}.visit-link:hover{background:var(--red);border-color:var(--red)}
 .post-grid{border-radius:16px}.post:hover img{transform:scale(1.025)}
 .merchant-dialog{border:1px solid rgba(255,255,255,.7);border-radius:12px}.merchant-dialog::backdrop{background:rgba(25,31,27,.46)}
-.merchant-source{margin:9px 81px 0 0;display:flex;align-items:center;gap:8px;color:#8a8f89;font-size:8px}.merchant-source a{color:var(--red);font-weight:700}.merchant-source a:hover{text-decoration:underline}
 .merchant-trust-grid{border-color:var(--line);border-radius:7px}.merchant-dialog-posts a{border-radius:5px}
 .merchant-dialog-actions{margin-right:auto;display:flex;align-items:center;gap:7px}
 .merchant-dialog-actions .merchant-instagram{margin-right:0}

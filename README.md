@@ -4,45 +4,65 @@ Kahoo (کاهو) is a Persian RTL discovery layer for Iranian Instagram shops. S
 
 ## Run
 
+Kahoo now uses PostgreSQL with `pgvector`; the application does not write runtime data into Git or its container image.
+
 ```bash
-python3 server.py
+cp .env.example .env
+docker compose up --build
 ```
 
 - Marketplace: `http://127.0.0.1:4173`
 - Saved items: `http://127.0.0.1:4173/saved.html`
 - Admin analytics: `http://127.0.0.1:4173/admin.html`
 
-Python and SQLite are the only runtime dependencies.
+PostgreSQL data lives in the `kahoo-postgres` Docker volume. SQL migrations in `db/migrations` run automatically at startup.
 
-Refresh public Instagram biographies and profile counts:
+### Import the previous SQLite data
 
-```bash
-python3 scripts/sync_instagram_profiles.py
-# or only selected handles:
-python3 scripts/sync_instagram_profiles.py @noghre_rose @sarinaland_com
-```
-
-Instagram may rate-limit anonymous public-page access. Failed profiles retain
-their last sourced bio; product search descriptions are stored separately and
-are never shown as Instagram biographies.
-
-### Docker
+Before starting the application for the first time, start PostgreSQL and import the existing local database:
 
 ```bash
-docker build -t kahoo .
-docker run --rm -p 4173:4173 kahoo
+docker compose up -d db
+docker compose build app
+docker compose run --rm \
+  -v ./data/kahoo.db:/legacy/kahoo.db:ro \
+  app python3 scripts/migrate_sqlite_to_postgres.py --source /legacy/kahoo.db
+docker compose up app
 ```
 
-The image has no installed application dependencies and runs as an unprivileged user.
+The SQLite file is ignored by both Git and Docker after migration.
+
+### Instagram synchronization
+
+Set `META_IG_USER_ID` and `META_ACCESS_TOKEN` in `.env` to use Meta Business Discovery. Without them, the prototype public-embed reader remains a best-effort fallback. Then run:
+
+```bash
+docker compose run --rm app python3 scripts/sync_instagram_profiles.py
+```
+
+Business Discovery supports public professional accounts and returns biography, profile picture, follower/following counts, media counts, recent posts and carousel children. Personal, private and age-gated accounts remain unavailable.
+
+### Semantic search
+
+Configure an OpenAI-compatible embedding endpoint that returns 1024-dimensional BGE-M3 vectors, then index changed documents:
+
+```bash
+docker compose run --rm app python3 scripts/reindex_search.py
+```
+
+If no embedding endpoint is configured, Persian-normalized lexical, alias and category search continues to work.
 
 ## Structure
 
 ```text
 backend/
-  server.py              HTTP API, search, Instagram import and analytics
+  database.py            PostgreSQL connection and migration runner
+  instagram.py           Meta Business Discovery client
+  search.py              Search documents and embedding retrieval
+  server.py              HTTP API, hybrid ranking and analytics
+db/migrations/          Versioned PostgreSQL schema
 data/
-  schema.sql             SQLite schema
-  kahoo.db               Local merchant, media and usage data
+  categories.sql         Reproducible GS1 category seed
 docs/
   product-research.md
   market-benchmarks.md
@@ -97,4 +117,4 @@ To rebuild the seed from the official current and Persian GS1 publications:
 python3 scripts/build_gpc_categories.py --download
 ```
 
-Runtime category reads come only from SQLite; `data/categories.sql` is the reproducible database seed.
+Runtime category reads come only from PostgreSQL; `data/categories.sql` is the reproducible database seed.
