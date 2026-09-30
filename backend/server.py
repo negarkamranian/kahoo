@@ -229,7 +229,7 @@ def initialize_database():
                 db.execute("""UPDATE merchants SET biography=?,biography_source=?,biography_updated_at=datetime('now')
                   WHERE id=? AND biography_source IS NULL""",(biography_snapshot[0],biography_snapshot[1],merchant_id))
             avatar=db.execute("SELECT avatar_blob,avatar_source_url FROM merchants WHERE id=?",(merchant_id,)).fetchone()
-            post_state=db.execute("SELECT COUNT(*) count,COUNT(*) FILTER (WHERE image_url LIKE '%cdninstagram.com%') instagram_count FROM merchant_posts WHERE merchant_id=?",(merchant_id,)).fetchone()
+            post_state=db.execute("SELECT COUNT(*) count,COUNT(*) FILTER (WHERE POSITION('cdninstagram.com' IN image_url)>0) instagram_count FROM merchant_posts WHERE merchant_id=?",(merchant_id,)).fetchone()
             needs_avatar=not avatar["avatar_blob"] or avatar["avatar_source_url"]!=url
             needs_posts=post_state["count"]<6 or (post_state["instagram_count"] or 0)<post_state["count"]
             profile=None

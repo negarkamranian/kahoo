@@ -20,7 +20,7 @@ class HybridRow(dict):
 
 
 def hybrid_row(cursor):
-    columns = [column.name for column in cursor.description]
+    columns = [column.name for column in (cursor.description or ())]
 
     def make_row(values):
         return HybridRow(zip(columns, values))
