@@ -41,7 +41,12 @@
     <main>
       <section class="catalog" id="shops">
         <div class="market-layout">
-          <p class="result-status" aria-live="polite"><span id="result-title"></span><span id="result-count"></span></p>
+          <div class="result-status" aria-live="polite">
+            <div>
+              <h1 id="result-title">فروشگاه‌ها</h1>
+            </div>
+            <span id="result-count"></span>
+          </div>
           <div class="results-panel"><div class="shop-grid" id="shop-grid"><div class="kahoo-loader catalog-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg></div><span>در حال دریافت فروشگاه‌ها</span></div></div><div class="empty-state" id="empty-state" hidden><span>⌕</span><h3>فروشگاهی پیدا نشد</h3><p>دسته یا عبارت دیگری را امتحان کن.</p></div></div>
         </div>
       </section>
@@ -54,7 +59,7 @@
       <div class="merchant-dialog-content" id="merchant-dialog-content" hidden>
         <div class="merchant-dialog-head">
           <img id="detail-avatar" alt="" />
-          <div><div class="merchant-dialog-name"><h2 id="detail-name"></h2><span>✓</span></div><p id="detail-handle"></p><small id="detail-meta"></small></div>
+          <div><div class="merchant-dialog-name"><h2 id="detail-name"></h2></div><p id="detail-handle"></p><small id="detail-meta"></small></div>
           <div class="merchant-dialog-actions"><button class="merchant-save" id="detail-save" type="button" aria-label="ذخیره فروشگاه" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V22l-6-4-6 4z"/></svg></button><a class="merchant-instagram" id="detail-instagram" target="_blank" rel="noreferrer">دیدن در اینستاگرام <span>←</span></a></div>
         </div>
         <div class="merchant-dialog-bio"><b>بیو</b><p id="detail-bio"></p></div>
@@ -92,7 +97,7 @@
         <button class="back-button" type="button">→</button><h2>کد تأیید</h2><p>کد ارسال‌شده به <b id="phone-preview"></b></p><input id="otp-input" class="otp-input" inputmode="numeric" autocomplete="one-time-code" placeholder="− − − − −" maxlength="5" /><p class="form-error" id="otp-error"></p><button type="submit">ورود</button><small>در این نمونه هر کد ۵ رقمی پذیرفته می‌شود.</small>
       </form>
     </dialog>
-    <template id="shop-card-template"><article class="shop-card"><div class="shop-info"><div class="shop-avatar"></div><div class="shop-copy"><div class="shop-title-line"><h3></h3><span class="verified" title="فروشگاه تاییدشده"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon class="badge-shape" points="12,1.5 14.3,3.2 17.4,2.6 18.4,5.6 21.4,6.6 20.8,9.7 22.5,12 20.8,14.3 21.4,17.4 18.4,18.4 17.4,21.4 14.3,20.8 12,22.5 9.7,20.8 6.6,21.4 5.6,18.4 2.6,17.4 3.2,14.3 1.5,12 3.2,9.7 2.6,6.6 5.6,5.6 6.6,2.6 9.7,3.2"/><path class="badge-check" d="M6.5 12.5 10.3 16.3 17.8 8.2"/></svg></span></div><div class="shop-copy-meta"><p></p><span class="location"></span></div></div><a class="visit-link" target="_blank" rel="noreferrer">دیدن در اینستاگرام <span>←</span></a></div><p class="shop-description"></p><div class="post-grid"></div></article></template>
+    <template id="shop-card-template"><article class="shop-card"><div class="shop-info"><div class="shop-avatar"></div><div class="shop-copy"><div class="shop-title-line"><h3></h3></div><div class="shop-copy-meta"><p></p><span class="location"></span></div></div><a class="visit-link" target="_blank" rel="noreferrer" aria-label="دیدن فروشگاه در اینستاگرام">اینستاگرام <span>↗</span></a></div><p class="shop-description"></p><div class="post-grid"></div></article></template>
     <script src="./assets/js/catalog.js"></script>
   </body>
 </html>
