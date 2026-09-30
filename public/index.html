@@ -19,10 +19,20 @@
           <svg class="kahoo-icon" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="leaf leaf-a" d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"/><path class="leaf leaf-b" d="M6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg>
           <span class="brand-name">کاهو</span>
         </a>
-        <form class="search" id="search-form" role="search">
-          <button type="submit" aria-label="جستجو">⌕</button>
-          <input id="search-input" type="search" placeholder="دنبال چه محصولی هستی؟" autocomplete="off" />
-        </form>
+        <div class="header-discovery">
+          <div class="category-dropdown" id="categories">
+            <button class="category-menu-trigger" id="category-menu-trigger" type="button" aria-expanded="false" aria-controls="category-popover"><span id="category-menu-label">دسته‌بندی‌ها</span><i class="menu-chevron" aria-hidden="true"></i></button>
+            <aside class="category-panel category-popover" id="category-popover" hidden>
+              <div class="tree-heading"><h2>دسته‌بندی‌ها</h2><button id="reset-category" type="button">همه</button></div>
+              <div class="category-tree" id="category-tree" role="tree" aria-label="دسته‌بندی محصولات"></div>
+              <a class="gs1-source" href="https://gpc-browser.gs1.org/" target="_blank" rel="noreferrer">ساختار GS1 GPC ↗</a>
+            </aside>
+          </div>
+          <form class="search" id="search-form" role="search">
+            <button type="submit" aria-label="جستجو"></button>
+            <input id="search-input" type="search" placeholder="دنبال چه محصولی هستی؟" autocomplete="off" />
+          </form>
+        </div>
         <div class="header-actions">
           <button class="merchant-trigger" type="button" data-open-connect>افزودن فروشگاه</button><button class="login-button" id="login-trigger" type="button">ورود</button>
         </div>
@@ -31,18 +41,8 @@
     <main>
       <section class="catalog" id="shops">
         <div class="market-layout">
-          <div class="catalog-bar">
-            <div class="category-dropdown" id="categories">
-              <button class="category-menu-trigger" id="category-menu-trigger" type="button" aria-expanded="false" aria-controls="category-popover"><span id="category-menu-label">دسته‌بندی‌ها</span><i>⌄</i></button>
-              <aside class="category-panel category-popover" id="category-popover" hidden>
-                <div class="tree-heading"><h2>دسته‌بندی‌ها</h2><button id="reset-category" type="button">همه</button></div>
-                <ul class="category-tree" id="category-tree" role="tree" aria-label="دسته‌بندی محصولات"></ul>
-                <a class="gs1-source" href="https://gpc-browser.gs1.org/" target="_blank" rel="noreferrer">ساختار GS1 GPC ↗</a>
-              </aside>
-            </div>
-            <div class="result-toolbar" aria-live="polite"><div><h2 id="result-title">همه‌ی فروشگاه‌ها</h2><span id="result-count"></span></div></div>
-          </div>
-          <div class="results-panel"><div class="shop-grid" id="shop-grid"></div><div class="empty-state" id="empty-state" hidden><span>⌕</span><h3>فروشگاهی پیدا نشد</h3><p>دسته یا عبارت دیگری را امتحان کن.</p></div></div>
+          <p class="result-status" aria-live="polite"><span id="result-title"></span><span id="result-count"></span></p>
+          <div class="results-panel"><div class="shop-grid" id="shop-grid"><div class="kahoo-loader catalog-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg></div><span>در حال دریافت فروشگاه‌ها</span></div></div><div class="empty-state" id="empty-state" hidden><span>⌕</span><h3>فروشگاهی پیدا نشد</h3><p>دسته یا عبارت دیگری را امتحان کن.</p></div></div>
         </div>
       </section>
     </main>
@@ -50,14 +50,15 @@
 
     <dialog class="merchant-dialog" id="merchant-dialog">
       <button class="dialog-close merchant-dialog-close" type="button" aria-label="بستن">×</button>
-      <div class="merchant-dialog-loading" id="merchant-dialog-loading">در حال دریافت فروشگاه…</div>
+      <div class="merchant-dialog-loading" id="merchant-dialog-loading"><div class="kahoo-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg></div><span>در حال دریافت فروشگاه</span></div></div>
       <div class="merchant-dialog-content" id="merchant-dialog-content" hidden>
         <div class="merchant-dialog-head">
           <img id="detail-avatar" alt="" />
           <div><div class="merchant-dialog-name"><h2 id="detail-name"></h2><span>✓</span></div><p id="detail-handle"></p><small id="detail-meta"></small></div>
-          <div class="merchant-dialog-actions"><button class="merchant-save" id="detail-save" type="button">ذخیره</button><a class="merchant-instagram" id="detail-instagram" target="_blank" rel="noreferrer">دیدن در اینستاگرام <span>←</span></a></div>
+          <div class="merchant-dialog-actions"><button class="merchant-save" id="detail-save" type="button" aria-label="ذخیره فروشگاه" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V22l-6-4-6 4z"/></svg></button><a class="merchant-instagram" id="detail-instagram" target="_blank" rel="noreferrer">دیدن در اینستاگرام <span>←</span></a></div>
         </div>
         <div class="merchant-dialog-bio"><b>بیو</b><p id="detail-bio"></p></div>
+        <div class="merchant-source"><span>منبع اطلاعات فروشگاه</span><a id="detail-source" target="_blank" rel="noreferrer">مشاهده منبع ↗</a></div>
         <div class="merchant-trust-grid">
           <div><span>دنبال‌کننده</span><strong id="detail-followers">—</strong><small id="detail-followers-note"></small></div>
           <div><span>دنبال‌شونده</span><strong id="detail-following">—</strong><small id="detail-following-note"></small></div>
@@ -78,7 +79,7 @@
         <button class="instagram-button" id="instagram-connect" type="button"><span class="instagram-glyph">◎</span> ادامه با Instagram</button>
         <small>فقط برای حساب‌های Professional</small>
       </div>
-      <div class="connect-state" data-connect-state="loading" hidden><div class="pixel-loader"><i></i><i></i><i></i><i></i><i></i></div><h2>در حال ساخت فروشگاه…</h2><p id="import-status">دریافت پروفایل</p></div>
+      <div class="connect-state" data-connect-state="loading" hidden><div class="kahoo-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg></div></div><h2>در حال ساخت فروشگاه…</h2><p id="import-status">دریافت پروفایل</p></div>
       <div class="connect-state" data-connect-state="done" hidden><div class="success-check">✓</div><h2>فروشگاه اضافه شد</h2><div class="imported-shop"><span>ن</span><div><b>ناردونه استودیو</b><small>@nardoone.studio · ۳ پست دریافت شد</small></div></div><button class="done-button" type="button">دیدن فروشگاه</button></div>
     </dialog>
 
@@ -92,7 +93,7 @@
         <button class="back-button" type="button">→</button><h2>کد تأیید</h2><p>کد ارسال‌شده به <b id="phone-preview"></b></p><input id="otp-input" class="otp-input" inputmode="numeric" autocomplete="one-time-code" placeholder="− − − − −" maxlength="5" /><p class="form-error" id="otp-error"></p><button type="submit">ورود</button><small>در این نمونه هر کد ۵ رقمی پذیرفته می‌شود.</small>
       </form>
     </dialog>
-    <template id="shop-card-template"><article class="shop-card"><div class="shop-info"><div class="shop-avatar"></div><div class="shop-copy"><div class="shop-title-line"><h3></h3><span class="verified" title="فروشگاه تاییدشده">✓</span></div><p></p></div><a class="visit-link" target="_blank" rel="noreferrer">دیدن در اینستاگرام <span>←</span></a></div><p class="shop-description"></p><div class="post-grid"></div><div class="shop-meta"><span class="location"></span><span class="freshness"></span></div></article></template>
+    <template id="shop-card-template"><article class="shop-card"><div class="shop-info"><div class="shop-avatar"></div><div class="shop-copy"><div class="shop-title-line"><h3></h3><span class="verified" title="فروشگاه تاییدشده"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon class="badge-shape" points="12,1.5 14.3,3.2 17.4,2.6 18.4,5.6 21.4,6.6 20.8,9.7 22.5,12 20.8,14.3 21.4,17.4 18.4,18.4 17.4,21.4 14.3,20.8 12,22.5 9.7,20.8 6.6,21.4 5.6,18.4 2.6,17.4 3.2,14.3 1.5,12 3.2,9.7 2.6,6.6 5.6,5.6 6.6,2.6 9.7,3.2"/><path class="badge-check" d="M6.5 12.5 10.3 16.3 17.8 8.2"/></svg></span></div><div class="shop-copy-meta"><p></p><span class="location"></span></div></div><a class="visit-link" target="_blank" rel="noreferrer">دیدن در اینستاگرام <span>←</span></a></div><p class="shop-description"></p><div class="post-grid"></div></article></template>
     <script src="./assets/js/catalog.js"></script>
   </body>
 </html>

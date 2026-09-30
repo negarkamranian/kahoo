@@ -21,6 +21,11 @@ CREATE TABLE IF NOT EXISTS merchants (
   name TEXT NOT NULL,
   handle TEXT NOT NULL UNIQUE,
   description TEXT NOT NULL DEFAULT '',
+  description_source TEXT,
+  description_source_url TEXT,
+  description_generated_by TEXT,
+  description_updated_at TEXT,
+  source_url TEXT,
   biography TEXT NOT NULL DEFAULT '',
   biography_source TEXT,
   biography_updated_at TEXT,
@@ -57,6 +62,40 @@ CREATE TABLE IF NOT EXISTS merchant_posts (
   UNIQUE(merchant_id, position)
 );
 
+CREATE TABLE IF NOT EXISTS merchant_categories (
+  merchant_id INTEGER NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+  category_code TEXT NOT NULL REFERENCES categories(code),
+  confidence REAL NOT NULL DEFAULT 1 CHECK(confidence BETWEEN 0 AND 1),
+  source TEXT NOT NULL,
+  source_url TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (merchant_id, category_code)
+);
+
+CREATE TABLE IF NOT EXISTS merchant_search_terms (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  merchant_id INTEGER NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+  term TEXT NOT NULL,
+  normalized_term TEXT NOT NULL,
+  weight REAL NOT NULL DEFAULT 1,
+  source TEXT NOT NULL,
+  source_url TEXT,
+  generated_by TEXT,
+  confidence REAL NOT NULL DEFAULT 1 CHECK(confidence BETWEEN 0 AND 1),
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (merchant_id, normalized_term, source)
+);
+
+CREATE TABLE IF NOT EXISTS search_aliases (
+  alias TEXT NOT NULL,
+  normalized_alias TEXT NOT NULL,
+  term TEXT NOT NULL,
+  normalized_term TEXT NOT NULL,
+  weight REAL NOT NULL DEFAULT 0.5,
+  source TEXT NOT NULL,
+  PRIMARY KEY (normalized_alias, normalized_term)
+);
+
 CREATE TABLE IF NOT EXISTS analytics_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   event_type TEXT NOT NULL CHECK(event_type IN (
@@ -80,6 +119,9 @@ CREATE INDEX IF NOT EXISTS idx_events_type_created ON analytics_events(event_typ
 CREATE INDEX IF NOT EXISTS idx_events_query ON analytics_events(query);
 
 /* Legacy bootstrap retained for existing merchant foreign keys. The generated
+CREATE INDEX IF NOT EXISTS idx_merchant_categories_category ON merchant_categories(category_code);
+CREATE INDEX IF NOT EXISTS idx_merchant_terms_merchant ON merchant_search_terms(merchant_id);
+CREATE INDEX IF NOT EXISTS idx_merchant_terms_normalized ON merchant_search_terms(normalized_term);
    data/categories.sql seed expands and updates this after schema creation. */
 INSERT OR IGNORE INTO categories(code,parent_code,level,label_fa,label_en,icon,sort_order) VALUES
 ('50000000',NULL,'1','خوراکی و نوشیدنی','Food/Beverage','◉','10'),

@@ -28,8 +28,60 @@ MERCHANTS = [
     ("ig_hirad","پاندورا چالوس","@pandora_chalus","کفش اسپرت و چرمی، بوت، صندل، کیف، کمربند و کیف پول","63010300","چالوس","پ","#ead8c6","اطلاعات نمونه",1,"https://socialauditor.io/profile/pandora_chalus",["photo-1542291026-7eec264c27ff","photo-1549298916-b41d501d3772","photo-1608256246200-53e635b5b65f"]),
     ("ig_homino","ویداس","@vidasco.ir","لوازم خانگی، خردکن، ساندویچ‌ساز و لوازم برقی آشپزخانه","72020100","تهران","و","#dbe6e4","اطلاعات نمونه",1,"https://www.t.me/s/VIDASOFFICIAL",["photo-1585515320310-259814833e62","photo-1556911220-bff31c812dba","photo-1570222094114-d054a817e56b"]),
     ("ig_kaghaz","کوچه تحریر","@koocheh_tahrir","لوازم‌التحریر، نوشت‌افزار، دفتر، خودکار و وسایل طراحی","62060100","گرگان","ک","#f0dfbf","اطلاعات نمونه",1,"https://pelazaa.ir/business/koochehtahrir/",["photo-1455390582262-044cdead277a","photo-1517841905240-472988babdf9","photo-1531346878377-a5be20888e57"]),
-    ("ig_sabz","سارینالند","@sarinaland_com","گل و گیاه آپارتمانی، گلدان، خاک و لوازم نگهداری گیاه","93037400","تهران","س","#d9ead6","اطلاعات نمونه",1,"https://socialveins.com/influencer/instagram/sarinaland_com",["photo-1485955900006-10f4d324d411","photo-1416879595882-3373a0480b5b","photo-1501004318641-b39e6451bec6"])
+    ("ig_sabz","سارینالند","@sarinaland_com","گل و گیاه آپارتمانی، گلدان، خاک و لوازم نگهداری گیاه","93037400","تهران","س","#d9ead6","اطلاعات نمونه",1,"https://socialveins.com/influencer/instagram/sarinaland_com",["photo-1485955900006-10f4d324d411","photo-1416879595882-3373a0480b5b","photo-1501004318641-b39e6451bec6"]),
+    ("ig_digistyle","دیجی‌استایل","@digistylecom","پوشاک زنانه و مردانه، لباس راحتی و خواب، شلوار و جین، کیف، کفش و اکسسوری","67010000","تهران","د","#e5e0dc","منبع مستقل",1,"https://basaliro.com/shop/digistylecom",[]),
+    ("ig_khanoumi","خانومی","@khanoumi_shop","لوازم آرایشی و بهداشتی، مراقبت پوست و مو، عطر، ضدآفتاب و لوازم برقی شخصی","53161000","تهران","خ","#f1dde4","منبع مستقل",1,"https://basaliro.com/shop/khanoumi_shop",[]),
+    ("ig_roja","روژا","@rojashop","عطر و ادکلن، آرایش، مراقبت پوست و مو، شامپو، رنگ مو و محصولات بهداشتی","53161000","تهران","ر","#eadde5","منبع مستقل",1,"https://basaliro.com/shop/rojashop",[]),
+    ("ig_mootanroo","مو تن رو","@mootanroo","محصولات آرایشی و بهداشتی، مراقبت پوست و مو، عطر و ابزار زیبایی","53161000","تهران","م","#eee1e2","منبع مستقل",1,"https://basaliro.com/shop/mootanroo",[]),
+    ("ig_asenwear","آسن ویر","@asenwear","پوشاک زنانه روزمره، شومیز، تیشرت، تاپ، شلوار و ست‌های هماهنگ","67010000","اندیشه","آ","#e5e4df","منبع مستقل",1,"https://basaliro.com/shop/asenwear",[]),
+    ("ig_ballentine","گالری بلنتین","@ballentine_gallery","پوشاک زنانه، مانتو، کت، شومیز، پیراهن، کفتان، شال و روسری","67010000","تهران","ب","#e7ded8","منبع مستقل",1,"https://basaliro.com/shop/ballentine_gallery",[]),
+    ("ig_kifkafsh","کیف و کفش آنلاین","@kif_kafsh_onlinee","کیف و کفش زنانه، بوت، نیم‌بوت، صندل، کفش مجلسی و روزمره","63010300","ایران","ک","#e8dfd5","منبع مستقل",1,"https://basaliro.com/shop/kif_kafsh_onlinee",[]),
+    ("ig_kajjshoe","کیف و کفش کاج","@kajjshoe","کفش، کیف و صندل زنانه برای استفاده روزمره و استایل مجلسی","63010300","بوشهر","ک","#e6ddd1","منبع مستقل",1,"https://basaliro.com/shop/kajjshoe",[]),
+    ("ig_traffic","ترافیک","@kif.kafsh.traffic","کیف، کفش راحتی و رسمی، کوله‌پشتی مدرسه، سفر و دانشگاه","63010300","گنبدکاووس","ت","#deded8","منبع مستقل",1,"https://basaliro.com/shop/kif.kafsh.traffic",[]),
+    ("ig_stiletto","تهران استیلتو","@tehran_stiletto","کفش زنانه، کفش مجلسی، پاشنه‌بلند و استیلتو","63010300","تهران","ت","#eadcd7","منبع مستقل",1,"https://basaliro.com/shop/tehran_stiletto",[]),
+    ("ig_vartan","گالری ورتان","@vartan_gallery","زیورآلات دست‌ساز و هنری، قطعات تک‌نسخه با الهام از فرهنگ ایرانی","64010100","اصفهان","و","#e2e0dc","منبع مستقل",1,"https://basaliro.com/shop/vartan_gallery",[]),
+    ("ig_nazmara","نظم آرا","@luxe_organizer","نظم‌دهنده، لوازم کاربردی خانه و آشپزخانه و محصولات سازمان‌دهی منزل","73040100","ایران","ن","#dfe7df","منبع مستقل",1,"https://basaliro.com/shop/luxe_organizer",[]),
+    ("ig_khaneariaee","خانه آریایی","@khaneariaee","لوازم آشپزخانه، وسایل دکوری، گل مصنوعی، جهیزیه و محصولات خانه","75030100","ایران","خ","#e5e2d8","منبع مستقل",1,"https://basaliro.com/shop/khaneariaee",[]),
+    ("ig_hihome","های هوم","@hihome_opal","لوازم خانه و آشپزخانه، محصولات لوکس، دکوراسیون و لوازم نظافت منزل","73040000","تهران","ه","#dfe5e1","منبع مستقل",1,"https://basaliro.com/shop/hihome_opal",[]),
+    ("ig_niloofarabi","گالری نیلوفر آبی","@gallery.niloofarabi","لوازم آشپزخانه، وسایل دکوری، ظروف و هدایای خانه","75030100","امیرکلا","ن","#e0e6e5","منبع مستقل",1,"https://basaliro.com/shop/gallery.niloofarabi",[]),
+    ("ig_haghgoo","گالری حق‌گو","@haghgoo_galleri","دکوریجات، ظروف چوبی، لوازم خانه و وسایل کاربردی آشپزخانه","73040400","مشهد","ح","#e7dfd3","منبع مستقل",1,"https://basaliro.com/shop/haghgoo_galleri",[]),
+    ("ig_favstor","فیواستور","@favstor","لوازم تحریر فانتزی، خودکار، مداد، پاک‌کن، دفتر، کاغذ و ماژیک","62060100","ایران","ف","#e2e5eb","منبع مستقل",1,"https://basaliro.com/shop/favstor",[]),
+    ("ig_tahrirshop","تحریر شاپ","@tahrir._shopp","لوازم تحریر فانتزی، پلنر، دفتر، روان‌نویس و ابزار برنامه‌ریزی","62060400","تهران","ت","#e8e1eb","منبع مستقل",1,"https://basaliro.com/shop/tahrir._shopp",[]),
+    ("ig_fantasymarket","فانتزی مارکت","@fantasy_markett","لوازم تحریر رنگی و فانتزی، اکسسوری و محصولات خلاقانه کودک و بزرگسال","62060100","قزوین","ف","#ebe0e7","منبع مستقل",1,"https://basaliro.com/shop/fantasy_markett",[]),
+    ("ig_homebazi","خانه بازی","@home.bazi","اسباب‌بازی چوبی، آشپزخانه کودک، پارکینگ طبقاتی و بازی‌های کودک","86010400","ایران","خ","#dfe8df","منبع مستقل",1,"https://basaliro.com/shop/home.bazi",[]),
+    ("ig_kadopich","کادوپیچ","@kadopich.shops","ماگ، قمقمه، فلاسک، نوشیدنی‌افزار و لوازم کاربردی خانه و آشپزخانه","73050000","ایران","ک","#e4e0d8","منبع مستقل",1,"https://basaliro.com/shop/kadopich.shops",[]),
+    ("ig_homekala","هوم‌کالا","@homekala_20","لوازم خانه و آشپزخانه، وسایل دکوراسیون و محصولات کاربردی منزل","73040000","ایران","ه","#e1e5de","منبع مستقل",1,"https://basaliro.com/shop/homekala_20",[])
 ]
+MERCHANT_CATEGORY_SEED={
+  "@iranclothings":("67010300",),
+  "@set.city.store":("53131100","53141100","53161300"),
+  "@forough_homegallery":("73040100","73050000","75030100"),
+  "@hyper.toy":("86010100","86010200"),
+  "@pandora_chalus":("64010200",),
+  "@vidasco.ir":("72020200",),
+  "@koocheh_tahrir":("62060400","62061100"),
+  "@digistylecom":("67010200","67010300","67010800","67020100","67040100","63010300","64010200"),
+  "@khanoumi_shop":("53131100","53141100","53161300","53181100"),
+  "@rojashop":("53131100","53141100","53161300","53181100"),
+  "@mootanroo":("53131100","53141100","53161300","53181100"),
+  "@asenwear":("67010300","67010800"),
+  "@ballentine_gallery":("67010200","67010800","64010100"),
+  "@kif_kafsh_onlinee":("64010200",),
+  "@kajjshoe":("64010200",),
+  "@kif.kafsh.traffic":("64010200",),
+  "@vartan_gallery":("70011400",),
+  "@luxe_organizer":("75030100",),
+  "@khaneariaee":("73040000",),
+  "@hihome_opal":("72020400","75030100"),
+  "@gallery.niloofarabi":("73040000","73050000"),
+  "@haghgoo_galleri":("75030100",),
+  "@favstor":("62060400","62061100"),
+  "@tahrir._shopp":("62060100","62061100"),
+  "@fantasy_markett":("62060400","62061100"),
+  "@home.bazi":("86010700","86011100","86011200"),
+  "@kadopich.shops":("73050300",),
+  "@homekala_20":("75030100",),
+}
 
 # Public Instagram biography snapshots. The source URL for every value is kept
 # alongside it so a product description is never presented as an Instagram bio.
@@ -136,6 +188,16 @@ def migrate_database(db):
         db.execute("ALTER TABLE merchants ADD COLUMN verified_at TEXT")
     if "description" not in merchant_columns:
         db.execute("ALTER TABLE merchants ADD COLUMN description TEXT NOT NULL DEFAULT ''")
+    if "description_source" not in merchant_columns:
+        db.execute("ALTER TABLE merchants ADD COLUMN description_source TEXT")
+    if "description_source_url" not in merchant_columns:
+        db.execute("ALTER TABLE merchants ADD COLUMN description_source_url TEXT")
+    if "description_generated_by" not in merchant_columns:
+        db.execute("ALTER TABLE merchants ADD COLUMN description_generated_by TEXT")
+    if "description_updated_at" not in merchant_columns:
+        db.execute("ALTER TABLE merchants ADD COLUMN description_updated_at TEXT")
+    if "source_url" not in merchant_columns:
+        db.execute("ALTER TABLE merchants ADD COLUMN source_url TEXT")
     if "avatar_blob" not in merchant_columns:
         db.execute("ALTER TABLE merchants ADD COLUMN avatar_blob BLOB")
     if "avatar_mime_type" not in merchant_columns:
@@ -198,10 +260,13 @@ def initialize_database():
             existing=db.execute("SELECT id FROM merchants WHERE instagram_id=?",(instagram_id,)).fetchone()
             if existing:
                 merchant_id=existing["id"]
-                db.execute("UPDATE merchants SET name=?,handle=?,description=?,category_code=?,city=?,avatar_initial=?,avatar_color=?,instagram_url=?,updated_label=?,verified=?,verification_source=?,verified_at=date('now') WHERE id=?",(name,handle,description,category,city,initial,color,url,updated,verified,source,merchant_id))
+                db.execute("UPDATE merchants SET name=?,handle=?,description=CASE WHEN description_source='llm' THEN description ELSE ? END,category_code=?,city=?,avatar_initial=?,avatar_color=?,instagram_url=?,updated_label=?,verified=?,verification_source=?,verified_at=date('now') WHERE id=?",(name,handle,description,category,city,initial,color,url,updated,verified,source,merchant_id))
             else:
                 cursor=db.execute("INSERT INTO merchants(instagram_id,name,handle,description,category_code,city,avatar_initial,avatar_color,instagram_url,updated_label,verified,verification_source,verified_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,date('now'))",(instagram_id,name,handle,description,category,city,initial,color,url,updated,verified,source))
                 merchant_id=cursor.lastrowid
+            db.execute("""UPDATE merchants SET source_url=?,description_source=COALESCE(description_source,'curated_seed'),
+              description_source_url=COALESCE(description_source_url,?),description_updated_at=COALESCE(description_updated_at,datetime('now'))
+              WHERE id=?""",(source,source,merchant_id))
             biography_snapshot=PROFILE_BIO_SNAPSHOTS.get(handle)
             if biography_snapshot:
                 db.execute("""UPDATE merchants SET biography=?,biography_source=?,biography_updated_at=datetime('now')
@@ -230,6 +295,7 @@ def initialize_database():
                 for position,photo in enumerate(posts,1):
                     image_url=f"https://images.unsplash.com/{photo}?auto=format&fit=crop&w=500&q=80"
                     db.execute("INSERT INTO merchant_posts(merchant_id,image_url,permalink,position) VALUES(?,?,?,?)",(merchant_id,image_url,url,position))
+        seed_search_metadata(db)
         uncached=list(db.execute("SELECT p.id,p.image_url,m.name FROM merchant_posts p JOIN merchants m ON m.id=p.merchant_id WHERE p.image_blob IS NULL OR p.mime_type IS NULL"))
         for post in uncached:
             cache_post_image(db,post["id"],post["image_url"],post["name"])
@@ -252,6 +318,7 @@ def refresh_instagram_profiles(handles=None):
                 results.append({"handle":merchant["handle"],"updated":True,"has_biography":bool(biography)})
             except Exception as error:
                 results.append({"handle":merchant["handle"],"updated":False,"error":str(error)})
+        seed_search_metadata(db)
     return results
 
 def category_tree():
@@ -259,11 +326,17 @@ def category_tree():
         rows=[dict(row) for row in db.execute("SELECT code,parent_code,level,label_fa,label_en,icon FROM categories ORDER BY level,sort_order,label_fa")]
         counts={row["code"]:0 for row in rows}
         parents={row["code"]:row["parent_code"] for row in rows}
-        for item in db.execute("SELECT category_code,COUNT(*) count FROM merchants GROUP BY category_code"):
-            code=item["category_code"]
-            while code:
-                counts[code]=counts.get(code,0)+item["count"]
-                code=parents.get(code)
+        assignments={}
+        for item in db.execute("SELECT merchant_id,category_code FROM merchant_categories"):
+            assignments.setdefault(item["merchant_id"],[]).append(item["category_code"])
+        for category_codes in assignments.values():
+            visible=set()
+            for category_code in category_codes:
+                code=category_code
+                while code:
+                    visible.add(code);code=parents.get(code)
+            for code in visible:
+                counts[code]=counts.get(code,0)+1
         nodes={row["code"]:{**row,"count":counts[row["code"]],"children":[]} for row in rows}
         roots=[]
         for row in rows:
@@ -278,33 +351,161 @@ def normalize_search(value):
     value=(value or "").lower().translate(PERSIAN_TRANSLATION).replace("\u200c"," ")
     return " ".join(re.sub(r"[^\w@.]+"," ",value).split())
 
+SEARCH_ALIAS_SEED=(
+  ("شلوار","لباس",0.55,"curated_taxonomy"),
+  ("شلوار","پوشاک",0.55,"curated_taxonomy"),
+  ("شلوار","پایین تنه",0.9,"curated_taxonomy"),
+  ("جین","شلوار",0.9,"curated_taxonomy"),
+  ("لگ","شلوار",0.8,"curated_taxonomy"),
+  ("شلوارک","شلوار",0.85,"curated_taxonomy"),
+  ("تی شرت","تیشرت",0.95,"curated_taxonomy"),
+  ("تیشرت","لباس",0.6,"curated_taxonomy"),
+)
+
+def searchable_tokens(text):
+    return {token for token in normalize_search(text).split() if len(token)>1 and token not in SEARCH_STOPWORDS}
+
+def seed_search_metadata(db):
+    for alias,term,weight,source in SEARCH_ALIAS_SEED:
+        db.execute(
+          """INSERT INTO search_aliases(alias,normalized_alias,term,normalized_term,weight,source)
+            VALUES(?,?,?,?,?,?) ON CONFLICT(normalized_alias,normalized_term)
+            DO UPDATE SET alias=excluded.alias,term=excluded.term,weight=excluded.weight,source=excluded.source""",
+          (alias,normalize_search(alias),term,normalize_search(term),weight,source))
+    for merchant in db.execute("SELECT id,handle,category_code,description,description_source_url,biography,biography_source,instagram_url FROM merchants"):
+        db.execute(
+          """INSERT INTO merchant_categories(merchant_id,category_code,confidence,source,source_url)
+            VALUES(?,?,1,'merchant_primary',?) ON CONFLICT(merchant_id,category_code)
+            DO UPDATE SET confidence=1,source='merchant_primary',source_url=excluded.source_url""",
+          (merchant["id"],merchant["category_code"],merchant["description_source_url"]))
+        db.execute("DELETE FROM merchant_categories WHERE merchant_id=? AND source='curated_catalog'",(merchant["id"],))
+        for category_code in MERCHANT_CATEGORY_SEED.get(merchant["handle"],()):
+            db.execute(
+              """INSERT INTO merchant_categories(merchant_id,category_code,confidence,source,source_url)
+                VALUES(?,?,0.9,'curated_catalog',?) ON CONFLICT(merchant_id,category_code)
+                DO UPDATE SET confidence=excluded.confidence,source=excluded.source,source_url=excluded.source_url""",
+              (merchant["id"],category_code,merchant["description_source_url"]))
+        db.execute("DELETE FROM merchant_search_terms WHERE merchant_id=? AND source IN ('description','biography')",(merchant["id"],))
+        sources=(("description",merchant["description"],1.0,merchant["description_source_url"]),("biography",merchant["biography"],0.8,merchant["instagram_url"]))
+        for source,text,weight,source_url in sources:
+            for term in searchable_tokens(text):
+                db.execute(
+                  """INSERT INTO merchant_search_terms(merchant_id,term,normalized_term,weight,source,source_url,confidence)
+                    VALUES(?,?,?,?,?,?,1) ON CONFLICT(merchant_id,normalized_term,source)
+                    DO UPDATE SET term=excluded.term,weight=excluded.weight,source_url=excluded.source_url,updated_at=CURRENT_TIMESTAMP""",
+                  (merchant["id"],term,term,weight,source,source_url))
+
+def save_llm_enrichment(merchant_id,description,terms,model,source_url,confidence=0.75):
+    if not model or not source_url:
+        raise ValueError("LLM enrichment requires both model and source_url provenance")
+    normalized_terms={normalize_search(term):term.strip() for term in terms if normalize_search(term)}
+    with connect() as db:
+        db.execute("""UPDATE merchants SET description=?,description_source='llm',description_source_url=?,
+          description_generated_by=?,description_updated_at=datetime('now') WHERE id=?""",
+          (description.strip(),source_url,model,merchant_id))
+        db.execute("DELETE FROM merchant_search_terms WHERE merchant_id=? AND source='llm'",(merchant_id,))
+        for normalized,term in normalized_terms.items():
+            db.execute("""INSERT INTO merchant_search_terms
+              (merchant_id,term,normalized_term,weight,source,source_url,generated_by,confidence)
+              VALUES(?,?,?,1,'llm',?,?,?)""",
+              (merchant_id,term,normalized,source_url,model,max(0,min(1,confidence))))
+        seed_search_metadata(db)
+def instagram_shortcode(permalink):
+    match=re.search(r"/(?:p|reel)/([^/?#]+)",permalink or "")
+    return match.group(1) if match else ""
+
+def shared_prefix(left,right):
+    length=0
+    for left_char,right_char in zip(left,right):
+        if left_char!=right_char:break
+        length+=1
+    return left[:length]
+
+def merchant_posts(db,merchant_id):
+    rows=list(db.execute(
+      "SELECT id,image_url,permalink,position FROM merchant_posts "
+      "WHERE merchant_id=? AND image_blob IS NOT NULL ORDER BY position",(merchant_id,)))
+    posts=[];index=0
+    while index<len(rows):
+        first=rows[index];end=index+1
+        if end<len(rows) and first["image_url"]==rows[end]["image_url"]:
+            prefix=shared_prefix(instagram_shortcode(first["permalink"]),instagram_shortcode(rows[end]["permalink"]))
+            if len(prefix)>=3:
+                end+=1
+                while end<len(rows) and instagram_shortcode(rows[end]["permalink"]).startswith(prefix):
+                    end+=1
+        collection=[];seen_images=set()
+        for media in rows[index:end]:
+            if media["image_url"] in seen_images:continue
+            seen_images.add(media["image_url"])
+            collection.append({
+              "media_url":f"/api/media/{media['id']}",
+              "position":len(collection)+1,
+            })
+        shortcode=instagram_shortcode(first["permalink"])
+        posts.append({
+          "key":shortcode or f"{merchant_id}-{first['position']}",
+          "permalink":first["permalink"],
+          "position":len(posts)+1,
+          "media_url":collection[0]["media_url"],
+          "media":collection,
+          "image_count":len(collection),
+        })
+        index=end
+    return posts
 def merchants(category=None, query=""):
     params=[]
     where=[]
     if category:
-        where.append("m.category_code IN (WITH RECURSIVE branch(code) AS (SELECT ? UNION ALL SELECT c.code FROM categories c JOIN branch b ON c.parent_code=b.code) SELECT code FROM branch)")
+        where.append("""EXISTS (SELECT 1 FROM merchant_categories mc WHERE mc.merchant_id=m.id
+          AND mc.category_code IN (WITH RECURSIVE branch(code) AS (SELECT ? UNION ALL
+          SELECT c.code FROM categories c JOIN branch b ON c.parent_code=b.code) SELECT code FROM branch))""")
         params.append(category)
     sql="SELECT m.* FROM merchants m"+(" WHERE "+" AND ".join(where) if where else "")+" ORDER BY m.id DESC"
     with connect() as db:
         category_rows={row["code"]:dict(row) for row in db.execute("SELECT code,parent_code,label_fa,label_en FROM categories")}
+        categories_by_merchant={}
+        for item in db.execute("SELECT merchant_id,category_code FROM merchant_categories"):
+            categories_by_merchant.setdefault(item["merchant_id"],[]).append(item["category_code"])
+        terms_by_merchant={}
+        for item in db.execute("SELECT merchant_id,normalized_term,weight,confidence FROM merchant_search_terms"):
+            terms_by_merchant.setdefault(item["merchant_id"],[]).append((item["normalized_term"],item["weight"]*item["confidence"]))
+        phrase=normalize_search(query)
+        tokens=[token for token in phrase.split() if len(token)>1 and token not in SEARCH_STOPWORDS]
+        expanded={token:1.0 for token in tokens}
+        alias_keys=set(tokens)
+        if phrase:alias_keys.add(phrase)
+        if alias_keys:
+            placeholders=",".join("?" for _ in alias_keys)
+            for item in db.execute(f"SELECT normalized_term,weight FROM search_aliases WHERE normalized_alias IN ({placeholders})",tuple(alias_keys)):
+                expanded[item["normalized_term"]]=max(expanded.get(item["normalized_term"],0),item["weight"])
         result=[]
         for row in db.execute(sql,params):
-            merchant=dict(row)
-            score=0
+            merchant=dict(row);score=0;exact_score=0
             if query:
-                tokens=[token for token in normalize_search(query).split() if len(token)>1 and token not in SEARCH_STOPWORDS]
-                category_labels=[];code=row["category_code"]
-                while code and code in category_rows:
-                    category_labels.extend((category_rows[code]["label_fa"],category_rows[code]["label_en"]));code=category_rows[code]["parent_code"]
+                category_labels=[]
+                for category_code in categories_by_merchant.get(row["id"],[row["category_code"]]):
+                    code=category_code
+                    while code and code in category_rows:
+                        category_labels.extend((category_rows[code]["label_fa"],category_rows[code]["label_en"]));code=category_rows[code]["parent_code"]
                 identity=normalize_search(f'{row["name"]} {row["handle"]} {row["city"]}')
                 description=normalize_search(row["description"])
+                biography=normalize_search(row["biography"])
                 category_text=normalize_search(" ".join(category_labels))
-                phrase=normalize_search(query)
-                score=(12 if phrase and phrase in description else 0)+sum((5 if token in identity else 0)+(3 if token in description else 0)+(2 if token in category_text else 0) for token in tokens)
-                if not tokens or score==0:continue
+                stored_terms=terms_by_merchant.get(row["id"],[])
+                def term_score(term):
+                    metadata=max((weight*5 for stored,weight in stored_terms if term in stored or stored in term),default=0)
+                    return (7 if term in identity else 0)+(5 if term in description else 0)+(4 if term in biography else 0)+(3 if term in category_text else 0)+metadata
+                token_scores=[term_score(token) for token in tokens]
+                exact_score=sum(token_scores)
+                related_score=sum(term_score(term)*weight for term,weight in expanded.items() if term not in tokens)
+                score=exact_score+related_score+(14 if phrase and phrase in identity else 0)+(12 if phrase and phrase in description else 0)+(9 if phrase and phrase in biography else 0)
+                required_matches=max(2,(len(tokens)+1)//2)
+                if not tokens or score==0 or (len(tokens)>1 and sum(value>0 for value in token_scores)<required_matches):continue
+                merchant["match_quality"]="exact" if exact_score else "related"
             merchant.pop("avatar_blob",None);merchant.pop("avatar_mime_type",None);merchant["avatar_url"]=f"/api/avatars/{row['id']}"
-            merchant["posts"]=[{"media_url":f"/api/media/{post['id']}","permalink":post["permalink"],"position":post["position"]} for post in db.execute("SELECT id,permalink,position FROM merchant_posts WHERE merchant_id=? AND image_blob IS NOT NULL ORDER BY position",(row["id"],))]
-            merchant["search_score"]=score
+            merchant["posts"]=merchant_posts(db,row["id"])
+            merchant["search_score"]=round(score,2)
             result.append(merchant)
         return sorted(result,key=lambda merchant:(merchant["search_score"],merchant["id"]),reverse=True)
 
@@ -314,12 +515,16 @@ def merchant_detail(merchant_id):
         if not row:return None
         merchant=dict(row);merchant.pop("avatar_blob",None);merchant.pop("avatar_mime_type",None)
         merchant["avatar_url"]=f"/api/avatars/{merchant_id}"
-        merchant["posts"]=[{"media_url":f"/api/media/{post['id']}","permalink":post["permalink"],"position":post["position"]} for post in db.execute("SELECT id,permalink,position FROM merchant_posts WHERE merchant_id=? AND image_blob IS NOT NULL ORDER BY position",(merchant_id,))]
+        merchant["posts"]=merchant_posts(db,merchant_id)
         category_rows={item["code"]:dict(item) for item in db.execute("SELECT code,parent_code,label_fa FROM categories")}
         breadcrumb=[];code=row["category_code"]
         while code and code in category_rows:
             breadcrumb.insert(0,{"code":code,"label":category_rows[code]["label_fa"]});code=category_rows[code]["parent_code"]
         merchant["category_path"]=breadcrumb
+        merchant["categories"]=[dict(item) for item in db.execute(
+          """SELECT c.code,c.label_fa label,mc.confidence,mc.source,mc.source_url
+            FROM merchant_categories mc JOIN categories c ON c.code=mc.category_code
+            WHERE mc.merchant_id=? ORDER BY mc.confidence DESC,c.level,c.sort_order""",(merchant_id,))]
         return merchant
 
 def import_demo_merchant():
