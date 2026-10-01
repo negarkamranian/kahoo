@@ -15,3 +15,7 @@ to do:
 2. add products to search(we currently support shops only)
 3. change the UI of the main page (finding benchmarks)
 4. fix instagram 
+
+-------------------------------
+محصول‌های وارداتی و کشاورزی و دکترعلفی‌ای توی اینستاد خرید و فروش می‌شه.
+مثلا لباس یا عسل یا 

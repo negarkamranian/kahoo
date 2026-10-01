@@ -1,6 +1,6 @@
 # Kahoo — market benchmarks
 
-Updated: 29 September 2026
+Updated: 1 October 2026
 
 ## Summary
 
@@ -14,7 +14,7 @@ Search quality, current merchant data and a fast Instagram handoff matter more t
 
 | Platform | Evidence | What Kahoo should borrow |
 |---|---|---|
-| Basaliro | Iranian Instagram-shop discovery and trust product with 884 listed shops, public profile/post counts, mobile-verified reviews, owner claims and an automated trust score. A shop can be submitted with only its Instagram handle. [Homepage](https://basaliro.com/) · [Directory](https://basaliro.com/allshops) · [Add shop](https://basaliro.com/addshop) | Treat it as the closest direct competitor. Differentiate through product-level Persian search, current post collections, transparent data freshness and seamless OAuth onboarding—not another opaque trust score. |
+| Basaliro | Iranian Instagram-shop discovery and trust product whose public directory reported 2,719 active shops on 1 October 2026, with public follower/post counts, mobile-verified reviews, owner claims and an automated trust score. A shop can be submitted with only its Instagram handle. [Homepage](https://basaliro.com/) · [Directory](https://basaliro.com/allshops) · [Add shop](https://basaliro.com/addshop) | Treat it as the closest direct competitor. Differentiate through product-level Persian search, current post collections, transparent data freshness and seamless OAuth onboarding—not another opaque trust score. |
 | Etsy | 86.5M active buyers, 5.6M active sellers and $10.5B marketplace GMS in 2025. Its strategy combines search, human sellers and trust. [Annual report](https://investors.etsy.com/sec-filings/all-sec-filings/content/0001370637-26-000019/etsy-20251231.htm) | Strong query matching, visible seller identity and repeat-visit metrics. |
 | Depop | 2025 GMS grew 36.3% to $1.075B; 92% was transacted in-app. 59% of sellers who sold also bought. [Annual report](https://investors.etsy.com/sec-filings/all-sec-filings/content/0001370637-26-000019/etsy-20251231.htm) | Visual merchant profiles and compact social proof without turning the feed into entertainment. |
 | Pinterest | Reported 600M+ monthly users and 80B+ monthly searches in 2026. [Company announcement](https://investor.pinterestinc.com/news-and-events/press-releases/press-releases-details/2026/Pinterest-Announces-1-Billion-Strategic-Investment-from-Elliott-and-2-Billion-of-Near-Term-Share-Repurchases/default.aspx) | Visual similarity and saved collections after Kahoo has enough clean media. |
@@ -26,6 +26,11 @@ Company-reported scale and growth figures are directional; they are not comparab
 ### Basaliro data check
 
 Basaliro renders follower and post counts from its own stored shop record; its public Khanoumi payload contains `followers`, `followersRaw`, `posts`, cached logo/screenshot URLs and a record creation date. It does not expose a following count or a technical ingestion endpoint, and `instagramFetchedAt` is null on that record. Basaliro says the data is collected directly after submitting a handle, but the public evidence cannot establish whether it uses Meta Business Discovery, a third-party provider, browser extraction or an older import. Kahoo should not copy an undocumented collection path: use Meta Business Discovery for known professional accounts, merchant OAuth for owner-authorized refreshes, and field-level source/freshness metadata internally.
+
+Kahoo's reproducible public-directory snapshot is stored in
+`data/merchant_catalog.json`. It uses Basaliro only for shop discovery and
+dated follower/post snapshots. Those records are not treated as Kahoo
+verification, and a newer successful Instagram refresh always wins.
 
 ## Kahoo flows
 

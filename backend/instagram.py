@@ -21,7 +21,7 @@ def business_discovery_profile(handle):
         "followers_count,follows_count,media_count,"
         "media.limit(9){id,caption,media_type,media_product_type,"
         "media_url,thumbnail_url,permalink,timestamp,"
-        "children.limit(10){id,media_type,media_url,thumbnail_url}}}"
+        "children.limit(20){id,media_type,media_url,thumbnail_url}}}"
     )
     query = urlencode(
         {
@@ -63,6 +63,7 @@ def business_discovery_profile(handle):
             }
         )
     return {
+        "name": profile.get("name") or username,
         "avatar_url": profile.get("profile_picture_url"),
         "posts": posts,
         "biography": profile.get("biography") or "",
@@ -71,4 +72,5 @@ def business_discovery_profile(handle):
         "media_count": profile.get("media_count"),
         "instagram_verified": False,
         "source": "meta_business_discovery",
+        "media_grouping_version": 2,
     }

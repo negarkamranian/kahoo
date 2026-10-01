@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "notes": "Small, reviewed Persian commerce relevance set. A query passes when any expected merchant appears in the top five.",
+  "queries": [
+    {"query": "قاب موبایل", "expected_handles": ["@casecenters", "@royal_coverr", "@ghab_center", "@tisacase", "@coverto.ir"]},
+    {"query": "کاور گوشی", "expected_handles": ["@casecenters", "@royal_coverr", "@ghab_center", "@tisacase", "@coverto.ir"]},
+    {"query": "لوازم آرایشی", "expected_handles": ["@khanomi.shop", "@nili.plus", "@nelsa.shop1", "@riiha_ir", "@lafemmegallery_"]},
+    {"query": "عطر و ادکلن", "expected_handles": ["@riiha_ir"]},
+    {"query": "کفش زنانه", "expected_handles": ["@liyohappy", "@aldo.gallery", "@lomana_shoes", "@avishan.shoes.bag"]},
+    {"query": "کتونی", "expected_handles": ["@liyohappy", "@aldo.gallery", "@lomana_shoes", "@avishan.shoes.bag"]},
+    {"query": "لباس زنانه", "expected_handles": ["@nil_shopp_", "@conolabel", "@womshik", "@coral_wear", "@niik_women"]},
+    {"query": "اسباب بازی", "expected_handles": ["@toyzzshop", "@hyper.toy", "@home.bazi"]},
+    {"query": "پت شاپ", "expected_handles": ["@petkharid"]},
+    {"query": "کتاب", "expected_handles": ["@iranketab.ir"]},
+    {"query": "موبایل", "expected_handles": ["@nazari_mobile", "@alodigital", "@digikalacom"]},
+    {"query": "لوازم خانه", "expected_handles": ["@dominokala", "@hihome_opal", "@forough_homegallery", "@homekala_20"]}
+  ]
+}

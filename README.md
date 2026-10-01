@@ -34,20 +34,94 @@ The SQLite file is ignored by both Git and Docker after migration.
 
 ### Instagram synchronization
 
-Set `META_IG_USER_ID` and `META_ACCESS_TOKEN` in `.env` to use Meta Business Discovery. Without them, the prototype public-embed reader remains a best-effort fallback. Then run:
+Set `META_IG_USER_ID` and `META_ACCESS_TOKEN` in `.env` to use Meta Business
+Discovery. Without them, the public-embed reader scrapes the public Instagram
+embed page as a best-effort fallback. Then run:
 
 ```bash
 docker compose run --rm app python3 scripts/sync_instagram_profiles.py
 ```
 
-Business Discovery supports public professional accounts and returns biography, profile picture, follower/following counts, media counts, recent posts and carousel children. Personal, private and age-gated accounts remain unavailable.
-
-### Semantic search
-
-Configure an OpenAI-compatible embedding endpoint that returns 1024-dimensional BGE-M3 vectors, then index changed documents:
+To repair only missing or generated profile pictures without replacing post
+galleries, run:
 
 ```bash
-docker compose run --rm app python3 scripts/reindex_search.py
+docker compose run --rm app python3 scripts/sync_profile_images.py
+```
+
+Pass one or more handles (for example `@rabostore`) to force-refresh specific
+shops even when they already have a cached profile picture.
+
+Business Discovery is the supported source for reading another public
+professional account. It returns biography, profile picture,
+follower/following counts, media counts, recent posts and carousel children.
+It requires `instagram_basic`, `instagram_manage_insights` and
+`pages_read_engagement`. Personal, private and age-gated accounts remain
+unavailable, and Meta may omit downloadable media for licensed-audio videos or
+Reels whose owner disabled downloads.
+
+### Refresh the curated merchant catalog
+
+The reviewed public-directory snapshot in `data/merchant_catalog.json` enriches
+existing shops with sourced follower/post counts and adds new shops without
+marking an external directory listing as Kahoo verification. On every run, the
+import detects catalog shops that still have fewer than three cached post images
+and fills them from their own account. It also repairs missing/generated profile
+pictures. Reapply it safely at any time (the import is idempotent). Rebuild the
+app image first after pulling script changes:
+
+```bash
+docker compose build app
+docker compose run --rm app python3 scripts/seed_merchants.py
+docker compose up -d app
+```
+
+Live Instagram synchronization takes precedence over snapshot metrics on its
+next successful refresh. Every metric stores its source URL and timestamp.
+
+To add one shop directly from its public Instagram identifier, run:
+
+```bash
+docker compose run --rm app python3 scripts/add_merchant.py @shop_username
+```
+
+The identifier may also be a profile URL. The command is idempotent and stores
+the merchant, current profile picture, metrics, recent posts, and carousel
+children. It infers the GPC category from the public profile and captions; for
+an ambiguous account, provide it explicitly, for example
+`--category 66010100`. Optional `--name`, `--description`, and `--city` flags
+can override the public defaults.
+
+To replace any earlier generated gallery entries, collect the shops' own posts,
+and cache the returned media in PostgreSQL:
+
+```bash
+docker compose run --rm app python3 scripts/backfill_gallery_images.py
+```
+
+The command tries Meta Business Discovery first when credentials are configured,
+otherwise it reads each public Instagram embed. It stores only successfully
+downloaded shop media in `merchant_posts.image_blob`; it does not create gallery
+placeholders. The JSON report lists failures and image counts per handle.
+
+### Search quality
+
+Search includes Persian normalization, commerce synonyms, typo-tolerant prefix
+and trigram retrieval, field-aware ranking, optional vector retrieval with RRF,
+quality-aware browsing, autocomplete, match explanations, and empty-result
+recovery. Research notes and design details are in `docs/search-quality.md`.
+
+Run the reviewed Persian-commerce relevance benchmark with:
+
+```bash
+docker compose run --rm app python3 scripts/evaluate_search.py
+```
+
+Configure an OpenAI-compatible embedding endpoint that returns 1024-dimensional
+BGE-M3 vectors, then index changed documents:
+
+```bash
+docker compose run --rm app python3 scripts/reindex_search.py --batch-size 500
 ```
 
 If no embedding endpoint is configured, Persian-normalized lexical, alias and category search continues to work.
@@ -63,6 +137,7 @@ backend/
 db/migrations/          Versioned PostgreSQL schema
 data/
   categories.sql         Reproducible GS1 category seed
+  merchant_catalog.json Versioned merchant enrichment snapshot
 docs/
   product-research.md
   market-benchmarks.md
@@ -94,6 +169,7 @@ server.py                 Development entrypoint
 
 ```text
 GET  /api/categories
+GET  /api/search/suggestions?q={query}
 GET  /api/merchants?category={gpc_code}&q={query}
 GET  /api/merchants/{id}
 GET  /api/media/{id}

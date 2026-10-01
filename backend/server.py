@@ -4,6 +4,7 @@ import mimetypes
 import re
 import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from html import escape
@@ -12,13 +13,25 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, urlparse
 
+from backend.catalog import load_merchant_catalog
 from backend.database import connect, run_category_seed, run_migrations
 from backend.instagram import business_discovery_enabled, business_discovery_profile
-from backend.search import lexical_merchant_scores, semantic_merchant_scores, sync_search_documents
+from backend.search import (
+    lexical_merchant_scores,
+    diversify_results,
+    merchant_quality_score,
+    normalize_search,
+    query_tokens,
+    reciprocal_rank_fusion,
+    semantic_merchant_scores,
+    sync_search_documents,
+    term_match_strength,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PUBLIC_ROOT = PROJECT_ROOT / "public"
 DATA_ROOT = PROJECT_ROOT / "data"
+INSTAGRAM_MEDIA_SYNC_VERSION = 2
 
 MERCHANTS = [
     ("ig_nila","شیرینی بی‌بی","@bibi_confectionery","کیک تولد، شیرینی تر و خشک، شکلاتی، دسر و سفارش شیرینی","50182000","تهران","ب","#f2e2be","اطلاعات نمونه",1,"https://gzlocation.com/the-best-sweet-shop-in-tehran/",["photo-1578985545062-69928b1d9587","photo-1558961363-fa8fdf82db35","photo-1559620192-032c4bc4674e"]),
@@ -87,6 +100,19 @@ MERCHANT_CATEGORY_SEED={
   "@homekala_20":("75030100",),
 }
 
+CATALOG_SNAPSHOT_AT, CATALOG_MERCHANTS = load_merchant_catalog(
+    DATA_ROOT / "merchant_catalog.json"
+)
+for catalog_merchant in CATALOG_MERCHANTS:
+    extra_categories = catalog_merchant.get("category_codes", ())
+    if extra_categories:
+        existing_categories = MERCHANT_CATEGORY_SEED.get(
+            catalog_merchant["handle"], ()
+        )
+        MERCHANT_CATEGORY_SEED[catalog_merchant["handle"]] = tuple(
+            dict.fromkeys((*existing_categories, *extra_categories))
+        )
+
 # Public Instagram biography snapshots. The source URL for every value is kept
 # alongside it so a product description is never presented as an Instagram bio.
 PROFILE_BIO_SNAPSHOTS = {
@@ -104,14 +130,6 @@ PROFILE_BIO_SNAPSHOTS = {
     ),
 }
 
-def fallback_image(label, color="#e8eee4"):
-    safe_label = escape(label)
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
-<rect width="640" height="480" fill="{color}"/><path d="M0 355L195 210l90 70 92-105 263 180v125H0z" fill="#fff" opacity=".55"/>
-<circle cx="505" cy="105" r="48" fill="#fff" opacity=".65"/><text x="320" y="430" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#435044">{safe_label}</text>
-</svg>'''
-    return svg.encode("utf-8"), "image/svg+xml"
-
 def fallback_avatar(initial, color):
     safe_initial = escape(initial)
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
@@ -121,18 +139,86 @@ def fallback_avatar(initial, color):
 </svg>'''
     return svg.encode("utf-8"), "image/svg+xml"
 
+def detected_image_mime(data):
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
 def download_image(url):
     request = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; KahooPrototype/1.0)"})
     with urlopen(request, timeout=20) as response:
         mime = response.headers.get_content_type()
-        data = response.read(3_000_001)
-        if not mime.startswith("image/") or not data or len(data) > 3_000_000:
+        data = response.read(8_000_001)
+        mime = mime if mime.startswith("image/") else detected_image_mime(data)
+        if not mime or not data or len(data) > 8_000_000:
             raise ValueError("invalid image response")
         return data, mime
 
-def fetch_image(url, label):
-    try:return download_image(url)
-    except Exception:return fallback_image(label)
+def extract_embed_posts(payload):
+    """Read top-level posts and carousel children from Instagram's ServerJS data."""
+    graphql_media=[]
+
+    def walk(value):
+        nonlocal graphql_media
+        if graphql_media:return
+        if isinstance(value,dict):
+            media=value.get("graphql_media")
+            if isinstance(media,list):
+                graphql_media=media;return
+            for child in value.values():walk(child)
+        elif isinstance(value,list):
+            for child in value:walk(child)
+        elif isinstance(value,str) and "graphql_media" in value:
+            try:walk(json.loads(value))
+            except (json.JSONDecodeError,TypeError):pass
+
+    decoder=json.JSONDecoder()
+    for script in re.findall(r"<script[^>]*>(.*?)</script>",payload,re.DOTALL):
+        if "graphql_media" not in script:continue
+        for match in re.finditer(r"\b\w+\.handle\(",script):
+            try:server_data,_=decoder.raw_decode(script[match.end():])
+            except json.JSONDecodeError:continue
+            walk(server_data)
+            if graphql_media:break
+        if graphql_media:break
+
+    posts=[]
+    for wrapper in graphql_media[:9]:
+        media=wrapper.get("shortcode_media") or wrapper
+        shortcode=media.get("shortcode")
+        if not shortcode:continue
+        child_edges=media.get("edge_sidecar_to_children",{}).get("edges") or []
+        children=[edge.get("node",{}) for edge in child_edges] or [media]
+        images=[]
+        for media_position,child in enumerate(children,1):
+            image_url=child.get("display_url") or child.get("thumbnail_src")
+            if not image_url:continue
+            images.append({
+                "instagram_media_id":child.get("id"),
+                "image_url":image_url,
+                "media_position":media_position,
+            })
+        if not images:continue
+        caption_edges=media.get("edge_media_to_caption",{}).get("edges") or []
+        caption=(caption_edges[0].get("node",{}).get("text","") if caption_edges else "")
+        published_at=media.get("taken_at_timestamp")
+        if published_at:
+            published_at=datetime.fromtimestamp(published_at).astimezone().isoformat()
+        posts.append({
+            "instagram_media_id":media.get("id"),
+            "collection_key":media.get("id") or shortcode,
+            "caption":caption,
+            "permalink":f"https://www.instagram.com/p/{shortcode}/",
+            "published_at":published_at,
+            "media":images,
+        })
+    return posts
 
 def public_embed_profile(handle):
     username=handle.lstrip("@").lower()
@@ -154,17 +240,21 @@ def public_embed_profile(handle):
         match=re.search(r'\\"'+re.escape(key)+r'\\":\{\\"count\\":(\d+)',payload)
         return int(match.group(1)) if match else None
     verified_match=re.search(r'\\"is_verified\\":(true|false)',payload)
-    posts=[];seen=set()
-    pattern=re.compile(r'\\"shortcode\\":\\"(.*?)\\".*?\\"display_url\\":\\"(.*?)\\"',re.DOTALL)
-    for shortcode_value,image_value in pattern.findall(payload):
-        shortcode=decode_value(shortcode_value);post_image=decode_value(image_value)
-        if shortcode in seen:continue
-        seen.add(shortcode);posts.append({"image_url":post_image,"permalink":f"https://www.instagram.com/p/{shortcode}/"})
-        if len(posts)==9:break
-    return {"avatar_url":image_url,"posts":posts,"biography":value("biography"),
+    posts=extract_embed_posts(payload)
+    media_grouping_version=INSTAGRAM_MEDIA_SYNC_VERSION if posts else 1
+    if not posts:
+        seen=set()
+        pattern=re.compile(r'\\"shortcode\\":\\"(.*?)\\".*?\\"display_url\\":\\"(.*?)\\"',re.DOTALL)
+        for shortcode_value,image_value in pattern.findall(payload):
+            shortcode=decode_value(shortcode_value);post_image=decode_value(image_value)
+            if shortcode in seen:continue
+            seen.add(shortcode);posts.append({"image_url":post_image,"permalink":f"https://www.instagram.com/p/{shortcode}/"})
+            if len(posts)==9:break
+    return {"name":value("full_name") or username,"avatar_url":image_url,"posts":posts,"biography":value("biography"),
       "followers_count":count("edge_followed_by"),"following_count":count("edge_follow"),
       "media_count":count("edge_owner_to_timeline_media"),
-      "instagram_verified":verified_match and verified_match.group(1)=="true"}
+      "instagram_verified":verified_match and verified_match.group(1)=="true",
+      "media_grouping_version":media_grouping_version}
 
 def instagram_profile(handle):
     if business_discovery_enabled():
@@ -174,34 +264,162 @@ def instagram_profile(handle):
     return profile
 
 def cache_post_image(db, post_id, image_url, label):
-    image_blob, mime_type = fetch_image(image_url, label)
-    db.execute("UPDATE merchant_posts SET image_blob=?, mime_type=? WHERE id=?", (image_blob, mime_type, post_id))
+    try:
+        image_blob, mime_type = download_image(image_url)
+    except Exception:
+        return False
+    db.execute(
+        """UPDATE merchant_posts SET image_blob=?,mime_type=?,
+          image_source=COALESCE(image_source,'curated_seed'),
+          image_source_url=COALESCE(image_source_url,permalink),
+          image_cached_at=CURRENT_TIMESTAMP WHERE id=?""",
+        (image_blob, mime_type, post_id),
+    )
+    return True
 
 def cache_merchant_avatar(db, merchant_id, initial, color, image_url=None, source_url=None):
-    try:
-        avatar_blob,mime_type=download_image(image_url) if image_url else fallback_avatar(initial,color)
-    except Exception:
+    if image_url:
+        try:avatar_blob,mime_type=download_image(image_url)
+        except Exception:return False
+    else:
         avatar_blob,mime_type=fallback_avatar(initial,color);source_url=None
-    db.execute("UPDATE merchants SET avatar_blob=?,avatar_mime_type=?,avatar_source_url=? WHERE id=?",(avatar_blob,mime_type,source_url,merchant_id))
+    db.execute("""UPDATE merchants SET avatar_blob=?,avatar_mime_type=?,
+      avatar_source_url=?,avatar_updated_at=CURRENT_TIMESTAMP WHERE id=?""",
+      (avatar_blob,mime_type,source_url,merchant_id))
+    return mime_type
+
+def ensure_gallery_images(db):
+    """Cache actual remote post images; never fabricate gallery entries."""
+    uncached = list(db.execute(
+        """SELECT p.id,p.image_url,m.name
+           FROM merchant_posts p JOIN merchants m ON m.id=p.merchant_id
+           WHERE p.image_blob IS NULL OR p.mime_type IS NULL"""
+    ))
+    cached = sum(
+        cache_post_image(db, post["id"], post["image_url"], post["name"])
+        for post in uncached
+    )
+    return {
+        "attempted_images": len(uncached),
+        "cached_images": cached,
+        "failed_images": len(uncached) - cached,
+    }
+
+def seed_public_catalog(db):
+    """Upsert the reviewed public-directory snapshot without claiming verification."""
+    created = 0
+    created_handles = []
+    enriched = 0
+    for item in CATALOG_MERCHANTS:
+        handle = item["handle"]
+        description_source = item.get("description_source", "curated_public_directory")
+        metrics_source = item.get("metrics_source", "basaliro_public_directory")
+        existing = db.execute(
+            "SELECT id,avatar_blob FROM merchants WHERE handle=?", (handle,)
+        ).fetchone()
+        if existing:
+            merchant_id = existing["id"]
+            enriched += 1
+            if item.get("is_new"):
+                db.execute(
+                    """UPDATE merchants SET name=?,
+                      description=CASE WHEN description_source='llm' THEN description ELSE ? END,
+                      description_source=CASE WHEN description_source='llm' THEN description_source ELSE ? END,
+                      description_source_url=CASE WHEN description_source='llm' THEN description_source_url ELSE ? END,
+                      category_code=?,city=?,source_url=?,updated_label='داده عمومی'
+                      WHERE id=?""",
+                    (
+                        item["name"], item["description"], description_source,
+                        item["source_url"],
+                        item["category_code"], item["city"], item["source_url"],
+                        merchant_id,
+                    ),
+                )
+        else:
+            username = handle[1:]
+            name = item["name"]
+            source_url = item["source_url"]
+            cursor = db.execute(
+                """INSERT INTO merchants(
+                  instagram_id,name,handle,description,description_source,
+                  description_source_url,description_updated_at,source_url,
+                  category_code,city,avatar_initial,avatar_color,instagram_url,
+                  updated_label,verified,followers_count,media_count,
+                  metrics_source,metrics_source_url,metrics_updated_at)
+                  VALUES(?,?,?,?,?,?,?,?, ?,?,?,?,?,'داده عمومی',0,?,?,
+                    ?,?,?) RETURNING id""",
+                (
+                    f"catalog_{username}", name, handle, item["description"],
+                    description_source, source_url, CATALOG_SNAPSHOT_AT, source_url,
+                    item["category_code"], item["city"], name[0], "#e3e7e1",
+                    f"https://www.instagram.com/{username}/",
+                    item.get("followers_count"), item.get("media_count"),
+                    metrics_source, item.get("metrics_source_url"), CATALOG_SNAPSHOT_AT,
+                ),
+            )
+            merchant_id = cursor.fetchone()["id"]
+            created += 1
+            created_handles.append(handle)
+            cache_merchant_avatar(db, merchant_id, name[0], "#e3e7e1")
+
+        if item.get("metrics_source_url"):
+            db.execute(
+                """UPDATE merchants SET
+                  followers_count=COALESCE(?,followers_count),
+                  media_count=COALESCE(?,media_count),
+                  metrics_source=?,
+                  metrics_source_url=?,metrics_updated_at=?
+                  WHERE id=? AND (metrics_updated_at IS NULL OR metrics_updated_at<=?)""",
+                (
+                    item.get("followers_count"), item.get("media_count"), metrics_source,
+                    item["metrics_source_url"], CATALOG_SNAPSHOT_AT, merchant_id,
+                    CATALOG_SNAPSHOT_AT,
+                ),
+            )
+    return {
+        "created": created,
+        "created_handles": created_handles,
+        "enriched": enriched,
+    }
 
 def replace_profile_posts(db,merchant_id,label,profile):
-    downloaded=[]
-    flat_position=0
+    candidates=[]
+    source=profile.get("source","instagram_public_embed")
     for post_position,post in enumerate(profile.get("posts",[])[:9],1):
         media_items=post.get("media") or [{"image_url":post.get("image_url"),"media_position":1}]
         collection_key=post.get("collection_key") or post.get("instagram_media_id") or instagram_shortcode(post.get("permalink")) or f"{merchant_id}-{post_position}"
         for media in media_items:
             image_url=media.get("image_url")
             if not image_url:continue
-            image_blob,mime_type=download_image(image_url)
-            flat_position+=1
-            downloaded.append((post.get("instagram_media_id"),post.get("caption",''),image_url,image_blob,mime_type,post.get("permalink"),flat_position,collection_key,media.get("media_position",1),post.get("published_at")))
-    if not downloaded:return False
+            candidates.append({
+                "instagram_media_id":media.get("instagram_media_id") or post.get("instagram_media_id"),
+                "caption":post.get("caption",''),
+                "image_url":image_url,
+                "permalink":post.get("permalink"),
+                "collection_key":collection_key,
+                "media_position":media.get("media_position",1),
+                "published_at":post.get("published_at"),
+            })
+
+    def fetch(candidate):
+        try:
+            image_blob,mime_type=download_image(candidate["image_url"])
+            return candidate,image_blob,mime_type
+        except Exception:
+            return None
+
+    workers=min(6,len(candidates)) or 1
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        downloaded=[item for item in executor.map(fetch,candidates) if item]
+    if not downloaded:return 0
     db.execute("DELETE FROM merchant_posts WHERE merchant_id=?",(merchant_id,))
-    for row in downloaded:
-        db.execute("""INSERT INTO merchant_posts(merchant_id,instagram_media_id,caption,image_url,image_blob,mime_type,permalink,position,collection_key,media_position,published_at)
-          VALUES(?,?,?,?,?,?,?,?,?,?,?)""",(merchant_id,*row))
-    return True
+    for flat_position,(post,image_blob,mime_type) in enumerate(downloaded,1):
+        row=(post["instagram_media_id"],post["caption"],post["image_url"],image_blob,
+          mime_type,post["permalink"],flat_position,post["collection_key"],
+          post["media_position"],post["published_at"],source,post["permalink"])
+        db.execute("""INSERT INTO merchant_posts(merchant_id,instagram_media_id,caption,image_url,image_blob,mime_type,permalink,position,collection_key,media_position,published_at,image_source,image_source_url,image_cached_at)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)""",(merchant_id,*row))
+    return len(downloaded)
 
 def migrate_database(db):
     return None
@@ -228,16 +446,20 @@ def initialize_database():
             if biography_snapshot:
                 db.execute("""UPDATE merchants SET biography=?,biography_source=?,biography_updated_at=datetime('now')
                   WHERE id=? AND biography_source IS NULL""",(biography_snapshot[0],biography_snapshot[1],merchant_id))
-            avatar=db.execute("SELECT avatar_blob,avatar_source_url FROM merchants WHERE id=?",(merchant_id,)).fetchone()
+            avatar=db.execute("SELECT avatar_blob,avatar_mime_type,avatar_source_url FROM merchants WHERE id=?",(merchant_id,)).fetchone()
             post_state=db.execute("SELECT COUNT(*) count,COUNT(*) FILTER (WHERE POSITION('cdninstagram.com' IN image_url)>0) instagram_count FROM merchant_posts WHERE merchant_id=?",(merchant_id,)).fetchone()
-            needs_avatar=not avatar["avatar_blob"] or avatar["avatar_source_url"]!=url
+            needs_avatar=not avatar["avatar_blob"] or avatar["avatar_mime_type"]=="image/svg+xml" or not avatar["avatar_source_url"]
             needs_posts=post_state["count"]<6 or (post_state["instagram_count"] or 0)<post_state["count"]
             profile=None
             if os.environ.get("KAHOO_SYNC_ON_START","0").lower() in {"1","true","yes"} and (needs_avatar or needs_posts):
                 try:profile=instagram_profile(handle)
                 except Exception:profile=None
-            if needs_avatar:
-                cache_merchant_avatar(db,merchant_id,initial,color,profile["avatar_url"] if profile else None,url if profile else None)
+            if profile and profile.get("avatar_url"):
+                avatar_saved=cache_merchant_avatar(db,merchant_id,initial,color,profile["avatar_url"],profile["avatar_url"])
+                if not avatar_saved and not avatar["avatar_blob"]:
+                    cache_merchant_avatar(db,merchant_id,initial,color)
+            elif not avatar["avatar_blob"]:
+                cache_merchant_avatar(db,merchant_id,initial,color)
             if needs_posts and profile and len(profile["posts"])>=4:
                 try:replace_profile_posts(db,merchant_id,name,profile)
                 except Exception:pass
@@ -245,38 +467,101 @@ def initialize_database():
                 for position,photo in enumerate(posts,1):
                     image_url=f"https://images.unsplash.com/{photo}?auto=format&fit=crop&w=500&q=80"
                     db.execute("INSERT INTO merchant_posts(merchant_id,image_url,permalink,position) VALUES(?,?,?,?)",(merchant_id,image_url,url,position))
+        seed_public_catalog(db)
+        ensure_gallery_images(db)
         seed_search_metadata(db)
         sync_search_documents(db)
-        uncached=list(db.execute("SELECT p.id,p.image_url,m.name FROM merchant_posts p JOIN merchants m ON m.id=p.merchant_id WHERE p.image_blob IS NULL OR p.mime_type IS NULL"))
-        for post in uncached:
-            cache_post_image(db,post["id"],post["image_url"],post["name"])
 
-def refresh_instagram_profiles(handles=None):
+def refresh_instagram_profiles(handles=None,on_result=None,on_start=None):
     requested={handle if handle.startswith("@") else f"@{handle}" for handle in (handles or [])}
     results=[]
     with connect() as db:
         rows=list(db.execute("SELECT id,handle,name,avatar_initial,avatar_color FROM merchants ORDER BY id"))
-        for merchant in rows:
-            if requested and merchant["handle"] not in requested:continue
-            try:
-                profile=instagram_profile(merchant["handle"])
+    for merchant in rows:
+        if requested and merchant["handle"] not in requested:continue
+        if on_start:on_start(merchant["handle"])
+        try:
+            profile=instagram_profile(merchant["handle"])
+            with connect() as db:
                 biography=(profile.get("biography") or "").strip()
                 source=profile.get("source","instagram_public_embed")
                 db.execute("""UPDATE merchants SET biography=?,biography_source=?,
                   biography_updated_at=datetime('now'),followers_count=COALESCE(?,followers_count),
                   following_count=COALESCE(?,following_count),media_count=COALESCE(?,media_count),
-                  metrics_source=?,metrics_updated_at=datetime('now') WHERE id=?""",
-                  (biography,source,profile.get("followers_count"),profile.get("following_count"),profile.get("media_count"),source,merchant["id"]))
+                  metrics_source=?,metrics_source_url=?,metrics_updated_at=datetime('now') WHERE id=?""",
+                  (biography,source,profile.get("followers_count"),profile.get("following_count"),profile.get("media_count"),source,
+                   f"https://www.instagram.com/{merchant['handle'][1:]}/",merchant["id"]))
+                avatar_saved=False
                 if profile.get("avatar_url"):
-                    cache_merchant_avatar(db,merchant["id"],merchant["avatar_initial"],merchant["avatar_color"],profile["avatar_url"],source)
-                if profile.get("posts"):
-                    replace_profile_posts(db,merchant["id"],merchant["name"],profile)
-                results.append({"handle":merchant["handle"],"updated":True,"has_biography":bool(biography)})
-            except Exception as error:
-                results.append({"handle":merchant["handle"],"updated":False,"error":str(error)})
+                    avatar_saved=bool(cache_merchant_avatar(db,merchant["id"],merchant["avatar_initial"],merchant["avatar_color"],profile["avatar_url"],profile["avatar_url"]))
+                posts_saved=replace_profile_posts(db,merchant["id"],merchant["name"],profile) if profile.get("posts") else 0
+                if posts_saved:
+                    db.execute("""UPDATE merchants SET
+                      instagram_media_sync_version=GREATEST(instagram_media_sync_version,?),
+                      instagram_media_synced_at=CURRENT_TIMESTAMP WHERE id=?""",
+                      (profile.get("media_grouping_version",1),merchant["id"]))
+            result={"handle":merchant["handle"],"updated":True,"source":source,
+              "posts_found":len(profile.get("posts",[])),"images_saved":posts_saved,
+              "avatar_saved":avatar_saved,"has_biography":bool(biography)}
+        except Exception as error:
+            result={"handle":merchant["handle"],"updated":False,"error":str(error)}
+        results.append(result)
+        if on_result:on_result(result)
+    with connect() as db:
         seed_search_metadata(db)
         sync_search_documents(db)
     return results
+
+def refresh_instagram_avatars(handles=None,on_result=None):
+    """Replace missing/generated avatars with the shops' current profile images."""
+    requested={handle if handle.startswith("@") else f"@{handle}" for handle in (handles or [])}
+    results=[]
+    with connect() as db:
+        rows=list(db.execute("""SELECT id,handle,avatar_initial,avatar_color,
+          avatar_blob,avatar_mime_type,avatar_source_url FROM merchants ORDER BY id"""))
+    for merchant in rows:
+        if requested and merchant["handle"] not in requested:continue
+        has_remote_avatar=(
+            bool(merchant["avatar_blob"])
+            and merchant["avatar_mime_type"]!="image/svg+xml"
+            and (merchant["avatar_source_url"] or "").startswith("http")
+        )
+        if not requested and has_remote_avatar:continue
+        try:
+            profile=instagram_profile(merchant["handle"])
+            avatar_url=profile.get("avatar_url")
+            if not avatar_url:raise ValueError("Instagram returned no profile picture")
+            with connect() as db:
+                avatar_saved=cache_merchant_avatar(
+                    db,merchant["id"],merchant["avatar_initial"],
+                    merchant["avatar_color"],avatar_url,avatar_url,
+                )
+            if not avatar_saved:
+                raise ValueError("Profile picture download failed")
+            result={"handle":merchant["handle"],"updated":True,
+              "mime_type":avatar_saved}
+        except Exception as error:
+            result={"handle":merchant["handle"],"updated":False,"error":str(error)}
+        results.append(result)
+        if on_result:on_result(result)
+    return results
+
+def catalog_profiles_missing_posts(minimum_images=3):
+    """Return catalog shops whose database gallery is still incomplete."""
+    catalog_handles={
+        item["handle"] for item in CATALOG_MERCHANTS if item.get("is_new")
+    }
+    with connect() as db:
+        rows=db.execute("""SELECT m.handle,m.instagram_media_sync_version,
+          COUNT(p.id) FILTER (WHERE p.image_blob IS NOT NULL) cached_images
+          FROM merchants m LEFT JOIN merchant_posts p ON p.merchant_id=m.id
+          GROUP BY m.id,m.handle,m.instagram_media_sync_version ORDER BY m.id""")
+        return [
+            row["handle"] for row in rows
+            if row["handle"] in catalog_handles
+            and ((row["cached_images"] or 0)<minimum_images
+              or row["instagram_media_sync_version"]<INSTAGRAM_MEDIA_SYNC_VERSION)
+        ]
 
 def category_tree():
     with connect() as db:
@@ -301,13 +586,6 @@ def category_tree():
             (nodes[row["parent_code"]]["children"] if row["parent_code"] else roots).append(node)
         return roots
 
-PERSIAN_TRANSLATION=str.maketrans({"ي":"ی","ى":"ی","ك":"ک","ة":"ه","ۀ":"ه","ؤ":"و","إ":"ا","أ":"ا"})
-SEARCH_STOPWORDS={"از","به","با","در","برای","و","یا","یک","های","این","آن"}
-
-def normalize_search(value):
-    value=(value or "").lower().translate(PERSIAN_TRANSLATION).replace("\u200c"," ")
-    return " ".join(re.sub(r"[^\w@.]+"," ",value).split())
-
 SEARCH_ALIAS_SEED=(
   ("شلوار","لباس",0.55,"curated_taxonomy"),
   ("شلوار","پوشاک",0.55,"curated_taxonomy"),
@@ -317,10 +595,27 @@ SEARCH_ALIAS_SEED=(
   ("شلوارک","شلوار",0.85,"curated_taxonomy"),
   ("تی شرت","تیشرت",0.95,"curated_taxonomy"),
   ("تیشرت","لباس",0.6,"curated_taxonomy"),
+  ("گوشی","موبایل",0.95,"curated_taxonomy"),
+  ("تلفن همراه","موبایل",0.95,"curated_taxonomy"),
+  ("اسمارت فون","موبایل",0.85,"curated_taxonomy"),
+  ("کاور","قاب",0.95,"curated_taxonomy"),
+  ("کیس","قاب",0.9,"curated_taxonomy"),
+  ("قاب","لوازم جانبی موبایل",0.8,"curated_taxonomy"),
+  ("میکاپ","آرایشی",0.95,"curated_taxonomy"),
+  ("لوازم آرایش","آرایشی",0.95,"curated_taxonomy"),
+  ("اسکین کر","مراقبت پوست",0.9,"curated_taxonomy"),
+  ("ادکلن","عطر",0.95,"curated_taxonomy"),
+  ("کتونی","کفش",0.95,"curated_taxonomy"),
+  ("اسنیکر","کفش",0.85,"curated_taxonomy"),
+  ("نوشت افزار","لوازم تحریر",0.95,"curated_taxonomy"),
+  ("استیشنری","لوازم تحریر",0.85,"curated_taxonomy"),
+  ("پت شاپ","حیوانات خانگی",0.95,"curated_taxonomy"),
+  ("عروسک","اسباب بازی",0.85,"curated_taxonomy"),
+  ("هوم دکور","دکوراسیون",0.85,"curated_taxonomy"),
 )
 
 def searchable_tokens(text):
-    return {token for token in normalize_search(text).split() if len(token)>1 and token not in SEARCH_STOPWORDS}
+    return set(query_tokens(text))
 
 def seed_search_metadata(db):
     for alias,term,weight,source in SEARCH_ALIAS_SEED:
@@ -401,6 +696,15 @@ def merchant_posts(db,merchant_id):
         posts.append({"key":collection_key or shortcode or f"{merchant_id}-{first['position']}","permalink":first["permalink"],"position":len(posts)+1,"media_url":collection[0]["media_url"],"media":collection,"image_count":len(collection)})
         index=end
     return posts
+
+def merchant_avatar_url(merchant):
+    updated_at=merchant.get("avatar_updated_at")
+    if isinstance(updated_at,datetime):
+        version=str(int(updated_at.timestamp()*1_000_000))
+    else:
+        version=re.sub(r"[^0-9]","",str(updated_at or "0")) or "0"
+    return f"/api/avatars/{merchant['id']}?v={version}"
+
 def merchants(category=None, query=""):
     params=[]
     where=[]
@@ -418,8 +722,8 @@ def merchants(category=None, query=""):
         terms_by_merchant={}
         for item in db.execute("SELECT merchant_id,normalized_term,weight,confidence FROM merchant_search_terms"):
             terms_by_merchant.setdefault(item["merchant_id"],[]).append((item["normalized_term"],item["weight"]*item["confidence"]))
-        phrase=normalize_search(query)
-        tokens=[token for token in phrase.split() if len(token)>1 and token not in SEARCH_STOPWORDS]
+        phrase=normalize_search(query)[:120]
+        tokens=query_tokens(phrase)
         expanded={token:1.0 for token in tokens}
         alias_keys=set(tokens)
         if phrase:alias_keys.add(phrase)
@@ -430,9 +734,16 @@ def merchants(category=None, query=""):
         lexical_document_scores=lexical_merchant_scores(db,phrase) if phrase else {}
         try:semantic_scores=semantic_merchant_scores(db,phrase) if phrase else {}
         except Exception:semantic_scores={}
+        fused_scores=reciprocal_rank_fusion(lexical_document_scores,semantic_scores)
+        click_counts={row["merchant_id"]:row["clicks"] for row in db.execute(
+          """SELECT merchant_id,COUNT(*) clicks FROM analytics_events
+             WHERE event_type='merchant_click' AND merchant_id IS NOT NULL
+               AND created_at>=CURRENT_TIMESTAMP-INTERVAL '30 days'
+             GROUP BY merchant_id""")}
         result=[]
         for row in db.execute(sql,params):
-            merchant=dict(row);score=0;exact_score=0
+            merchant=dict(row);score=0;exact_score=0;match_fields=set();fuzzy_match=False
+            quality_score=merchant_quality_score(merchant,click_counts.get(row["id"],0))
             if query:
                 category_labels=[]
                 for category_code in categories_by_merchant.get(row["id"],[row["category_code"]]):
@@ -444,31 +755,98 @@ def merchants(category=None, query=""):
                 biography=normalize_search(row["biography"])
                 category_text=normalize_search(" ".join(category_labels))
                 stored_terms=terms_by_merchant.get(row["id"],[])
-                def term_score(term):
-                    metadata=max((weight*5 for stored,weight in stored_terms if term in stored or stored in term),default=0)
-                    return (7 if term in identity else 0)+(5 if term in description else 0)+(4 if term in biography else 0)+(3 if term in category_text else 0)+metadata
-                token_scores=[term_score(token) for token in tokens]
+                def term_score(term,record_fields=False):
+                    nonlocal fuzzy_match
+                    strengths={
+                      "name":term_match_strength(term,identity),
+                      "description":term_match_strength(term,description),
+                      "biography":term_match_strength(term,biography),
+                      "category":term_match_strength(term,category_text),
+                    }
+                    metadata=max((weight*term_match_strength(term,stored) for stored,weight in stored_terms),default=0)
+                    if record_fields:
+                        match_fields.update(field for field,strength in strengths.items() if strength>=0.7)
+                        if metadata>=0.7:match_fields.add("metadata")
+                        fuzzy_match=fuzzy_match or any(0<strength<0.7 for strength in strengths.values())
+                    return (12*strengths["name"]+7*strengths["description"]
+                      +5*strengths["biography"]+8*strengths["category"]+6*metadata)
+                token_scores=[term_score(token,True) for token in tokens]
                 exact_score=sum(token_scores)
                 related_score=sum(term_score(term)*weight for term,weight in expanded.items() if term not in tokens)
                 semantic_score=semantic_scores.get(row["id"],0)
                 document_score=lexical_document_scores.get(row["id"],0)
-                score=exact_score+related_score+(14 if phrase and phrase in identity else 0)+(12 if phrase and phrase in description else 0)+(9 if phrase and phrase in biography else 0)+(semantic_score*12)+(document_score*10)
+                phrase_bonus=(18*term_match_strength(phrase,identity)
+                  +12*term_match_strength(phrase,description)
+                  +9*term_match_strength(phrase,biography)
+                  +12*term_match_strength(phrase,category_text))
+                score=(exact_score+related_score+phrase_bonus
+                  +fused_scores.get(row["id"],0)*300+quality_score*.25)
                 required_matches=max(2,(len(tokens)+1)//2)
                 weak_lexical=len(tokens)>1 and sum(value>0 for value in token_scores)<required_matches
-                if not tokens or score==0 or (weak_lexical and semantic_score<0.55 and document_score<0.2):continue
-                merchant["match_quality"]="exact" if exact_score else ("semantic" if semantic_score>=0.55 else ("document" if document_score>=0.2 else "related"))
-            merchant.pop("avatar_blob",None);merchant.pop("avatar_mime_type",None);merchant["avatar_url"]=f"/api/avatars/{row['id']}"
+                no_strong_signal=(exact_score+related_score+phrase_bonus==0
+                  and semantic_score<0.55 and document_score<0.25)
+                if not tokens or score==0 or no_strong_signal or (weak_lexical and semantic_score<0.55 and document_score<0.25):continue
+                if "name" in match_fields:reason="نام فروشگاه"
+                elif "category" in match_fields:reason="دسته‌بندی مرتبط"
+                elif "description" in match_fields or "metadata" in match_fields:reason="محصولات مرتبط"
+                elif "biography" in match_fields:reason="بیوی فروشگاه"
+                elif semantic_score>=0.55:reason="نتیجه معنایی نزدیک"
+                else:reason="عبارت مشابه"
+                merchant["match_reason"]=reason
+                merchant["match_quality"]=("near" if fuzzy_match and not match_fields else
+                  "semantic" if not match_fields and semantic_score>=0.55 else
+                  "related" if related_score and not exact_score else "exact")
+            else:
+                score=quality_score
+            merchant.pop("avatar_blob",None);merchant.pop("avatar_mime_type",None);merchant["avatar_url"]=merchant_avatar_url(merchant)
             merchant["posts"]=merchant_posts(db,row["id"])
             merchant["search_score"]=round(score,2)
             result.append(merchant)
-        return sorted(result,key=lambda merchant:(merchant["search_score"],merchant["id"]),reverse=True)
+        ranked=sorted(result,key=lambda merchant:(merchant["search_score"],merchant["id"]),reverse=True)
+        return diversify_results(ranked) if not query and not category else ranked
+
+def search_suggestions(query,limit=8):
+    phrase=normalize_search(query)[:80]
+    if len(phrase)<2:return []
+    candidates={}
+    def add(value,label,kind,base=0):
+        normalized=normalize_search(value)
+        if not normalized:return
+        strength=term_match_strength(phrase,normalized)
+        if normalized==phrase:match=100
+        elif normalized.startswith(phrase):match=85
+        elif any(word.startswith(phrase) for word in normalized.split()):match=75
+        elif phrase in normalized:match=65
+        elif strength:match=40*strength
+        else:return
+        score=match+base
+        previous=candidates.get(normalized)
+        if not previous or score>previous[0]:candidates[normalized]=(score,{"value":value,"label":label,"type":kind})
+    with connect() as db:
+        for row in db.execute("SELECT name,handle FROM merchants"):
+            add(row["name"],f'{row["name"]} · {row["handle"]}',"merchant",8)
+            add(row["handle"].lstrip("@"),f'{row["name"]} · {row["handle"]}',"merchant",7)
+        category_pattern=f"%{phrase}%"
+        for row in db.execute("""SELECT label_fa FROM categories
+          WHERE level>=2 AND (label_fa ILIKE ? OR label_en ILIKE ?)
+          ORDER BY level,sort_order LIMIT 100""",(category_pattern,category_pattern)):
+            add(row["label_fa"],row["label_fa"],"category",5)
+        for row in db.execute("SELECT alias,term,weight FROM search_aliases"):
+            add(row["term"],row["term"],"query",float(row["weight"])*5)
+            add(row["alias"],row["alias"],"query",float(row["weight"])*3)
+        for row in db.execute("""SELECT query,COUNT(*) uses FROM analytics_events
+          WHERE event_type='search' AND query IS NOT NULL
+            AND created_at>=CURRENT_TIMESTAMP-INTERVAL '90 days'
+          GROUP BY query ORDER BY uses DESC LIMIT 100"""):
+            add(row["query"],row["query"],"popular",min(8,float(row["uses"])))
+    return [item for _,item in sorted(candidates.values(),key=lambda pair:(pair[0],pair[1]["value"]),reverse=True)[:max(1,min(limit,12))]]
 
 def merchant_detail(merchant_id):
     with connect() as db:
         row=db.execute("SELECT m.*,c.label_fa category_label FROM merchants m JOIN categories c ON c.code=m.category_code WHERE m.id=?",(merchant_id,)).fetchone()
         if not row:return None
         merchant=dict(row);merchant.pop("avatar_blob",None);merchant.pop("avatar_mime_type",None)
-        merchant["avatar_url"]=f"/api/avatars/{merchant_id}"
+        merchant["avatar_url"]=merchant_avatar_url(merchant)
         merchant["posts"]=merchant_posts(db,merchant_id)
         category_rows={item["code"]:dict(item) for item in db.execute("SELECT code,parent_code,label_fa FROM categories")}
         breadcrumb=[];code=row["category_code"]
@@ -513,13 +891,13 @@ def admin_metrics(days=30):
         visitors=db.execute("SELECT COUNT(DISTINCT session_id) FROM analytics_events WHERE created_at>=?",(since,)).fetchone()[0]
         searched_sessions=db.execute("SELECT COUNT(DISTINCT session_id) FROM analytics_events WHERE created_at>=? AND event_type='search'",(since,)).fetchone()[0]
         clicked_sessions=db.execute("SELECT COUNT(DISTINCT session_id) FROM analytics_events WHERE created_at>=? AND event_type='merchant_click'",(since,)).fetchone()[0]
-        daily_rows={row["day"]:dict(row) for row in db.execute("""
-          SELECT to_char(created_at,'YYYY-MM-DD') day,
+        daily_rows={row["event_day"]:dict(row) for row in db.execute("""
+          SELECT to_char(created_at,'YYYY-MM-DD') AS event_day,
             COUNT(*) FILTER (WHERE event_type='search') searches,
             COUNT(*) FILTER (WHERE event_type='merchant_click') clicks,
             COUNT(DISTINCT session_id) visitors,
             COUNT(*) FILTER (WHERE event_type='search' AND result_count=0) zero_results
-          FROM analytics_events WHERE created_at>=? GROUP BY day ORDER BY day
+          FROM analytics_events WHERE created_at>=? GROUP BY 1 ORDER BY 1
         """,(since,))}
         daily=[{"date":day,"searches":0,"clicks":0,"visitors":0,"zero_results":0}|daily_rows.get(day,{}) for day in date_keys]
         top_queries=[dict(row) for row in db.execute("""
@@ -571,6 +949,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed=urlparse(self.path)
         if parsed.path=="/api/categories": return self.send_json(category_tree())
+        if parsed.path=="/api/search/suggestions":
+            args=parse_qs(parsed.query)
+            return self.send_json(search_suggestions(args.get("q",[""])[0]))
         if parsed.path=="/api/merchants":
             args=parse_qs(parsed.query);category=args.get("category",[None])[0];query=args.get("q",[""])[0];result=merchants(category,query)
             session_id=self.headers.get("X-Kahoo-Session")

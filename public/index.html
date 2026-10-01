@@ -30,7 +30,8 @@
           </div>
           <form class="search" id="search-form" role="search">
             <button type="submit" aria-label="جستجو"></button>
-            <input id="search-input" type="search" placeholder="دنبال چه محصولی هستی؟" autocomplete="off" />
+            <input id="search-input" type="search" placeholder="دنبال چه محصولی هستی؟" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="search-suggestions" aria-expanded="false" />
+            <div class="search-suggestions" id="search-suggestions" role="listbox" hidden></div>
           </form>
         </div>
         <div class="header-actions">
@@ -45,9 +46,8 @@
             <div>
               <h1 id="result-title">فروشگاه‌ها</h1>
             </div>
-            <span id="result-count"></span>
           </div>
-          <div class="results-panel"><div class="shop-grid" id="shop-grid"><div class="kahoo-loader catalog-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg></div><span>در حال دریافت فروشگاه‌ها</span></div></div><div class="empty-state" id="empty-state" hidden><span>⌕</span><h3>فروشگاهی پیدا نشد</h3><p>دسته یا عبارت دیگری را امتحان کن.</p></div></div>
+          <div class="results-panel"><div class="shop-grid" id="shop-grid"><div class="kahoo-loader catalog-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg></div><span>در حال دریافت فروشگاه‌ها</span></div></div><div class="empty-state" id="empty-state" hidden><span>⌕</span><h3>فروشگاهی پیدا نشد</h3><p>عبارت دیگری را امتحان کن.</p><div class="empty-suggestions" id="empty-suggestions"></div></div></div>
         </div>
       </section>
     </main>
@@ -60,14 +60,14 @@
         <div class="merchant-dialog-head">
           <img id="detail-avatar" alt="" />
           <div><div class="merchant-dialog-name"><h2 id="detail-name"></h2></div><p id="detail-handle"></p><small id="detail-meta"></small></div>
-          <div class="merchant-dialog-actions"><button class="merchant-save" id="detail-save" type="button" aria-label="ذخیره فروشگاه" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V22l-6-4-6 4z"/></svg></button><a class="merchant-instagram" id="detail-instagram" target="_blank" rel="noreferrer">دیدن در اینستاگرام <span>←</span></a></div>
+          <div class="merchant-dialog-actions"><button class="merchant-save" id="detail-save" type="button" aria-label="ذخیره فروشگاه" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button><a class="merchant-instagram" id="detail-instagram" target="_blank" rel="noreferrer">دیدن در اینستاگرام <span>←</span></a></div>
         </div>
         <div class="merchant-dialog-bio"><b>بیو</b><p id="detail-bio"></p></div>
         <div class="merchant-trust-grid">
-          <div><span>دنبال‌کننده</span><strong id="detail-followers">—</strong><small id="detail-followers-note"></small></div>
-          <div><span>دنبال‌شونده</span><strong id="detail-following">—</strong><small id="detail-following-note"></small></div>
-          <div><span>تغییر نام کاربری</span><strong id="detail-former-names">—</strong><small id="detail-former-note"></small></div>
-          <div><span>تاریخ ساخت حساب</span><strong class="detail-date" id="detail-created">—</strong><small id="detail-created-note"></small></div>
+          <div><span>تعداد دنبال‌کننده</span><strong id="detail-followers">—</strong><small id="detail-followers-note"></small></div>
+          <div><span>تعداد دنبال‌شونده</span><strong id="detail-following">—</strong><small id="detail-following-note"></small></div>
+          <div><span>نام کاربری قبلی</span><strong id="detail-former-names">—</strong><small id="detail-former-note"></small></div>
+          <div><span>زمان ساخت حساب</span><strong class="detail-date" id="detail-created">—</strong><small id="detail-created-note"></small></div>
         </div>
         <div class="merchant-dialog-posts-head"><b>آخرین پست‌ها</b><small id="detail-sync"></small></div>
         <div class="merchant-dialog-posts" id="detail-posts"></div>
@@ -97,7 +97,7 @@
         <button class="back-button" type="button">→</button><h2>کد تأیید</h2><p>کد ارسال‌شده به <b id="phone-preview"></b></p><input id="otp-input" class="otp-input" inputmode="numeric" autocomplete="one-time-code" placeholder="− − − − −" maxlength="5" /><p class="form-error" id="otp-error"></p><button type="submit">ورود</button><small>در این نمونه هر کد ۵ رقمی پذیرفته می‌شود.</small>
       </form>
     </dialog>
-    <template id="shop-card-template"><article class="shop-card"><div class="shop-info"><div class="shop-avatar"></div><div class="shop-copy"><div class="shop-title-line"><h3></h3></div><div class="shop-copy-meta"><p></p><span class="location"></span></div></div><a class="visit-link" target="_blank" rel="noreferrer" aria-label="دیدن فروشگاه در اینستاگرام">اینستاگرام <span>↗</span></a></div><p class="shop-description"></p><div class="post-grid"></div></article></template>
+    <template id="shop-card-template"><article class="shop-card"><div class="shop-info"><div class="shop-avatar"></div><div class="shop-copy"><div class="shop-title-line"><h3></h3></div><div class="shop-copy-meta"><p></p><span class="location"></span></div></div><a class="visit-link" target="_blank" rel="noreferrer" aria-label="دیدن فروشگاه در اینستاگرام">اینستاگرام <span>↗</span></a></div><span class="match-reason" hidden></span><p class="shop-description"></p><div class="post-grid"></div></article></template>
     <script src="./assets/js/catalog.js"></script>
   </body>
 </html>

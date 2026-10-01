@@ -17,11 +17,13 @@ body{background:var(--page)}
 .header-actions{margin-right:auto}
 .kahoo-icon,.leaf-b{animation:none}
 .brand:hover .kahoo-icon{animation:none;transform:translateY(-1px)}
-.search{height:43px;border-color:#d9ddd8;border-radius:8px;background:#f6f7f5}
+.search{position:relative;height:43px;border-color:#d9ddd8;border-radius:8px;background:#f6f7f5}
 .search:focus-within{background:#fff;border-color:#79a98c;box-shadow:0 0 0 3px rgba(36,122,75,.08)}
 .search button{display:grid;place-items:center;padding:0;font-size:0;line-height:0}
 .search button::before,.search button::after{content:"";grid-area:1/1;display:block}
 .search button::before{width:13px;height:13px;border:2px solid #77817b;border-radius:50%;transform:translate(2px,-2px)}.search button::after{width:7px;height:2px;border-radius:2px;background:#77817b;transform:translate(-5px,6px) rotate(45deg)}
+.search-suggestions{position:absolute;top:calc(100% + 8px);right:0;left:0;z-index:50;max-height:360px;padding:6px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:0 18px 48px rgba(22,39,29,.14)}
+.search-suggestions button{width:100%;height:auto;min-height:44px;padding:8px 11px;display:flex;align-items:center;justify-content:space-between;border:0;border-radius:7px;background:transparent;color:var(--ink);text-align:right;font-size:12px}.search-suggestions button::before,.search-suggestions button::after{display:none}.search-suggestions button:hover,.search-suggestions button.active{background:var(--green-soft)}.search-suggestions span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.search-suggestions small{flex:0 0 auto;margin-right:12px;color:var(--muted);font-size:9px}
 .login-button{border-color:#d7dbd6;border-radius:7px}
 .site-header nav{height:38px;border-top:1px solid #f0f1ef}.site-header nav .admin-link{margin-right:auto}
 .catalog{padding:26px 20px 64px}
@@ -44,7 +46,7 @@ body{background:var(--page)}
 .shop-card:hover{border-color:#c9d6cc;box-shadow:0 9px 24px rgba(31,45,36,.08);transform:translateY(-2px)}
 .shop-card:focus-visible{outline-color:#4d9169}
 .shop-info{margin-bottom:11px}.shop-avatar{width:44px;height:44px;border:2px solid #f1f3ef}
-.shop-copy h3{font-size:14px;line-height:1.35}.shop-copy-meta{display:flex;align-items:center;gap:7px;margin-top:3px;color:#8b898e;font-size:9px}.shop-copy-meta p{margin:0}.shop-copy-meta .location{white-space:nowrap}.shop-description{color:#636862;font-size:8.5px}
+.shop-copy h3{font-size:14px;line-height:1.35}.shop-copy-meta{display:flex;align-items:center;gap:7px;margin-top:3px;color:#8b898e;font-size:9px}.shop-copy-meta p{margin:0}.shop-copy-meta .location{white-space:nowrap}.shop-description{color:#636862;font-size:8.5px}.match-reason{display:inline-flex;margin:-4px 0 8px;padding:3px 7px;border-radius:20px;background:#edf7f0;color:#27754b;font-size:9px;font-weight:600}.match-reason[hidden]{display:none}
 .visit-link{border-color:#d8ddd8;border-radius:999px;background:#fff}.visit-link:hover{background:var(--red);border-color:var(--red)}
 .post-grid{border-radius:16px}.post:hover img{transform:scale(1.025)}
 .merchant-dialog{border:1px solid rgba(255,255,255,.7);border-radius:12px}.merchant-dialog::backdrop{background:rgba(25,31,27,.46)}
@@ -127,24 +129,25 @@ body{background:var(--page);font-size:14px}
 .result-status>span{padding-bottom:5px;color:var(--muted);font-size:12px;white-space:nowrap}
 .shop-grid,.results-panel .shop-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 18px;padding-top:22px}
 
-/* Merchant content carries the personality; chrome stays quiet. */
-.shop-card{min-width:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;cursor:pointer;transform:none;transition:none;animation:cardIn .24s ease both}
-.shop-card:hover{border:0;box-shadow:none;transform:none}.shop-card:focus-visible{outline:2px solid var(--red);outline-offset:6px}
+/* A defined card edge keeps each merchant and its products visually grouped. */
+.shop-card{min-width:0;padding:16px;border:1px solid #d8ddd9;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(26,38,30,.045);cursor:pointer;transform:none;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;animation:cardIn .24s ease both}
+.shop-card:hover{border-color:#aebbb2;box-shadow:0 10px 26px rgba(26,38,30,.09);transform:translateY(-2px)}.shop-card:focus-visible{outline:3px solid rgba(36,122,75,.22);outline-offset:3px;border-color:#78a589}
 .shop-info{gap:11px;margin:0 0 12px}.shop-avatar{width:48px;height:48px;flex-basis:48px;border:1px solid var(--line)}
 .shop-copy h3{color:var(--ink);font-size:17px;line-height:1.45;letter-spacing:-.25px}
 .shop-copy-meta{gap:8px;margin-top:2px;color:#7b847e;font-size:11px}.location::before{content:""}
 .visit-link{margin-right:auto;padding:6px 0;border:0;border-radius:0;background:transparent;color:#5f6962;font-size:11px;font-weight:650;white-space:nowrap}
 .visit-link span{display:inline-block;margin-right:2px}.visit-link:hover{border:0;background:transparent;color:var(--red)}
 .shop-description{min-height:42px;margin:0 0 12px;color:#5e6761;font-size:12px;line-height:1.75}
-.post-grid{aspect-ratio:3.25/1;border-radius:var(--radius-md);background:#eef0ee}
+.post-grid{aspect-ratio:3.25/1;padding:3px;border:1px solid #d9ded9;border-radius:var(--radius-md);background:#f2f4f2}
 .post-reel-track{gap:3px}.post-reel-track .post{flex-basis:calc((100% - 6px)/3)}
-.post img{transition:none}.post:hover img{transform:none}.post::after{display:none}
+.post{padding:0;border:1px solid #e0e4e1;border-radius:7px;cursor:pointer}.post img{transition:filter .18s ease,transform .18s ease}.post:hover img{filter:brightness(.94);transform:scale(1.018)}.post:focus-visible{outline:2px solid var(--red);outline-offset:-2px}.post::after{display:none}
 .collection-count{top:7px;right:7px;height:20px;min-width:28px;padding:0 6px;border:0;border-radius:6px;background:rgba(24,29,26,.72);font-size:8px}
 @keyframes cardIn{from{opacity:0;transform:translateY(4px)}}
 
 /* Empty and loading states remain branded but subordinate. */
 .empty-state{margin-top:22px;padding:64px 24px;border:1px solid var(--line);border-radius:var(--radius-md);background:#fff}
 .empty-state>span{color:#9ca49f;font-size:28px}.empty-state h3{margin:8px 0 3px}.empty-state p{font-size:12px}
+.empty-suggestions{margin-top:15px;display:flex;flex-wrap:wrap;justify-content:center;gap:7px}.empty-suggestions button{padding:6px 10px;border:1px solid var(--line-strong);border-radius:20px;background:#fff;color:var(--green);cursor:pointer;font:inherit}.empty-suggestions button:hover{border-color:var(--green);background:var(--green-soft)}
 .kahoo-loader{color:#818a84;font-size:10px}.kahoo-loader-icons svg{width:22px;height:22px}
 .catalog-loader{min-height:180px}
 
@@ -164,7 +167,8 @@ body{background:var(--page);font-size:14px}
 .merchant-trust-grid>div{padding:16px 14px}.merchant-trust-grid span{font-size:10px}.merchant-trust-grid strong{font-size:19px}
 .merchant-trust-grid .detail-date{font-size:12px}.merchant-trust-grid small{font-size:8px}
 .merchant-dialog-posts-head{margin-top:23px}.merchant-dialog-posts-head small{font-size:9px}
-.saved-post-tile,.merchant-dialog-posts a{border-radius:6px}.post-save{border:0;border-radius:var(--radius-sm)}
+.saved-post-tile{border:1px solid #d9ded9;background:#f3f5f3}.saved-post-tile,.merchant-dialog-posts a{border-radius:7px}.post-save{border:0;border-radius:var(--radius-sm)}
+.merchant-dialog-posts .collection-tile{grid-column:1/-1;aspect-ratio:auto;padding:8px;overflow:visible}.merchant-dialog-posts .collection-tile>a{height:auto;aspect-ratio:auto}.merchant-dialog-posts .collection-tile .collection-preview,.merchant-dialog-posts .collection-tile .collection-preview.count-2,.merchant-dialog-posts .collection-tile .collection-preview.count-3,.merchant-dialog-posts .collection-tile .collection-preview.count-4{height:auto;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none;gap:5px}.merchant-dialog-posts .collection-tile .collection-preview img,.merchant-dialog-posts .collection-tile .collection-preview.count-2 img,.merchant-dialog-posts .collection-tile .collection-preview.count-3 img:first-child{grid-row:auto;aspect-ratio:1;border-radius:5px}
 .connect-dialog,.login-dialog{border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow)}
 .instagram-button,.done-button,.login-state>button[type="submit"]{border-radius:var(--radius-sm)}
 footer{min-height:88px;background:#202521}footer button{border-radius:var(--radius-sm)}
@@ -180,3 +184,20 @@ footer{min-height:88px;background:#202521}footer button{border-radius:var(--radi
 }
 @media(max-width:420px){.header-discovery .category-dropdown{flex-basis:122px}.result-status>span{font-size:10px}.shop-copy h3{font-size:16px}.visit-link{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.post-reel-track{transition:none!important;transform:none!important}}
+
+/* Modal controls and carousel hierarchy. */
+.dialog-close{padding:0;display:grid;place-items:center;font-family:Arial,sans-serif;font-size:24px;line-height:1}
+.merchant-save{position:relative;z-index:4;color:#465048}
+.merchant-save svg{display:block;width:20px;height:20px;overflow:visible;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.merchant-save.saved{color:var(--red)}.merchant-save.saved svg{fill:currentColor}
+.post-save{z-index:4;display:grid;place-items:center;font-family:Arial,sans-serif;font-size:20px;line-height:1}
+.merchant-dialog-posts .collection-tile .collection-preview,
+.merchant-dialog-posts .collection-tile .collection-preview.count-2,
+.merchant-dialog-posts .collection-tile .collection-preview.count-3,
+.merchant-dialog-posts .collection-tile .collection-preview.count-4{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);align-items:stretch;gap:6px;direction:rtl}
+.merchant-dialog-posts .collection-tile .collection-preview img:first-child,
+.merchant-dialog-posts .collection-tile .collection-preview.count-2 img:first-child,
+.merchant-dialog-posts .collection-tile .collection-preview.count-3 img:first-child{width:100%;height:auto;grid-row:auto;aspect-ratio:1;object-fit:cover}
+.merchant-dialog-posts .collection-thumbnails{min-width:0;display:grid;grid-template-columns:repeat(var(--thumbnail-columns),minmax(0,1fr));grid-template-rows:repeat(var(--thumbnail-rows),minmax(0,1fr));grid-auto-flow:row;gap:6px;direction:rtl}
+.merchant-dialog-posts .collection-thumbnails img,
+.merchant-dialog-posts .collection-preview .collection-thumbnails img:first-child{width:100%;height:100%;min-width:0;min-height:0;grid-row:auto;aspect-ratio:auto;object-fit:cover}
