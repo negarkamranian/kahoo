@@ -39,3 +39,20 @@ def load_merchant_catalog(path: Path):
                 raise ValueError(f"invalid {field} for {handle}")
 
     return snapshot_at, merchants
+
+
+def load_merchant_catalogs(paths):
+    """Load catalog shards and reject duplicates across shard boundaries."""
+    snapshots = []
+    merchants = []
+    handles = set()
+    for path in paths:
+        snapshot_at, shard = load_merchant_catalog(path)
+        snapshots.append(snapshot_at)
+        for merchant in shard:
+            handle = merchant["handle"]
+            if handle in handles:
+                raise ValueError(f"duplicate merchant handle across catalogs: {handle}")
+            handles.add(handle)
+            merchants.append(merchant)
+    return max(snapshots), merchants

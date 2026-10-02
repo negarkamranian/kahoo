@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, urlparse
 
-from backend.catalog import load_merchant_catalog
+from backend.catalog import load_merchant_catalogs
 from backend.database import connect, run_category_seed, run_migrations
 from backend.instagram import business_discovery_enabled, business_discovery_profile
 from backend.search import (
@@ -100,9 +100,13 @@ MERCHANT_CATEGORY_SEED={
   "@homekala_20":("75030100",),
 }
 
-CATALOG_SNAPSHOT_AT, CATALOG_MERCHANTS = load_merchant_catalog(
-    DATA_ROOT / "merchant_catalog.json"
-)
+CATALOG_PATHS = [
+    DATA_ROOT / "merchant_catalog.json",
+    *sorted(DATA_ROOT.glob("merchant_catalog_expansion_*.json")),
+]
+if (DATA_ROOT / "merchant_catalog_shared.json").exists():
+    CATALOG_PATHS.append(DATA_ROOT / "merchant_catalog_shared.json")
+CATALOG_SNAPSHOT_AT, CATALOG_MERCHANTS = load_merchant_catalogs(CATALOG_PATHS)
 for catalog_merchant in CATALOG_MERCHANTS:
     extra_categories = catalog_merchant.get("category_codes", ())
     if extra_categories:
@@ -322,7 +326,9 @@ def seed_public_catalog(db):
             enriched += 1
             if item.get("is_new"):
                 db.execute(
-                    """UPDATE merchants SET name=?,
+                    """UPDATE merchants SET
+                      name=CASE WHEN description_source='user_submitted_profile_url'
+                        AND biography_source IS NOT NULL THEN name ELSE ? END,
                       description=CASE WHEN description_source='llm' THEN description ELSE ? END,
                       description_source=CASE WHEN description_source='llm' THEN description_source ELSE ? END,
                       description_source_url=CASE WHEN description_source='llm' THEN description_source_url ELSE ? END,
@@ -374,6 +380,18 @@ def seed_public_catalog(db):
                     item.get("followers_count"), item.get("media_count"), metrics_source,
                     item["metrics_source_url"], CATALOG_SNAPSHOT_AT, merchant_id,
                     CATALOG_SNAPSHOT_AT,
+                ),
+            )
+        if item.get("quality_score") is not None:
+            db.execute(
+                """UPDATE merchants SET directory_quality_score=?,
+                  directory_review_count=?,quality_source=?,quality_source_url=?,
+                  quality_updated_at=? WHERE id=?""",
+                (
+                    item["quality_score"], item.get("review_count", 0),
+                    item.get("quality_source", "basaliro_ai_trust"),
+                    item.get("quality_source_url", item.get("source_url")),
+                    CATALOG_SNAPSHOT_AT, merchant_id,
                 ),
             )
     return {
@@ -476,25 +494,34 @@ def refresh_instagram_profiles(handles=None,on_result=None,on_start=None):
     requested={handle if handle.startswith("@") else f"@{handle}" for handle in (handles or [])}
     results=[]
     with connect() as db:
-        rows=list(db.execute("SELECT id,handle,name,avatar_initial,avatar_color FROM merchants ORDER BY id"))
+        rows=list(db.execute("""SELECT id,handle,name,avatar_initial,avatar_color,
+          description_source FROM merchants ORDER BY id"""))
     for merchant in rows:
         if requested and merchant["handle"] not in requested:continue
         if on_start:on_start(merchant["handle"])
         try:
             profile=instagram_profile(merchant["handle"])
+            profile_name=(profile.get("name") or "").strip()
+            display_name=(
+                profile_name
+                if merchant["description_source"] == "user_submitted_profile_url"
+                and profile_name
+                else merchant["name"]
+            )
             with connect() as db:
                 biography=(profile.get("biography") or "").strip()
                 source=profile.get("source","instagram_public_embed")
-                db.execute("""UPDATE merchants SET biography=?,biography_source=?,
+                db.execute("""UPDATE merchants SET name=?,avatar_initial=?,
+                  biography=?,biography_source=?,
                   biography_updated_at=datetime('now'),followers_count=COALESCE(?,followers_count),
                   following_count=COALESCE(?,following_count),media_count=COALESCE(?,media_count),
                   metrics_source=?,metrics_source_url=?,metrics_updated_at=datetime('now') WHERE id=?""",
-                  (biography,source,profile.get("followers_count"),profile.get("following_count"),profile.get("media_count"),source,
+                  (display_name,display_name[0],biography,source,profile.get("followers_count"),profile.get("following_count"),profile.get("media_count"),source,
                    f"https://www.instagram.com/{merchant['handle'][1:]}/",merchant["id"]))
                 avatar_saved=False
                 if profile.get("avatar_url"):
-                    avatar_saved=bool(cache_merchant_avatar(db,merchant["id"],merchant["avatar_initial"],merchant["avatar_color"],profile["avatar_url"],profile["avatar_url"]))
-                posts_saved=replace_profile_posts(db,merchant["id"],merchant["name"],profile) if profile.get("posts") else 0
+                    avatar_saved=bool(cache_merchant_avatar(db,merchant["id"],display_name[0],merchant["avatar_color"],profile["avatar_url"],profile["avatar_url"]))
+                posts_saved=replace_profile_posts(db,merchant["id"],display_name,profile) if profile.get("posts") else 0
                 if posts_saved:
                     db.execute("""UPDATE merchants SET
                       instagram_media_sync_version=GREATEST(instagram_media_sync_version,?),
@@ -556,12 +583,17 @@ def catalog_profiles_missing_posts(minimum_images=3):
           COUNT(p.id) FILTER (WHERE p.image_blob IS NOT NULL) cached_images
           FROM merchants m LEFT JOIN merchant_posts p ON p.merchant_id=m.id
           GROUP BY m.id,m.handle,m.instagram_media_sync_version ORDER BY m.id""")
-        return [
+        missing = [
             row["handle"] for row in rows
             if row["handle"] in catalog_handles
             and ((row["cached_images"] or 0)<minimum_images
               or row["instagram_media_sync_version"]<INSTAGRAM_MEDIA_SYNC_VERSION)
         ]
+        shared_handles = {
+            item["handle"] for item in CATALOG_MERCHANTS
+            if item.get("description_source") == "user_submitted_profile_url"
+        }
+        return sorted(missing, key=lambda handle: handle not in shared_handles)
 
 def category_tree():
     with connect() as db:

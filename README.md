@@ -66,15 +66,38 @@ The reviewed public-directory snapshot in `data/merchant_catalog.json` enriches
 existing shops with sourced follower/post counts and adds new shops without
 marking an external directory listing as Kahoo verification. On every run, the
 import detects catalog shops that still have fewer than three cached post images
-and fills them from their own account. It also repairs missing/generated profile
-pictures. Reapply it safely at any time (the import is idempotent). Rebuild the
-app image first after pulling script changes:
+and fills them from their own account. Reapply it safely at any time (the import
+is idempotent). Rebuild the app image first after pulling script changes:
 
 ```bash
 docker compose build app
 docker compose run --rm app python3 scripts/seed_merchants.py
 docker compose up -d app
 ```
+
+Large expansions are added to PostgreSQL immediately, while Instagram media is
+synchronized in resumable batches of 25. Run the seed command repeatedly to
+finish later batches, or choose a different batch size:
+
+```bash
+docker compose run --rm app python3 scripts/seed_merchants.py --media-limit 50
+```
+
+Use `--skip-media` for a fast catalog-only import, `--media-limit 0` for one
+long-running full sync, or `--repair-avatars` for a separate retry pass over
+missing/generated profile pictures.
+
+The profiles shared in `shops.txt` are stored in
+`data/merchant_catalog_shared.json`. To rebuild that catalog after changing the
+list, run:
+
+```bash
+python3 scripts/build_shared_merchants.py shops.txt --output data/merchant_catalog_shared.json
+```
+
+Then rebuild the app image and run the seed command above. The catalog import
+adds every shop immediately; subsequent resumable media batches fill its real
+profile picture, biography, metrics, posts, and carousel children.
 
 Live Instagram synchronization takes precedence over snapshot metrics on its
 next successful refresh. Every metric stores its source URL and timestamp.
@@ -138,6 +161,8 @@ db/migrations/          Versioned PostgreSQL schema
 data/
   categories.sql         Reproducible GS1 category seed
   merchant_catalog.json Versioned merchant enrichment snapshot
+  merchant_catalog_expansion_*.json High-audience expansion shards
+  merchant_catalog_shared.json User-submitted Instagram shops
 docs/
   product-research.md
   market-benchmarks.md
