@@ -2,7 +2,7 @@ import unittest
 from contextlib import contextmanager
 from unittest.mock import patch
 
-from backend.server import admin_metrics
+from backend.server import admin_metrics, admin_mutation_authorized, remove_merchant
 
 
 class Cursor:
@@ -52,6 +52,39 @@ class AdminMetricsTests(unittest.TestCase):
         self.assertIn("AS event_day", database.daily_query)
         self.assertIn("GROUP BY 1 ORDER BY 1", database.daily_query)
         self.assertNotIn("GROUP BY day", database.daily_query)
+
+    def test_admin_token_is_required_only_when_configured(self):
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertTrue(admin_mutation_authorized({}))
+        with patch.dict("os.environ", {"KAHOO_ADMIN_TOKEN": "secret"}, clear=True):
+            self.assertFalse(admin_mutation_authorized({}))
+            self.assertFalse(admin_mutation_authorized({"X-Kahoo-Admin-Token": "wrong"}))
+            self.assertTrue(admin_mutation_authorized({"X-Kahoo-Admin-Token": "secret"}))
+
+    def test_removal_creates_a_persistent_exclusion_before_deleting(self):
+        class RemovalDatabase:
+            def __init__(self):
+                self.queries = []
+
+            def execute(self, query, params=None):
+                self.queries.append((query, params))
+                if "SELECT id,name,handle FROM merchants" in query:
+                    return Cursor([{"id": 12, "name": "Shop", "handle": "@shop"}])
+                return Cursor([])
+
+        database = RemovalDatabase()
+
+        @contextmanager
+        def fake_connect():
+            yield database
+
+        with patch("backend.server.connect", fake_connect):
+            removed = remove_merchant(12)
+
+        self.assertEqual("@shop", removed["handle"])
+        statements = [query for query, _ in database.queries]
+        self.assertIn("INSERT INTO merchant_exclusions", statements[1])
+        self.assertIn("DELETE FROM merchants", statements[2])
 
 
 if __name__ == "__main__":

@@ -31,4 +31,28 @@ function render(data){
 }
 function escapeHtml(value){const node=document.createElement("span");node.textContent=value||"";return node.innerHTML}
 async function load(){el("loading").hidden=false;try{const response=await fetch(`/api/admin/metrics?days=${el("period-select").value}`);if(!response.ok)throw new Error();render(await response.json())}catch{el("loading").textContent="دریافت آمار ممکن نشد. سرور را دوباره بررسی کنید."}}
-el("period-select").addEventListener("change",load);load();
+const adminHeaders=()=>{const token=el("admin-token").value.trim();return token?{"X-Kahoo-Admin-Token":token}:{}};
+function managerStatus(message,type=""){const node=el("manager-status");node.textContent=message;node.className=`manager-status ${type}`.trim()}
+async function responseJson(response){const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||"انجام عملیات ممکن نشد.");return data}
+async function loadManagedMerchants(){
+  const query=el("merchant-search").value.trim();
+  el("managed-merchant-list").innerHTML=empty("در حال دریافت فروشگاه‌ها…");
+  try{
+    const data=await responseJson(await fetch(`/api/admin/merchants?limit=100&q=${encodeURIComponent(query)}`));
+    el("managed-merchant-count").textContent=`${fa(data.total)} فروشگاه`;
+    renderList(el("managed-merchant-list"),data.items,row=>`<article class="managed-row"><span class="managed-avatar">${row.avatar_url?`<img src="${row.avatar_url}" alt="" loading="lazy" />`:escapeHtml((row.name||"؟").slice(0,1))}</span><div class="managed-copy"><b>${escapeHtml(row.name)}</b><small>${escapeHtml(row.handle)}</small></div><span class="managed-meta">${fa(row.followers_count)} دنبال‌کننده</span><span class="managed-meta">${fa(row.post_count)} تصویر</span><button class="remove-merchant" type="button" data-id="${row.id}" data-name="${escapeHtml(row.name)}">حذف</button></article>`,"فروشگاهی پیدا نشد");
+  }catch(error){el("managed-merchant-list").innerHTML=empty(error.message)}
+}
+el("merchant-add-form").addEventListener("submit",async event=>{
+  event.preventDefault();const button=el("merchant-submit");button.disabled=true;managerStatus("در حال دریافت پروفایل، تصویر و پست‌های فروشگاه…");
+  const payload={identifier:el("merchant-identifier").value,category_code:el("merchant-category").value||null,name:el("merchant-name").value.trim()||null,description:el("merchant-description").value.trim()||null,city:el("merchant-city").value.trim()||"ایران"};
+  try{const result=await responseJson(await fetch("/api/admin/merchants",{method:"POST",headers:{"Content-Type":"application/json",...adminHeaders()},body:JSON.stringify(payload)}));managerStatus(`${result.created?"فروشگاه افزوده شد":"فروشگاه به‌روزرسانی شد"}؛ ${fa(result.post_images_saved)} تصویر ذخیره شد.`,"success");el("merchant-identifier").value="";el("merchant-name").value="";el("merchant-description").value="";await Promise.all([loadManagedMerchants(),load()])}catch(error){managerStatus(error.message,"error")}finally{button.disabled=false}
+});
+el("managed-merchant-list").addEventListener("click",async event=>{
+  const button=event.target.closest(".remove-merchant");if(!button)return;
+  if(!confirm(`فروشگاه «${button.dataset.name}» و همه پست‌های ذخیره‌شده آن حذف شود؟`))return;
+  button.disabled=true;managerStatus("در حال حذف فروشگاه…");
+  try{await responseJson(await fetch(`/api/admin/merchants/${button.dataset.id}`,{method:"DELETE",headers:adminHeaders()}));managerStatus("فروشگاه حذف شد و پس از راه‌اندازی مجدد نیز برنمی‌گردد.","success");await Promise.all([loadManagedMerchants(),load()])}catch(error){managerStatus(error.message,"error");button.disabled=false}
+});
+let merchantSearchTimer;el("merchant-search").addEventListener("input",()=>{clearTimeout(merchantSearchTimer);merchantSearchTimer=setTimeout(loadManagedMerchants,250)});el("merchant-refresh").addEventListener("click",loadManagedMerchants);el("admin-token").value=sessionStorage.getItem("kahoo_admin_token")||"";el("admin-token").addEventListener("input",()=>sessionStorage.setItem("kahoo_admin_token",el("admin-token").value));
+el("period-select").addEventListener("change",load);load();loadManagedMerchants();

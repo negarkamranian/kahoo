@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import json
+import hmac
+import math
 import mimetypes
 import re
 import os
@@ -16,11 +18,14 @@ from urllib.parse import parse_qs, urlparse
 from backend.catalog import load_merchant_catalogs
 from backend.database import connect, run_category_seed, run_migrations
 from backend.instagram import business_discovery_enabled, business_discovery_profile
+from backend.merchant_import import infer_category, normalize_identifier
 from backend.search import (
-    lexical_merchant_scores,
+    lexical_merchant_matches,
     diversify_results,
     merchant_quality_score,
     normalize_search,
+    phrase_proximity_bonus,
+    query_coverage,
     query_tokens,
     reciprocal_rank_fusion,
     semantic_merchant_scores,
@@ -314,8 +319,13 @@ def seed_public_catalog(db):
     created = 0
     created_handles = []
     enriched = 0
+    excluded_handles = {
+        row["handle"] for row in db.execute("SELECT handle FROM merchant_exclusions")
+    }
     for item in CATALOG_MERCHANTS:
         handle = item["handle"]
+        if handle in excluded_handles:
+            continue
         description_source = item.get("description_source", "curated_public_directory")
         metrics_source = item.get("metrics_source", "basaliro_public_directory")
         existing = db.execute(
@@ -448,7 +458,12 @@ def initialize_database():
     if os.environ.get("KAHOO_SEED_DEMO","1").lower() not in {"1","true","yes"}:
         return
     with connect() as db:
+        excluded_handles = {
+            row["handle"] for row in db.execute("SELECT handle FROM merchant_exclusions")
+        }
         for instagram_id,name,handle,description,category,city,initial,color,updated,verified,source,posts in MERCHANTS:
+            if handle in excluded_handles:
+                continue
             url=f"https://www.instagram.com/{handle[1:]}/"
             existing=db.execute("SELECT id FROM merchants WHERE instagram_id=?",(instagram_id,)).fetchone()
             if existing:
@@ -644,6 +659,32 @@ SEARCH_ALIAS_SEED=(
   ("پت شاپ","حیوانات خانگی",0.95,"curated_taxonomy"),
   ("عروسک","اسباب بازی",0.85,"curated_taxonomy"),
   ("هوم دکور","دکوراسیون",0.85,"curated_taxonomy"),
+  ("مبایل","موبایل",0.95,"curated_typo"),
+  ("موبایل","گوشی",0.7,"curated_taxonomy"),
+  ("لوازم جانبی گوشی","لوازم جانبی موبایل",0.95,"curated_taxonomy"),
+  ("ارایشی","آرایشی",0.95,"curated_typo"),
+  ("لوازم ارایش","لوازم آرایشی",0.95,"curated_typo"),
+  ("کازمتیک","آرایشی",0.85,"curated_taxonomy"),
+  ("اسکینکر","مراقبت پوست",0.95,"curated_taxonomy"),
+  ("ضد افتاب","ضدآفتاب",0.95,"curated_typo"),
+  ("کفش اسپرت","کتونی",0.9,"curated_taxonomy"),
+  ("اسنیکرز","کتونی",0.9,"curated_taxonomy"),
+  ("نیم بوت","بوت",0.9,"curated_taxonomy"),
+  ("مانتو","پوشاک زنانه",0.9,"curated_taxonomy"),
+  ("شومیز","پوشاک زنانه",0.9,"curated_taxonomy"),
+  ("روسری","پوشاک زنانه",0.8,"curated_taxonomy"),
+  ("شال","پوشاک زنانه",0.75,"curated_taxonomy"),
+  ("کراپ","بالاپوش زنانه",0.85,"curated_taxonomy"),
+  ("هودی","بالاپوش",0.85,"curated_taxonomy"),
+  ("کیف دستی","کیف زنانه",0.9,"curated_taxonomy"),
+  ("اکسسوری","زیورآلات",0.75,"curated_taxonomy"),
+  ("بدلیجات","زیورآلات",0.9,"curated_taxonomy"),
+  ("خونه","خانه",0.9,"curated_typo"),
+  ("اشپزخانه","آشپزخانه",0.95,"curated_typo"),
+  ("لوازم التحریر","لوازم تحریر",0.95,"curated_typo"),
+  ("غذای گربه","پت شاپ",0.9,"curated_taxonomy"),
+  ("غذای سگ","پت شاپ",0.9,"curated_taxonomy"),
+  ("سیسمونی","کودک و نوزاد",0.85,"curated_taxonomy"),
 )
 
 def searchable_tokens(text):
@@ -725,7 +766,7 @@ def merchant_posts(db,merchant_id):
             if media["image_url"] in seen_images:continue
             seen_images.add(media["image_url"]);collection.append({"media_url":f"/api/media/{media['id']}","position":len(collection)+1})
         shortcode=instagram_shortcode(first["permalink"])
-        posts.append({"key":collection_key or shortcode or f"{merchant_id}-{first['position']}","permalink":first["permalink"],"position":len(posts)+1,"media_url":collection[0]["media_url"],"media":collection,"image_count":len(collection)})
+        posts.append({"post_id":first["id"],"key":collection_key or shortcode or f"{merchant_id}-{first['position']}","permalink":first["permalink"],"position":len(posts)+1,"media_url":collection[0]["media_url"],"media":collection,"image_count":len(collection)})
         index=end
     return posts
 
@@ -763,7 +804,9 @@ def merchants(category=None, query=""):
             placeholders=",".join("?" for _ in alias_keys)
             for item in db.execute(f"SELECT normalized_term,weight FROM search_aliases WHERE normalized_alias IN ({placeholders})",tuple(alias_keys)):
                 expanded[item["normalized_term"]]=max(expanded.get(item["normalized_term"],0),item["weight"])
-        lexical_document_scores=lexical_merchant_scores(db,phrase) if phrase else {}
+        lexical_matches=lexical_merchant_matches(db,phrase) if phrase else {}
+        lexical_document_scores={merchant_id:match["score"]
+          for merchant_id,match in lexical_matches.items()}
         try:semantic_scores=semantic_merchant_scores(db,phrase) if phrase else {}
         except Exception:semantic_scores={}
         fused_scores=reciprocal_rank_fusion(lexical_document_scores,semantic_scores)
@@ -772,6 +815,13 @@ def merchants(category=None, query=""):
              WHERE event_type='merchant_click' AND merchant_id IS NOT NULL
                AND created_at>=CURRENT_TIMESTAMP-INTERVAL '30 days'
              GROUP BY merchant_id""")}
+        query_click_counts={}
+        if phrase:
+            query_click_counts={row["merchant_id"]:row["clicks"] for row in db.execute(
+              """SELECT merchant_id,COUNT(*) clicks FROM analytics_events
+                 WHERE event_type='merchant_click' AND merchant_id IS NOT NULL
+                   AND created_at>=CURRENT_TIMESTAMP-INTERVAL '90 days'
+                   AND LOWER(query)=LOWER(?) GROUP BY merchant_id""",(query,))}
         result=[]
         for row in db.execute(sql,params):
             merchant=dict(row);score=0;exact_score=0;match_fields=set();fuzzy_match=False
@@ -782,7 +832,8 @@ def merchants(category=None, query=""):
                     code=category_code
                     while code and code in category_rows:
                         category_labels.extend((category_rows[code]["label_fa"],category_rows[code]["label_en"]));code=category_rows[code]["parent_code"]
-                identity=normalize_search(f'{row["name"]} {row["handle"]} {row["city"]}')
+                identity=normalize_search(f'{row["name"]} {row["handle"]}')
+                city=normalize_search(row["city"])
                 description=normalize_search(row["description"])
                 biography=normalize_search(row["biography"])
                 category_text=normalize_search(" ".join(category_labels))
@@ -794,44 +845,65 @@ def merchants(category=None, query=""):
                       "description":term_match_strength(term,description),
                       "biography":term_match_strength(term,biography),
                       "category":term_match_strength(term,category_text),
+                      "city":term_match_strength(term,city),
                     }
                     metadata=max((weight*term_match_strength(term,stored) for stored,weight in stored_terms),default=0)
                     if record_fields:
                         match_fields.update(field for field,strength in strengths.items() if strength>=0.7)
                         if metadata>=0.7:match_fields.add("metadata")
                         fuzzy_match=fuzzy_match or any(0<strength<0.7 for strength in strengths.values())
-                    return (12*strengths["name"]+7*strengths["description"]
-                      +5*strengths["biography"]+8*strengths["category"]+6*metadata)
+                    return (14*strengths["name"]+7*strengths["description"]
+                      +5*strengths["biography"]+9*strengths["category"]
+                      +3*strengths["city"]+6*metadata)
                 token_scores=[term_score(token,True) for token in tokens]
                 exact_score=sum(token_scores)
                 related_score=sum(term_score(term)*weight for term,weight in expanded.items() if term not in tokens)
                 semantic_score=semantic_scores.get(row["id"],0)
                 document_score=lexical_document_scores.get(row["id"],0)
-                phrase_bonus=(18*term_match_strength(phrase,identity)
-                  +12*term_match_strength(phrase,description)
+                proximity=max(
+                  phrase_proximity_bonus(phrase,identity),
+                  phrase_proximity_bonus(phrase,category_text),
+                  phrase_proximity_bonus(phrase,description),
+                  phrase_proximity_bonus(phrase,biography),
+                )
+                phrase_bonus=(20*term_match_strength(phrase,identity)
+                  +13*term_match_strength(phrase,description)
                   +9*term_match_strength(phrase,biography)
-                  +12*term_match_strength(phrase,category_text))
+                  +14*term_match_strength(phrase,category_text)+10*proximity)
+                coverage=query_coverage(tokens,identity,category_text,description,
+                  biography,city," ".join(term for term,_ in stored_terms))
+                behavior_boost=min(2.0,math.log1p(query_click_counts.get(row["id"],0))*.7)
                 score=(exact_score+related_score+phrase_bonus
-                  +fused_scores.get(row["id"],0)*300+quality_score*.25)
+                  +fused_scores.get(row["id"],0)*300+coverage*8
+                  +behavior_boost+quality_score*.15)
                 required_matches=max(2,(len(tokens)+1)//2)
                 weak_lexical=len(tokens)>1 and sum(value>0 for value in token_scores)<required_matches
                 no_strong_signal=(exact_score+related_score+phrase_bonus==0
                   and semantic_score<0.55 and document_score<0.25)
                 if not tokens or score==0 or no_strong_signal or (weak_lexical and semantic_score<0.55 and document_score<0.25):continue
                 if "name" in match_fields:reason="نام فروشگاه"
+                elif lexical_matches.get(row["id"],{}).get("entity_type")=="post":reason="محصول یا پست مرتبط"
                 elif "category" in match_fields:reason="دسته‌بندی مرتبط"
                 elif "description" in match_fields or "metadata" in match_fields:reason="محصولات مرتبط"
                 elif "biography" in match_fields:reason="بیوی فروشگاه"
+                elif "city" in match_fields:reason="موقعیت فروشگاه"
                 elif semantic_score>=0.55:reason="نتیجه معنایی نزدیک"
                 else:reason="عبارت مشابه"
                 merchant["match_reason"]=reason
                 merchant["match_quality"]=("near" if fuzzy_match and not match_fields else
                   "semantic" if not match_fields and semantic_score>=0.55 else
                   "related" if related_score and not exact_score else "exact")
+                merchant["match_coverage"]=round(coverage,2)
+                lexical_match=lexical_matches.get(row["id"])
+                if lexical_match and lexical_match["entity_type"]=="post":
+                    merchant["matched_post_id"]=lexical_match["entity_id"]
             else:
                 score=quality_score
             merchant.pop("avatar_blob",None);merchant.pop("avatar_mime_type",None);merchant["avatar_url"]=merchant_avatar_url(merchant)
             merchant["posts"]=merchant_posts(db,row["id"])
+            if merchant.get("matched_post_id"):
+                merchant["posts"].sort(
+                  key=lambda post:post["post_id"]!=merchant["matched_post_id"])
             merchant["search_score"]=round(score,2)
             result.append(merchant)
         ranked=sorted(result,key=lambda merchant:(merchant["search_score"],merchant["id"]),reverse=True)
@@ -910,6 +982,106 @@ def record_event(event_type,session_id,query=None,category_code=None,merchant_id
     with connect() as db:
         db.execute("INSERT INTO analytics_events(event_type,session_id,query,category_code,merchant_id,result_count) VALUES(?,?,?,?,?,?)",(event_type,session_id,query,category_code or None,merchant_id,result_count))
     return True
+
+def admin_mutation_authorized(headers):
+    configured=os.environ.get("KAHOO_ADMIN_TOKEN","")
+    if not configured:
+        return True
+    supplied=headers.get("X-Kahoo-Admin-Token","")
+    return bool(supplied) and hmac.compare_digest(configured,supplied)
+
+def admin_merchants(query="",limit=50,offset=0):
+    query=(query or "").strip()[:100]
+    limit=max(1,min(int(limit),100));offset=max(0,int(offset))
+    params=[];where=""
+    if query:
+        where="WHERE m.name ILIKE ? OR m.handle ILIKE ?"
+        term=f"%{query}%";params.extend((term,term))
+    with connect() as db:
+        total=db.execute(
+            f"SELECT COUNT(*) FROM merchants m {where}",tuple(params)
+        ).fetchone()[0]
+        rows=[dict(row) for row in db.execute(f"""
+          SELECT m.id,m.name,m.handle,m.category_code,m.city,m.followers_count,
+            m.avatar_blob IS NOT NULL has_avatar,COUNT(p.id) post_count
+          FROM merchants m LEFT JOIN merchant_posts p ON p.merchant_id=m.id
+          {where} GROUP BY m.id ORDER BY m.id DESC LIMIT ? OFFSET ?
+        """,tuple((*params,limit,offset)))]
+    for row in rows:
+        row["avatar_url"]=f"/api/avatars/{row['id']}" if row.pop("has_avatar") else None
+    return {"items":rows,"total":total,"limit":limit,"offset":offset}
+
+def add_or_refresh_merchant(identifier,category_code=None,name=None,description=None,city="ایران"):
+    handle=normalize_identifier(identifier)
+    try:
+        profile=instagram_profile(handle)
+    except Exception as error:
+        raise ValueError(f"could not read Instagram profile {handle}: {error}") from error
+    profile["handle"]=handle
+    inferred_code,inferred_description=infer_category(profile)
+    category_code=(category_code or inferred_code or "").strip()
+    if not category_code:
+        raise ValueError("the shop category could not be inferred; choose a category")
+    username=handle[1:];instagram_url=f"https://www.instagram.com/{username}/"
+    name=(name or profile.get("name") or username).strip()
+    description=(description or inferred_description or "فروشگاه آنلاین").strip()
+    city=(city or "ایران").strip()[:100]
+    source=profile.get("source","instagram_public_embed")
+    with connect() as db:
+        if not db.execute("SELECT 1 FROM categories WHERE code=?",(category_code,)).fetchone():
+            raise ValueError("unknown GPC category code")
+        db.execute("DELETE FROM merchant_exclusions WHERE handle=?",(handle,))
+        existing=db.execute("SELECT id FROM merchants WHERE handle=?",(handle,)).fetchone()
+        if existing:
+            merchant_id=existing["id"];created=False
+            db.execute("""UPDATE merchants SET name=?,description=?,description_source=?,
+              description_source_url=?,description_updated_at=CURRENT_TIMESTAMP,
+              source_url=?,category_code=?,city=?,avatar_initial=?,instagram_url=?,
+              biography=?,biography_source=?,biography_updated_at=CURRENT_TIMESTAMP,
+              followers_count=COALESCE(?,followers_count),
+              following_count=COALESCE(?,following_count),media_count=COALESCE(?,media_count),
+              metrics_source=?,metrics_source_url=?,metrics_updated_at=CURRENT_TIMESTAMP,
+              updated_label='داده عمومی' WHERE id=?""",
+              (name,description,source,instagram_url,instagram_url,category_code,city,
+               name[0],instagram_url,profile.get("biography") or "",source,
+               profile.get("followers_count"),profile.get("following_count"),
+               profile.get("media_count"),source,instagram_url,merchant_id))
+        else:
+            created=True
+            merchant_id=db.execute("""INSERT INTO merchants(
+              instagram_id,name,handle,description,description_source,
+              description_source_url,description_updated_at,source_url,biography,
+              biography_source,biography_updated_at,category_code,city,avatar_initial,
+              avatar_color,instagram_url,updated_label,verified,followers_count,
+              following_count,media_count,metrics_source,metrics_source_url,metrics_updated_at)
+              VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP,?,?,?,CURRENT_TIMESTAMP,?,?,?,?,?,
+              'داده عمومی',0,?,?,?,?,?,CURRENT_TIMESTAMP) RETURNING id""",
+              (f"import_{username}",name,handle,description,source,instagram_url,
+               instagram_url,profile.get("biography") or "",source,category_code,city,
+               name[0],"#e3e7e1",instagram_url,profile.get("followers_count"),
+               profile.get("following_count"),profile.get("media_count"),source,
+               instagram_url)).fetchone()["id"]
+        avatar_saved=bool(profile.get("avatar_url") and cache_merchant_avatar(
+            db,merchant_id,name[0],"#e3e7e1",profile["avatar_url"],profile["avatar_url"]))
+        images_saved=replace_profile_posts(db,merchant_id,name,profile) if profile.get("posts") else 0
+        if images_saved:
+            db.execute("""UPDATE merchants SET instagram_media_sync_version=GREATEST(
+              instagram_media_sync_version,?),instagram_media_synced_at=CURRENT_TIMESTAMP
+              WHERE id=?""",(profile.get("media_grouping_version",1),merchant_id))
+        seed_search_metadata(db);sync_search_documents(db)
+    return {"created":created,"merchant_id":merchant_id,"handle":handle,"name":name,
+      "category_code":category_code,"followers_count":profile.get("followers_count"),
+      "avatar_saved":avatar_saved,"post_images_saved":images_saved}
+
+def remove_merchant(merchant_id):
+    with connect() as db:
+        merchant=db.execute("SELECT id,name,handle FROM merchants WHERE id=?",(merchant_id,)).fetchone()
+        if not merchant:return None
+        db.execute("""INSERT INTO merchant_exclusions(handle,reason) VALUES(?,'admin_removed')
+          ON CONFLICT(handle) DO UPDATE SET reason=excluded.reason,created_at=CURRENT_TIMESTAMP""",
+          (merchant["handle"],))
+        db.execute("DELETE FROM merchants WHERE id=?",(merchant_id,))
+    return dict(merchant)
 
 def admin_metrics(days=30):
     days=days if days in (7,30,90) else 30
@@ -1000,6 +1172,13 @@ class Handler(BaseHTTPRequestHandler):
             try:days=int(args.get("days",[30])[0])
             except ValueError:days=30
             return self.send_json(admin_metrics(days))
+        if parsed.path=="/api/admin/merchants":
+            args=parse_qs(parsed.query)
+            try:
+                limit=int(args.get("limit",[50])[0]);offset=int(args.get("offset",[0])[0])
+            except ValueError:
+                return self.send_json({"error":"invalid_pagination"},400)
+            return self.send_json(admin_merchants(args.get("q",[""])[0],limit,offset))
         if parsed.path.startswith("/api/media/"):
             try: post_id=int(parsed.path.rsplit("/",1)[1])
             except ValueError: return self.send_error(404)
@@ -1030,7 +1209,31 @@ class Handler(BaseHTTPRequestHandler):
             if len(str(payload.get("code","")))!=5:return self.send_json({"error":"invalid_code"},400)
             return self.send_json({"user":{"phone":payload.get("phone"),"display_name":"حساب من"}})
         if self.path=="/api/merchants/import-demo": return self.send_json(import_demo_merchant(),201)
+        if self.path=="/api/admin/merchants":
+            if not admin_mutation_authorized(self.headers):
+                return self.send_json({"error":"unauthorized","message":"کلید مدیریت نادرست است."},401)
+            try:
+                result=add_or_refresh_merchant(
+                    payload.get("identifier"),payload.get("category_code"),
+                    payload.get("name"),payload.get("description"),payload.get("city","ایران"),
+                )
+            except ValueError as error:
+                return self.send_json({"error":"merchant_import_failed","message":str(error)},400)
+            except Exception:
+                return self.send_json({"error":"merchant_import_failed","message":"ذخیره فروشگاه ممکن نشد."},500)
+            return self.send_json(result,201 if result["created"] else 200)
         return self.send_error(404)
+
+    def do_DELETE(self):
+        parsed=urlparse(self.path)
+        if not parsed.path.startswith("/api/admin/merchants/"):
+            return self.send_error(404)
+        if not admin_mutation_authorized(self.headers):
+            return self.send_json({"error":"unauthorized","message":"کلید مدیریت نادرست است."},401)
+        try:merchant_id=int(parsed.path.rsplit("/",1)[1])
+        except ValueError:return self.send_json({"error":"invalid_merchant_id"},400)
+        removed=remove_merchant(merchant_id)
+        return self.send_json({"removed":removed}) if removed else self.send_json({"error":"not_found"},404)
 
 if __name__=="__main__":
     initialize_database();print("Kahoo running at http://127.0.0.1:4173");ThreadingHTTPServer(("127.0.0.1",4173),Handler).serve_forever()

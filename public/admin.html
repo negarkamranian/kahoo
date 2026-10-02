@@ -16,7 +16,7 @@
       <nav aria-label="بخش‌های پنل">
         <a class="active" href="#overview"><i>▦</i> نمای کلی</a>
         <a href="#queries"><i>⌕</i> جستجوها</a>
-        <a href="#merchants"><i>◇</i> فروشگاه‌ها</a>
+        <a href="#merchant-management"><i>◇</i> مدیریت فروشگاه‌ها</a>
         <a href="#catalog"><i>≡</i> سلامت داده</a>
       </nav>
       <a class="back-link" href="/">بازگشت به کاهو <span>←</span></a>
@@ -64,6 +64,22 @@
             <div class="funnel" id="funnel"></div>
           </section>
         </div>
+
+        <section class="panel merchant-management" id="merchant-management">
+          <div class="panel-head"><div><h2>مدیریت فروشگاه‌ها</h2><p>افزودن از اینستاگرام یا حذف دائمی از فهرست کاهو</p></div><span id="managed-merchant-count"></span></div>
+          <form id="merchant-add-form" class="merchant-form">
+            <label class="wide"><span>شناسه یا لینک اینستاگرام</span><input id="merchant-identifier" required dir="ltr" placeholder="@username یا https://instagram.com/username" /></label>
+            <label><span>دسته‌بندی</span><select id="merchant-category"><option value="">تشخیص خودکار</option><option value="67010000">پوشاک و مد</option><option value="53161000">آرایشی و زیبایی</option><option value="63010300">کفش و پاپوش</option><option value="64010100">زیورآلات</option><option value="73040000">خانه و آشپزخانه</option><option value="66010100">لوازم جانبی موبایل</option><option value="66010300">موبایل و دیجیتال</option><option value="62060100">لوازم تحریر</option><option value="60010200">کتاب</option><option value="86010400">کودک و اسباب‌بازی</option><option value="50230100">مواد غذایی</option><option value="10000000">حیوانات خانگی</option></select></label>
+            <label><span>نام نمایشی (اختیاری)</span><input id="merchant-name" placeholder="از اینستاگرام خوانده می‌شود" /></label>
+            <label><span>شهر</span><input id="merchant-city" value="ایران" /></label>
+            <label><span>کلید مدیریت (در صورت تنظیم)</span><input id="admin-token" type="password" dir="ltr" autocomplete="current-password" /></label>
+            <label class="wide"><span>توضیح (اختیاری)</span><input id="merchant-description" placeholder="در صورت خالی بودن از دسته‌بندی ساخته می‌شود" /></label>
+            <button id="merchant-submit" class="primary-button" type="submit">افزودن و دریافت اطلاعات</button>
+          </form>
+          <p class="manager-status" id="manager-status" role="status" aria-live="polite"></p>
+          <div class="merchant-tools"><label><span class="sr-only">جستجوی فروشگاه</span><input id="merchant-search" placeholder="جستجو با نام یا شناسه…" /></label><button id="merchant-refresh" type="button">به‌روزرسانی</button></div>
+          <div class="managed-list" id="managed-merchant-list"></div>
+        </section>
 
         <section class="panel" id="catalog">
           <div class="panel-head"><div><h2>سلامت داده</h2><p>پوشش فعلی فهرست کاهو</p></div><span class="status"><i></i> پایگاه داده فعال</span></div>

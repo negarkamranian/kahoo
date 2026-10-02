@@ -26,6 +26,7 @@ services:
       EMBEDDING_API_URL: ${EMBEDDING_API_URL:-}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-m3}
+      KAHOO_ADMIN_TOKEN: ${KAHOO_ADMIN_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy

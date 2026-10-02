@@ -60,6 +60,20 @@ It requires `instagram_basic`, `instagram_manage_insights` and
 unavailable, and Meta may omit downloadable media for licensed-audio videos or
 Reels whose owner disabled downloads.
 
+### Admin merchant management
+
+The admin panel can add a shop from an Instagram username/profile URL and can
+remove a shop together with its cached posts and search data. A removed catalog
+shop is recorded in `merchant_exclusions`, so it will not return on restart.
+Set a mutation token in `.env` before exposing the admin panel:
+
+```dotenv
+KAHOO_ADMIN_TOKEN=replace-with-a-long-random-value
+```
+
+Enter the same value in the admin panel when adding or removing a shop. Leaving
+the variable empty keeps mutations unlocked for local development.
+
 ### Refresh the curated merchant catalog
 
 The reviewed public-directory snapshot in `data/merchant_catalog.json` enriches
@@ -129,10 +143,12 @@ placeholders. The JSON report lists failures and image counts per handle.
 
 ### Search quality
 
-Search includes Persian normalization, commerce synonyms, typo-tolerant prefix
-and trigram retrieval, field-aware ranking, optional vector retrieval with RRF,
-quality-aware browsing, autocomplete, match explanations, and empty-result
-recovery. Research notes and design details are in `docs/search-quality.md`.
+Search includes Persian normalization and morphology, commerce synonyms,
+weighted full-text and trigram retrieval, post-level evidence, optional BGE-M3
+vector retrieval with RRF, coverage/proximity scoring, bounded behavioral
+signals, autocomplete, explanations, and empty-result recovery. The complete
+flow and runbook are in `docs/search-core-flow.md`; research notes remain in
+`docs/search-quality.md`.
 
 Run the reviewed Persian-commerce relevance benchmark with:
 
@@ -144,7 +160,7 @@ Configure an OpenAI-compatible embedding endpoint that returns 1024-dimensional
 BGE-M3 vectors, then index changed documents:
 
 ```bash
-docker compose run --rm app python3 scripts/reindex_search.py --batch-size 500
+docker compose run --rm app python3 scripts/reindex_search.py --batch-size 500 --all
 ```
 
 If no embedding endpoint is configured, Persian-normalized lexical, alias and category search continues to work.
