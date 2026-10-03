@@ -3,14 +3,14 @@ import unittest
 from contextlib import redirect_stdout
 from unittest.mock import Mock, patch
 
+from backend.cli import main
 from backend.instagram import normalize_identifier
-from scripts.cli import main
-from scripts.merchants import add_or_refresh_merchant
+from backend.services.merchants import add_or_refresh_merchant
 
 
 class AddMerchantTests(unittest.TestCase):
-    @patch("scripts.database.migrate")
-    @patch("scripts.merchants.add_or_refresh_merchant")
+    @patch("backend.cli.initialize_database")
+    @patch("backend.cli.merchants.add_or_refresh_merchant")
     def test_cli_uses_the_shared_import_workflow(self, import_merchant, migrate):
         import_merchant.return_value = {"handle": "@shop", "created": True}
         output = io.StringIO()
@@ -31,8 +31,8 @@ class AddMerchantTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             normalize_identifier("https://example.com/shop")
 
-    @patch("scripts.merchants.instagram_profile")
-    @patch("scripts.merchants.connect")
+    @patch("backend.services.merchants.instagram_profile")
+    @patch("backend.services.merchants.connect")
     def test_new_merchant_requires_category_before_contacting_instagram(self, connect, profile):
         connect.return_value.__enter__.return_value.execute.return_value.fetchone.return_value = (
             None
@@ -41,10 +41,12 @@ class AddMerchantTests(unittest.TestCase):
             add_or_refresh_merchant("@shop")
         profile.assert_not_called()
 
-    @patch("scripts.merchants.sync_search_documents")
-    @patch("scripts.merchants.sync_search_metadata")
-    @patch("scripts.merchants.instagram_profile", return_value={"name": "Shop", "posts": []})
-    @patch("scripts.merchants.connect")
+    @patch("backend.services.merchants.sync_search_documents")
+    @patch("backend.services.merchants.sync_search_metadata")
+    @patch(
+        "backend.services.merchants.instagram_profile", return_value={"name": "Shop", "posts": []}
+    )
+    @patch("backend.services.merchants.connect")
     def test_refresh_preserves_existing_category_without_keyword_rules(
         self, connect, profile, metadata, index
     ):

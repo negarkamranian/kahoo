@@ -6,9 +6,9 @@ from pathlib import Path
 
 import psycopg
 
-from backend.database import PROJECT_ROOT
+from backend.cli import catalog, media, merchants, search
+from backend.database import PROJECT_ROOT, initialize_database
 from backend.server.app import serve
-from scripts import catalog, categories, database, enrichment, media, merchants, search
 
 
 def nonnegative(value):
@@ -27,7 +27,7 @@ def positive(value):
 
 def parser():
     root = argparse.ArgumentParser(
-        prog="python -m scripts", description="Kahoo server and maintenance CLI"
+        prog="python -m backend", description="Kahoo server and maintenance CLI"
     )
     commands = root.add_subparsers(dest="command", required=True)
 
@@ -45,13 +45,8 @@ def parser():
     server.add_argument("--host")
     server.add_argument("--port", type=positive)
 
-    db = group("db", "Database setup and legacy import")
-    action(db, "migrate", "Apply migrations and the category seed", database.migrate, False)
-    legacy = action(
-        db, "import-sqlite", "Import an existing SQLite database", database.import_sqlite, False
-    )
-    legacy.add_argument("--source", type=Path, required=True)
-    legacy.add_argument("--database-url")
+    db = group("db", "Database setup")
+    action(db, "migrate", "Apply migrations and the category seed", migrate, False)
 
     shops = group("merchants", "List, import and remove merchants")
     listing = action(shops, "list", "List stored merchants", merchants.list_merchants)
@@ -87,14 +82,14 @@ def parser():
         catalogs,
         "import",
         "Import supplied JSON catalogs, or all checked-in snapshots",
-        catalog.import_catalog,
+        catalog.import_snapshots,
     )
     seed.add_argument("paths", nargs="*", type=Path)
     build = action(
         catalogs,
         "build-categories",
         "Build the GS1 category seed from publications",
-        categories.build,
+        catalog.build,
         False,
     )
     build.add_argument("--current", type=Path, required=True)
@@ -141,11 +136,15 @@ def parser():
         index,
         "enrich",
         "Apply a JSON description and search terms with provenance",
-        enrichment.apply,
+        search.enrich,
     )
     enrich.add_argument("merchant_id", type=positive)
     enrich.add_argument("source", type=Path)
     return root
+
+
+def migrate(args):
+    return initialize_database()
 
 
 def main(argv=None):
@@ -153,7 +152,7 @@ def main(argv=None):
     args = command.parse_args(argv)
     try:
         if args.needs_db:
-            database.migrate(args)
+            initialize_database()
         result = args.handler(args)
     except (ValueError, OSError, psycopg.Error) as error:
         command.exit(1, f"error: {error}\n")

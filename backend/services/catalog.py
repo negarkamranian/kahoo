@@ -1,12 +1,78 @@
 import json
+from pathlib import Path
 
-from backend.catalog import load_merchant_catalogs, merchant_catalog_paths
 from backend.database import PROJECT_ROOT, connect
 from backend.search.indexing import sync_search_documents
 from backend.search.metadata import sync_search_metadata
-from backend.server.media import cache_merchant_avatar
+from backend.services.media import cache_merchant_avatar
 
 DATA_ROOT = PROJECT_ROOT / "data"
+
+REQUIRED_NEW_MERCHANT_FIELDS = {
+    "name",
+    "description",
+    "category_code",
+    "city",
+}
+
+
+def merchant_catalog_paths(data_root: Path):
+    paths = [
+        data_root / "merchant_catalog.json",
+        *sorted(data_root.glob("merchant_catalog_expansion_*.json")),
+    ]
+    shared = data_root / "merchant_catalog_shared.json"
+    if shared.exists():
+        paths.append(shared)
+    return paths
+
+
+def load_merchant_catalog(path: Path):
+    """Load and validate the reproducible public merchant-data snapshot."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    snapshot_at = payload.get("snapshot_at")
+    merchants = payload.get("merchants")
+    if not snapshot_at or not isinstance(merchants, list):
+        raise ValueError("merchant catalog needs snapshot_at and a merchants list")
+
+    handles = set()
+    for merchant in merchants:
+        handle = merchant.get("handle", "")
+        if not handle.startswith("@") or handle != handle.lower():
+            raise ValueError(f"invalid merchant handle: {handle!r}")
+        if handle in handles:
+            raise ValueError(f"duplicate merchant handle: {handle}")
+        handles.add(handle)
+        if merchant.get("is_new"):
+            missing = REQUIRED_NEW_MERCHANT_FIELDS - merchant.keys()
+            if missing:
+                raise ValueError(f"{handle} is missing: {', '.join(sorted(missing))}")
+        categories = merchant.get("category_codes", [])
+        if len(categories) != len(set(categories)):
+            raise ValueError(f"duplicate category for {handle}")
+        for field in ("followers_count", "media_count"):
+            value = merchant.get(field)
+            if value is not None and (not isinstance(value, int) or value < 0):
+                raise ValueError(f"invalid {field} for {handle}")
+
+    return snapshot_at, merchants
+
+
+def load_merchant_catalogs(paths):
+    """Load catalog shards and reject duplicates across shard boundaries."""
+    snapshots = []
+    merchants = []
+    handles = set()
+    for path in paths:
+        snapshot_at, shard = load_merchant_catalog(path)
+        snapshots.append(snapshot_at)
+        for merchant in shard:
+            handle = merchant["handle"]
+            if handle in handles:
+                raise ValueError(f"duplicate merchant handle across catalogs: {handle}")
+            handles.add(handle)
+            merchants.append({**merchant, "snapshot_at": snapshot_at})
+    return max(snapshots), merchants
 
 
 def import_records(db, records):
@@ -170,8 +236,8 @@ def catalog_records(paths=None):
     return list(records.values())
 
 
-def import_catalog(args):
-    records = catalog_records(args.paths)
+def import_catalog(paths=None):
+    records = catalog_records(paths)
     with connect() as db:
         report = import_records(db, records)
         sync_search_metadata(db)

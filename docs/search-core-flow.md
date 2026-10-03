@@ -168,7 +168,7 @@ EMBEDDING_MODEL=BAAI/bge-m3
 Rebuild every changed document and embed all pending/stale-model rows:
 
 ```bash
-docker compose run --rm app python3 -m scripts search reindex --batch-size 250 --all
+docker compose run --rm app python3 -m backend search reindex --batch-size 250 --all
 ```
 
 Without `--all`, one embedding batch is processed. Without an embedding
@@ -179,7 +179,7 @@ endpoint, indexing still refreshes lexical documents and exits cleanly.
 Run the reviewed query set after any ranking or data change:
 
 ```bash
-docker compose run --rm app python3 -m scripts search evaluate
+docker compose run --rm app python3 -m backend search evaluate
 ```
 
 The report contains:

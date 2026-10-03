@@ -1,17 +1,48 @@
 import io
+import json
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
-from scripts.cli import main, parser
+from backend.cli import main, parser
 
 
 class CliTests(unittest.TestCase):
+    @patch("backend.cli.initialize_database", return_value={"migrated": True})
+    def test_migrate_initializes_database_once_and_reports_result(self, initialize):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            status = main(["db", "migrate"])
+        self.assertEqual(0, status)
+        initialize.assert_called_once_with()
+        self.assertEqual({"migrated": True}, json.loads(output.getvalue()))
+
+    @patch.dict("os.environ", {"KAHOO_HOST": "localhost", "KAHOO_PORT": "4174"})
+    @patch("backend.server.app.ThreadingHTTPServer")
+    @patch("backend.server.app.initialize_database")
+    @patch("backend.cli.initialize_database")
+    def test_serve_owns_database_setup_and_respects_address_options(
+        self, cli_initialize, server_initialize, server
+    ):
+        for options, address in (
+            ([], ("localhost", 4174)),
+            (["--host", "127.0.0.1", "--port", "4175"], ("127.0.0.1", 4175)),
+        ):
+            with self.subTest(options=options), redirect_stdout(io.StringIO()):
+                server.reset_mock()
+                server_initialize.reset_mock()
+                server.side_effect = lambda *args: (
+                    server_initialize.assert_called_once_with() or server.return_value
+                )
+                self.assertEqual(0, main(["serve", *options]))
+                self.assertEqual(address, server.call_args.args[0])
+                server.return_value.__enter__.return_value.serve_forever.assert_called_once_with()
+        cli_initialize.assert_not_called()
+
     def test_every_action_has_help_without_database_access(self):
         actions = [
             ["serve"],
             ["db", "migrate"],
-            ["db", "import-sqlite"],
             ["merchants", "list"],
             ["merchants", "add"],
             ["merchants", "remove"],
@@ -25,7 +56,7 @@ class CliTests(unittest.TestCase):
             ["search", "evaluate"],
             ["search", "enrich"],
         ]
-        with patch("scripts.database.migrate") as migrate:
+        with patch("backend.cli.initialize_database") as migrate:
             for action in actions:
                 with self.subTest(action=action), redirect_stdout(io.StringIO()):
                     with self.assertRaises(SystemExit) as error:
@@ -43,9 +74,9 @@ class CliTests(unittest.TestCase):
                     parser().parse_args(argv)
                 self.assertEqual(2, error.exception.code)
 
-    @patch("scripts.database.migrate")
+    @patch("backend.cli.initialize_database")
     @patch(
-        "scripts.media.refresh_instagram_profiles",
+        "backend.cli.media.refresh_instagram_profiles",
         return_value=[{"updated": False, "error": "unavailable"}],
     )
     def test_sync_routes_options_and_exits_nonzero_on_partial_failure(self, refresh, migrate):
@@ -65,9 +96,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(1, status)
         refresh.assert_called_once_with(["@shop"], only_missing=True, minimum_images=4, limit=5)
 
-    @patch("scripts.database.migrate")
-    @patch("scripts.media.refresh_instagram_avatars", return_value=[])
-    @patch("scripts.media.refresh_instagram_profiles")
+    @patch("backend.cli.initialize_database")
+    @patch("backend.cli.media.refresh_instagram_avatars", return_value=[])
+    @patch("backend.cli.media.refresh_instagram_profiles")
     def test_avatar_only_sync_does_not_replace_posts(self, profiles, avatars, migrate):
         with redirect_stdout(io.StringIO()):
             status = main(["media", "sync", "--avatars-only", "--only-missing", "--limit", "2"])

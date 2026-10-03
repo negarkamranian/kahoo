@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Run Kahoo's reviewed offline search relevance benchmark."""
+"""Search indexing, evaluation, and enrichment commands."""
 
 import json
 import math
@@ -8,6 +7,7 @@ import time
 
 from backend.database import connect
 from backend.search.embeddings import embed_pending_documents, embedding_enabled
+from backend.search.enrichment import save_llm_enrichment
 from backend.search.indexing import sync_search_documents
 from backend.search.metadata import sync_search_metadata
 from backend.search.ranking import ndcg_at_k
@@ -80,3 +80,19 @@ def reindex(args):
         "embedded": embedded,
         "embedding_enabled": embedding_enabled(),
     }
+
+
+def enrich(args):
+    payload = json.loads(args.source.read_text(encoding="utf-8"))
+    required = {"description", "terms", "model", "source_url"}
+    if not isinstance(payload, dict) or required - payload.keys():
+        raise ValueError("enrichment JSON needs description, terms, model and source_url")
+    save_llm_enrichment(
+        args.merchant_id,
+        payload["description"],
+        payload["terms"],
+        payload["model"],
+        payload["source_url"],
+        payload.get("confidence", 0.75),
+    )
+    return {"merchant_id": args.merchant_id, "updated": True}

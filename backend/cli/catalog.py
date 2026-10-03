@@ -1,6 +1,7 @@
-#!/usr/bin/env python3
 import json
 from urllib.request import Request, urlopen
+
+from backend.services.catalog import import_catalog
 
 API = "https://gpc-api.gs1.org/api/browser/download/publication/{}/json"
 HEADERS = {
@@ -135,3 +136,7 @@ def build(args):
         "english_fallbacks": len(untranslated),
         "output": str(args.output),
     }
+
+
+def import_snapshots(args):
+    return import_catalog(args.paths)

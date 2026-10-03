@@ -12,10 +12,14 @@ from urllib.parse import parse_qs, urlparse
 from backend.database import PROJECT_ROOT, connect
 from backend.search.service import merchants
 from backend.search.suggestions import search_suggestions
-from backend.server.analytics import admin_metrics, record_event
-from backend.server.categories import category_tree
-from backend.server.merchants import admin_merchants, merchant_detail, remove_merchant
-from scripts.merchants import add_or_refresh_merchant
+from backend.services.analytics import admin_metrics, record_event
+from backend.services.categories import category_tree
+from backend.services.merchants import (
+    add_or_refresh_merchant,
+    admin_merchants,
+    merchant_detail,
+    remove_merchant,
+)
 
 PUBLIC_ROOT = PROJECT_ROOT / "public"
 logger = logging.getLogger(__name__)

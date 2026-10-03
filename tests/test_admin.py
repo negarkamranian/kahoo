@@ -3,9 +3,9 @@ from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 from backend.search.metadata import sync_search_metadata
-from backend.server.analytics import admin_metrics
 from backend.server.http import admin_mutation_authorized
-from backend.server.merchants import remove_merchant
+from backend.services.analytics import admin_metrics
+from backend.services.merchants import remove_merchant
 
 
 class Cursor:
@@ -78,7 +78,7 @@ class AdminMetricsTests(unittest.TestCase):
         def fake_connect():
             yield database
 
-        with patch("backend.server.analytics.connect", fake_connect):
+        with patch("backend.services.analytics.connect", fake_connect):
             result = admin_metrics(7)
 
         self.assertEqual(7, result["period_days"])
@@ -111,7 +111,7 @@ class AdminMetricsTests(unittest.TestCase):
         def fake_connect():
             yield database
 
-        with patch("backend.server.merchants.connect", fake_connect):
+        with patch("backend.services.merchants.connect", fake_connect):
             removed = remove_merchant(12)
 
         self.assertEqual("@shop", removed["handle"])

@@ -2,12 +2,12 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
-from backend.server.media import cache_merchant_avatar
-from backend.server.merchants import merchant_avatar_url
+from backend.services.media import cache_merchant_avatar
+from backend.services.merchants import merchant_avatar_url
 
 
 class AvatarCacheTests(unittest.TestCase):
-    @patch("backend.server.media.download_image", side_effect=OSError("temporary failure"))
+    @patch("backend.services.media.download_image", side_effect=OSError("temporary failure"))
     def test_failed_remote_download_preserves_the_existing_avatar(self, _download):
         database = Mock()
 

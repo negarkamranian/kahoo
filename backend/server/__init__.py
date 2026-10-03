@@ -1,1 +1,1 @@
-"""HTTP handlers and merchant services."""
+"""HTTP server lifecycle and request handling."""

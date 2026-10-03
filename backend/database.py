@@ -53,3 +53,10 @@ def run_category_seed(path):
         script = script.replace("BEGIN;", "", 1).rsplit("COMMIT;", 1)[0]
         database.execute(script)
         return True
+
+
+def initialize_database():
+    """Apply schema migrations and seed categories for both server and CLI startup."""
+    run_migrations()
+    seeded = run_category_seed(PROJECT_ROOT / "data/categories.sql")
+    return {"migrated": True, "categories_seeded": seeded}

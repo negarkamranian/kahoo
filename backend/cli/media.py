@@ -1,6 +1,6 @@
 from backend.database import connect
-from backend.server.media import ensure_gallery_images
-from backend.server.profiles import (
+from backend.services.media import ensure_gallery_images
+from backend.services.profiles import (
     instagram_media_backfill_status,
     refresh_instagram_avatars,
     refresh_instagram_profiles,

@@ -29,21 +29,3 @@ def save_llm_enrichment(merchant_id, description, terms, model, source_url, conf
             )
         sync_search_metadata(db)
         sync_search_documents(db)
-
-
-def apply(args):
-    import json
-
-    payload = json.loads(args.source.read_text(encoding="utf-8"))
-    required = {"description", "terms", "model", "source_url"}
-    if not isinstance(payload, dict) or required - payload.keys():
-        raise ValueError("enrichment JSON needs description, terms, model and source_url")
-    save_llm_enrichment(
-        args.merchant_id,
-        payload["description"],
-        payload["terms"],
-        payload["model"],
-        payload["source_url"],
-        payload.get("confidence", 0.75),
-    )
-    return {"merchant_id": args.merchant_id, "updated": True}

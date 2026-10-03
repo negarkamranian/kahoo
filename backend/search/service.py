@@ -15,7 +15,7 @@ from backend.search.ranking import (
     term_match_strength,
 )
 from backend.search.retrieval import lexical_merchant_matches
-from backend.server.merchants import merchant_avatar_url, merchant_posts
+from backend.services.merchants import merchant_avatar_url, merchant_posts
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ from backend.database import connect
 from backend.instagram import INSTAGRAM_MEDIA_SYNC_VERSION, instagram_profile, normalize_identifier
 from backend.search.indexing import sync_search_documents
 from backend.search.metadata import sync_search_metadata
-from backend.server.media import cache_merchant_avatar, replace_profile_posts
+from backend.services.media import cache_merchant_avatar, replace_profile_posts
 
 
 def merchant_media_needs(merchant, minimum_images=3):

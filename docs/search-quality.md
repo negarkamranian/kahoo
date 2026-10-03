@@ -51,14 +51,14 @@ retrieval and ranking:
 5. **Experience:** suggestions cover shops, categories, extracted merchant terms, and successful
    queries. Results explain why they matched, and empty results offer recovery.
 6. **Evaluation:** `data/search_benchmarks.json` is a reviewed Persian-commerce
-   query set. `python3 -m scripts search evaluate` reports Success@5, MRR@5, Recall@10,
+   query set. `python3 -m backend search evaluate` reports Success@5, MRR@5, Recall@10,
    nDCG@10, zero-result rate, and latency percentiles.
 
 ## Operating loop
 
 ```bash
-docker compose run --rm app python3 -m scripts search evaluate
-docker compose run --rm app python3 -m scripts search reindex --batch-size 500 --all
+docker compose run --rm app python3 -m backend search evaluate
+docker compose run --rm app python3 -m backend search reindex --batch-size 500 --all
 ```
 
 Track zero-result rate, reformulation rate, Success@5, MRR@5,

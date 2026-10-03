@@ -3,8 +3,12 @@ import re
 import unittest
 from pathlib import Path
 
-from backend.catalog import load_merchant_catalog, load_merchant_catalogs, merchant_catalog_paths
-from scripts.catalog import catalog_records
+from backend.services.catalog import (
+    catalog_records,
+    load_merchant_catalog,
+    load_merchant_catalogs,
+    merchant_catalog_paths,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -83,7 +87,7 @@ class MerchantCatalogTests(unittest.TestCase):
             f"@{handle.lower()}"
             for handle in re.findall(
                 r"instagram\.com/([A-Za-z0-9._]+)",
-                (PROJECT_ROOT / "shops.txt").read_text(encoding="utf-8"),
+                (PROJECT_ROOT / "docs" / "shops.txt").read_text(encoding="utf-8"),
             )
         }
         self.assertEqual(131, len(submitted))
