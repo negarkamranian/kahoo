@@ -134,6 +134,10 @@ New merchants require an explicit GPC category; existing merchants retain theirs
 when `--category` is omitted. Imports preserve snapshot provenance, newer live
 metrics, and LLM descriptions. Use separate handle files for different categories.
 
+Catalog snapshots may omit fields supplied by the seed. Imports validate the
+merged merchant's required name before writing to the database; they do not invent
+missing names. Duplicate handles within or across snapshot files are rejected.
+
 For media sync, `--avatars-only` preserves galleries and `--limit 0` processes all
 matches. Status and sync use `--minimum-post-images` (default: 3) for completeness.
 Failed downloads preserve saved media. Commands print their result models on success. Runtime

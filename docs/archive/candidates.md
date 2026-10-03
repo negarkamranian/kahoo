@@ -6,4 +6,4 @@ Ideas for building:
 - loans and insurance and other things
 - insta shops
 - too good to go
-- 
+-

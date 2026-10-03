@@ -23,12 +23,14 @@ def merchant_catalog_paths(data_root: Path):
 
 
 def load_merchant_catalog(path: Path) -> MerchantCatalog:
-    return MerchantCatalog.model_validate_json(path.read_bytes())
+    catalog = MerchantCatalog.model_validate_json(path.read_bytes())
+    catalog.require_unique_handles()
+    return catalog
 
 
 def load_merchant_catalogs(paths) -> MerchantCatalog:
     shards = [load_merchant_catalog(path) for path in paths]
-    return MerchantCatalog(
+    catalog = MerchantCatalog(
         snapshot_at=max(shard.snapshot_at for shard in shards),
         merchants=[
             merchant.model_copy(update={"snapshot_at": shard.snapshot_at})
@@ -36,6 +38,8 @@ def load_merchant_catalogs(paths) -> MerchantCatalog:
             for merchant in shard.merchants
         ],
     )
+    catalog.require_unique_handles()
+    return catalog
 
 
 def update_catalog_details(db, merchant_id, item):
@@ -205,17 +209,16 @@ def catalog_records(paths=None) -> list[CatalogMerchant]:
     catalog = load_merchant_catalogs(paths or merchant_catalog_paths(DATA_ROOT))
     for item in catalog.merchants:
         previous = records.get(item.handle)
+        fields = item.model_dump(exclude_unset=True)
         if previous:
-            item = CatalogMerchant.model_validate(
-                {
-                    **previous.model_dump(exclude_unset=True),
-                    **item.model_dump(exclude_unset=True),
-                    "category_codes": list(
-                        dict.fromkeys([*previous.category_codes, *item.category_codes])
-                    ),
-                }
-            )
-        records[item.handle] = item
+            fields = {
+                **previous.model_dump(exclude_unset=True),
+                **fields,
+                "category_codes": list(
+                    dict.fromkeys([*previous.category_codes, *item.category_codes])
+                ),
+            }
+        records[item.handle] = CatalogMerchant.model_validate(fields)
     return list(records.values())
 
 

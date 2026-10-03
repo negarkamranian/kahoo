@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from pydantic import ValidationError
 
-from backend.models.catalog import CatalogMerchant, MerchantCatalog
+from backend.models.catalog import CatalogMerchant, CatalogMerchantSnapshot
 from backend.services.catalog import (
     catalog_records,
     load_merchant_catalog,
@@ -19,18 +19,55 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class MerchantCatalogTests(unittest.TestCase):
-    def test_invalid_catalog_metrics_and_duplicate_handles_are_rejected(self):
+    def test_invalid_catalog_metrics_are_rejected(self):
         for value in (-1, True, "123"):
             with self.subTest(value=value), self.assertRaises(ValidationError):
-                CatalogMerchant(handle="@shop", followers_count=value)
-        with self.assertRaisesRegex(ValidationError, "duplicate merchant handle"):
-            MerchantCatalog(
-                snapshot_at="2026-10-03",
-                merchants=[
-                    CatalogMerchant(handle="@shop"),
-                    CatalogMerchant(handle="@shop"),
-                ],
+                CatalogMerchant(handle="@shop", name="Shop", followers_count=value)
+
+    def test_full_merchant_requires_a_name_but_snapshot_fields_can_be_partial(self):
+        snapshot = CatalogMerchantSnapshot(handle="@shop", followers_count=123)
+        self.assertNotIn("name", snapshot.model_fields_set)
+        for fields in ({}, {"name": None}):
+            with self.subTest(fields=fields), self.assertRaises(ValidationError):
+                CatalogMerchant(handle="@shop", **fields)
+
+    def test_duplicate_catalog_handles_are_rejected_before_merging(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "catalog.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "snapshot_at": "2026-10-03",
+                        "merchants": [{"handle": "@shop"}, {"handle": "@shop"}],
+                    }
+                )
             )
+            with self.assertRaisesRegex(ValueError, "duplicate merchant handle"):
+                load_merchant_catalog(path)
+
+    def test_duplicate_handles_across_snapshot_files_are_rejected(self):
+        with TemporaryDirectory() as directory:
+            paths = [Path(directory) / name for name in ("first.json", "second.json")]
+            for path in paths:
+                path.write_text(
+                    json.dumps({"snapshot_at": "2026-10-03", "merchants": [{"handle": "@shop"}]})
+                )
+            with self.assertRaisesRegex(ValueError, "duplicate merchant handle"):
+                load_merchant_catalogs(paths)
+
+    def test_partial_snapshot_requires_a_named_base_record_before_import(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "catalog.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "snapshot_at": "2026-10-03",
+                        "merchants": [{"handle": "@shop", "followers_count": 123}],
+                    }
+                )
+            )
+            with self.assertRaises(ValidationError):
+                catalog_records([path])
 
     def test_merging_partial_snapshot_preserves_seed_fields_and_categories(self):
         seed = {

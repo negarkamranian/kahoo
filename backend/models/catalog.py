@@ -1,8 +1,6 @@
 """Reviewed merchant snapshots and catalog import results."""
 
-from typing import Self
-
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from backend.models.common import Count, InputModel, InstagramHandle
 
@@ -13,9 +11,11 @@ class CatalogImportResult(BaseModel):
     enriched: Count
 
 
-class CatalogMerchant(InputModel):
+class CatalogMerchantSnapshot(InputModel):
+    """Supplied snapshot fields; omitted fields retain an earlier record's values."""
+
     handle: InstagramHandle
-    name: str
+    name: str | None = None
     description: str | None = None
     category_code: str | None = None
     city: str | None = None
@@ -35,13 +35,11 @@ class CatalogMerchant(InputModel):
     quality_source: str = "curated_public_directory"
     quality_source_url: str | None = None
 
-    @model_validator(mode="after")
-    def valid_catalog_entry(self) -> Self:
-        if len(self.category_codes) != len(set(self.category_codes)):
-            raise ValueError(f"duplicate category for {self.handle}")
-        if self.is_new:
-            self.require_details()
-        return self
+
+class CatalogMerchant(CatalogMerchantSnapshot):
+    """Merged merchant record with a required name before import."""
+
+    name: str
 
     def require_details(self) -> None:
         missing = [
@@ -57,11 +55,9 @@ class CatalogMerchant(InputModel):
 
 class MerchantCatalog(InputModel):
     snapshot_at: str = Field(min_length=1)
-    merchants: list[CatalogMerchant]
+    merchants: list[CatalogMerchantSnapshot]
 
-    @model_validator(mode="after")
-    def unique_handles(self) -> Self:
+    def require_unique_handles(self) -> None:
         handles = [merchant.handle for merchant in self.merchants]
         if len(handles) != len(set(handles)):
             raise ValueError("duplicate merchant handle in catalog")
-        return self
