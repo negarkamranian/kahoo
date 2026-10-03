@@ -47,13 +47,14 @@ class AddMerchantTests(unittest.TestCase):
             add_or_refresh_merchant(MerchantImport(identifier="@shop"))
         profile.assert_not_called()
 
+    @patch("backend.services.merchants.replace_profile_posts", return_value=0)
     @patch("backend.services.merchants.sync_search_index")
     @patch(
         "backend.services.merchants.instagram_profile", return_value=InstagramProfile(name="Shop")
     )
     @patch("backend.services.merchants.connect")
     def test_refresh_preserves_existing_category_without_keyword_rules(
-        self, connect, profile, index
+        self, connect, profile, index, replace_posts
     ):
         database = connect.return_value.__enter__.return_value
 
@@ -70,19 +71,23 @@ class AddMerchantTests(unittest.TestCase):
         self.assertEqual("custom-code", result.category_code)
         self.assertFalse(result.created)
         profile.assert_called_once_with("@shop")
+        replace_posts.assert_called_once_with(database, 7, profile.return_value)
+        self.assertEqual(0, result.post_images_saved)
         index.assert_called_once_with(database)
 
+    @patch("backend.services.merchants.replace_profile_posts", return_value=0)
     @patch("backend.services.merchants.sync_search_index")
     @patch("backend.services.merchants.instagram_profile")
     @patch("backend.services.merchants.connect")
     def test_import_and_refresh_take_name_and_description_only_from_instagram(
-        self, connect, profile, index
+        self, connect, profile, index, replace_posts
     ):
         database = connect.return_value.__enter__.return_value
         for existing in (None, {"id": 7, "category_code": "custom-code"}):
             for biography in ("  Instagram biography  ", ""):
                 with self.subTest(existing=existing, biography=biography):
                     database.reset_mock()
+                    replace_posts.reset_mock()
                     profile.return_value = InstagramProfile(name="  Shop  ", biography=biography)
 
                     def execute(query, params=None, existing=existing):
@@ -100,6 +105,8 @@ class AddMerchantTests(unittest.TestCase):
                     )
                     self.assertEqual("Shop", result.name)
                     self.assertEqual(existing is None, result.created)
+                    replace_posts.assert_called_once_with(database, 7, profile.return_value)
+                    self.assertEqual(0, result.post_images_saved)
                     writes = [
                         call.args[1]
                         for call in database.execute.call_args_list

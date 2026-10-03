@@ -26,7 +26,7 @@ class CliTests(unittest.TestCase):
     ):
         for options, address in (
             ([], ("localhost", 4174)),
-            (["--host", "127.0.0.1", "--port", "4175"], ("127.0.0.1", 4175)),
+            (["--host", "127.0.0.1", "--port", "4175"], ("127.0.0.1", "4175")),
         ):
             with self.subTest(options=options), redirect_stdout(io.StringIO()):
                 server.reset_mock()
@@ -64,12 +64,20 @@ class CliTests(unittest.TestCase):
                     self.assertEqual(0, error.exception.code)
             migrate.assert_not_called()
 
-    def test_cli_rejects_invalid_batch_sizes_and_limits(self):
+    def test_cli_preserves_untyped_numeric_options_as_strings(self):
+        for argv, field, value in (
+            (["search", "reindex", "--batch-size", "0"], "batch_size", "0"),
+            (["media", "sync", "--limit", "-1"], "limit", "-1"),
+            (["merchants", "list", "--offset", "-1"], "offset", "-1"),
+        ):
+            with self.subTest(argv=argv):
+                self.assertEqual(value, getattr(parser().parse_args(argv), field))
+
+    def test_cli_rejects_invalid_page_sizes_and_import_overrides(self):
         for argv in (
-            ["search", "reindex", "--batch-size", "0"],
-            ["media", "sync", "--limit", "-1"],
+            ["merchants", "list", "--limit", "0"],
             ["merchants", "list", "--limit", "101"],
-            ["merchants", "list", "--offset", "-1"],
+            ["merchants", "list", "--limit", "invalid"],
             ["merchants", "add", "@shop", "--name", "Manual"],
             ["merchants", "add", "@shop", "--description", "Manual"],
         ):
@@ -98,7 +106,7 @@ class CliTests(unittest.TestCase):
                         "4",
                     ]
                 )
-        refresh.assert_called_once_with(["@shop"], only_missing=True, minimum_images=4, limit=5)
+        refresh.assert_called_once_with(["@shop"], only_missing=True, minimum_images="4", limit="5")
 
     @patch("backend.cli.initialize_database")
     @patch("backend.cli.media.refresh_instagram_avatars", return_value=[])
@@ -107,5 +115,5 @@ class CliTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             status = main(["media", "sync", "--avatars-only", "--only-missing", "--limit", "2"])
         self.assertEqual(0, status)
-        avatars.assert_called_once_with([], only_missing=True, limit=2)
+        avatars.assert_called_once_with([], only_missing=True, limit="2")
         profiles.assert_not_called()
