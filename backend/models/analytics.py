@@ -10,7 +10,7 @@ from backend.models.common import Count, InputModel
 from backend.models.merchants import MerchantSummary
 
 
-class AnalyticsEvent(InputModel):
+class AnalyticsRequest(InputModel):
     event_type: Literal[
         "search",
         "category_view",
@@ -20,17 +20,24 @@ class AnalyticsEvent(InputModel):
         "oauth_started",
         "oauth_completed",
     ]
-    session_id: str = Field(min_length=8, max_length=80)
     query: str
     category_code: str
     merchant_id: Count
     result_count: Count
 
 
+class AnalyticsEvent(AnalyticsRequest):
+    session_id: str = Field(min_length=8, max_length=80)
+
+
 class MetricsPeriod(IntEnum):
     WEEK = 7
     MONTH = 30
     QUARTER = 90
+
+
+class AnalyticsResult(BaseModel):
+    saved: bool
 
 
 class MetricsKpis(BaseModel):

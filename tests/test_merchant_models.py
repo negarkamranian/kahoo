@@ -1,16 +1,14 @@
-import json
 import unittest
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
-from backend.serialization import json_default
 from backend.services.merchants import merchant_detail, merchant_posts
 
 
 class MerchantModelsTests(unittest.TestCase):
     @patch("backend.services.merchants.connect")
-    def test_detail_serializes_nested_models_without_private_blobs(self, connect):
+    def test_detail_returns_nested_models_without_private_blobs(self, connect):
         database = connect.return_value.__enter__.return_value
         updated = datetime(2026, 10, 3, tzinfo=timezone.utc)
 
@@ -47,13 +45,13 @@ class MerchantModelsTests(unittest.TestCase):
             ]
 
         database.execute.side_effect = execute
-        result = json.loads(json.dumps(merchant_detail(1), default=json_default))
-        self.assertNotIn("avatar_blob", result)
-        self.assertNotIn("avatar_mime_type", result)
-        self.assertEqual(["parent", "child"], [item["code"] for item in result["category_path"]])
-        self.assertEqual(0.9, result["categories"][0]["confidence"])
-        self.assertEqual("/api/media/2", result["posts"][0]["media"][0]["media_url"])
-        self.assertTrue(result["avatar_url"].startswith("/api/avatars/1?v="))
+        result = merchant_detail(1)
+        self.assertFalse(hasattr(result, "avatar_blob"))
+        self.assertFalse(hasattr(result, "avatar_mime_type"))
+        self.assertEqual(["parent", "child"], [item.code for item in result.category_path])
+        self.assertEqual(0.9, result.categories[0].confidence)
+        self.assertEqual("/api/media/2", result.posts[0].media[0].media_url)
+        self.assertTrue(result.avatar_url.startswith("/api/avatars/1?v="))
 
     def test_post_collections_keep_grouping_and_deduplicate_images(self):
         database = Mock()

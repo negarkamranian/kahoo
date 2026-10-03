@@ -1,4 +1,6 @@
 psycopg[binary]>=3.2,<4
 hazm==0.12.1
 pydantic>=2.12,<3
+fastapi>=0.135,<1
+uvicorn>=0.41,<1
 python-dotenv>=1,<2

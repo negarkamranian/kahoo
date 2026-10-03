@@ -13,6 +13,9 @@ docker compose --env-file .env.example --env-file .env up --build
 Open the [marketplace](http://127.0.0.1:4173), [saved items](http://127.0.0.1:4173/saved.html),
 or [admin panel](http://127.0.0.1:4173/admin.html).
 
+API documentation is available through [Swagger UI](http://127.0.0.1:4173/docs),
+[ReDoc](http://127.0.0.1:4173/redoc), and the [OpenAPI schema](http://127.0.0.1:4173/openapi.json).
+
 Startup applies PostgreSQL migrations and seeds categories. Merchant data stays
 in the `kahoo-postgres` Docker volume. To populate a new database and fetch media:
 
@@ -34,7 +37,7 @@ backend/
     merchants.py       Merchant management commands
     media.py           Media maintenance commands
     search.py          Search indexing, evaluation, and enrichment commands
-  server/              HTTP server lifecycle and request handling
+  server/              FastAPI routes, static files, and Uvicorn lifecycle
   services/            Shared application logic
     catalog.py         Snapshot validation and import
     merchants.py       Merchant reads, imports, and removal
@@ -54,7 +57,6 @@ backend/
     auth.py            Login requests
     search.py          Search, enrichment, benchmarks, and command reports
     instagram/         Instagram wire schemas: common, embed, and Meta
-  serialization.py     JSON serialization at HTTP and CLI output boundaries
   config.py            Environment loading and shared typed settings
   instagram/           Instagram profile sources, embed parsing, and URL helpers
     service.py         Select the configured profile source
@@ -71,17 +73,18 @@ docs/                  Search details, product research, and source notes
   archive/             Historical planning notes
 ```
 
-The request flow is **browser → HTTP handler → services/search → PostgreSQL**.
+The request flow is **browser → FastAPI routes → services/search → PostgreSQL**.
 CLI commands call the same services. Both server startup and database-backed
 commands use `database.initialize_database()` for schema and category setup.
 Merchant imports and profile updates refresh search metadata and documents.
 
-Start with `backend/server/http.py` for routes, `backend/cli/__init__.py` for commands,
+Start with `backend/server/routes.py` for routes, `backend/cli/__init__.py` for commands,
 and `backend/search/service.py` for search orchestration. Shared application
 logic belongs in `services/`; request and command handling stays at the edges.
-Parse external JSON into Pydantic models in HTTP, CLI, and Instagram adapters.
-Services pass those models using attributes and return structured models. Serialize
-only at HTTP/CLI boundaries. Required fields fail validation; do not guess alternate
+FastAPI validates request bodies into Pydantic models and serializes returned models
+and lists directly. CLI and Instagram adapters parse external JSON into models.
+Services pass those models using attributes and return structured models.
+Required fields fail validation; do not guess alternate
 keys, identities, or content. Defaults belong in the owning model, and derived
 values (such as post collection keys and cover images) have one definition.
 Import contracts directly from their owning `backend.models` module; package
@@ -133,12 +136,12 @@ metrics, and LLM descriptions. Use separate handle files for different categorie
 
 For media sync, `--avatars-only` preserves galleries and `--limit 0` processes all
 matches. Status and sync use `--minimum-post-images` (default: 3) for completeness.
-Failed downloads preserve saved media. Commands report JSON on success. Runtime
+Failed downloads preserve saved media. Commands print their result models on success. Runtime
 errors stop the command with a traceback and a nonzero exit status; batches stop
 at the first failure. Earlier completed profiles remain committed.
 
-Unexpected HTTP request errors propagate to the server, which logs a traceback
-and closes that request. Other requests continue running. Configured embedding
+Unexpected HTTP request errors propagate to Uvicorn, which logs a traceback
+and returns HTTP 500. Other requests continue running. Configured embedding
 services must succeed; search does not silently fall back after an embedding error.
 
 The former `python3 -m scripts` entry point is replaced by `python3 -m backend`.

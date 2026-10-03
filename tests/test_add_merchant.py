@@ -35,7 +35,7 @@ class AddMerchantTests(unittest.TestCase):
         import_merchant.assert_called_once_with(
             MerchantImport(identifier="@shop", category_code="66010100")
         )
-        self.assertIn('"created": true', output.getvalue())
+        self.assertIn("created=True", output.getvalue())
 
     @patch("backend.services.merchants.instagram_profile")
     @patch("backend.services.merchants.connect")

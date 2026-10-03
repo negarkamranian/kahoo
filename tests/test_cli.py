@@ -1,5 +1,4 @@
 import io
-import json
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
@@ -15,10 +14,10 @@ class CliTests(unittest.TestCase):
             status = main(["db", "migrate"])
         self.assertEqual(0, status)
         initialize.assert_called_once_with()
-        self.assertEqual({"migrated": True}, json.loads(output.getvalue()))
+        self.assertEqual("{'migrated': True}\n", output.getvalue())
 
     @patch.multiple("backend.cli.settings", host="localhost", port=4174)
-    @patch("backend.server.app.ThreadingHTTPServer")
+    @patch("backend.server.app.uvicorn.run")
     @patch("backend.server.app.initialize_database")
     @patch("backend.cli.initialize_database")
     def test_serve_owns_database_setup_and_respects_address_options(
@@ -26,17 +25,19 @@ class CliTests(unittest.TestCase):
     ):
         for options, address in (
             ([], ("localhost", 4174)),
-            (["--host", "127.0.0.1", "--port", "4175"], ("127.0.0.1", "4175")),
+            (["--host", "127.0.0.1", "--port", "4175"], ("127.0.0.1", 4175)),
         ):
             with self.subTest(options=options), redirect_stdout(io.StringIO()):
                 server.reset_mock()
                 server_initialize.reset_mock()
-                server.side_effect = lambda *args: (
-                    server_initialize.assert_called_once_with() or server.return_value
+                server.side_effect = lambda *args, **kwargs: (
+                    server_initialize.assert_called_once_with() or None
                 )
                 self.assertEqual(0, main(["serve", *options]))
-                self.assertEqual(address, server.call_args.args[0])
-                server.return_value.__enter__.return_value.serve_forever.assert_called_once_with()
+                server.assert_called_once()
+                self.assertEqual(
+                    address, (server.call_args.kwargs["host"], server.call_args.kwargs["port"])
+                )
         cli_initialize.assert_not_called()
 
     def test_every_action_has_help_without_database_access(self):

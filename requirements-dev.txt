@@ -1,4 +1,5 @@
 -r requirements.txt
+httpx>=0.28,<1
 ruff>=0.15,<1
 pylint>=4,<5
 pre-commit>=4,<5

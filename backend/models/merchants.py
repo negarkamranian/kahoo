@@ -26,6 +26,15 @@ class MerchantSummary(BaseModel):
     handle: str
 
 
+class MerchantRemovalResult(BaseModel):
+    removed: MerchantSummary
+
+
+class DemoImportResult(BaseModel):
+    created: Literal[False]
+    mode: Literal["oauth_demo"]
+
+
 class AdminMerchantQuery(InputModel):
     model_config = ConfigDict(strict=True, frozen=True)
 

@@ -1,4 +1,3 @@
-import json
 import unittest
 from contextlib import contextmanager
 from datetime import datetime
@@ -7,8 +6,7 @@ from unittest.mock import Mock, patch
 from backend.models.analytics import AdminMetrics, MetricsPeriod
 from backend.models.merchants import AdminMerchantQuery
 from backend.search.metadata import sync_search_metadata
-from backend.serialization import json_default
-from backend.server.http import admin_mutation_authorized
+from backend.server.routes import admin_mutation_authorized
 from backend.services.analytics import admin_metrics
 from backend.services.merchants import admin_merchants, remove_merchant
 
@@ -93,7 +91,7 @@ class AdminMetricsTests(unittest.TestCase):
         self.assertNotIn("GROUP BY day", database.daily_query)
 
     @patch("backend.services.analytics.connect")
-    def test_metrics_periods_fill_missing_days_and_serialize_nested_models(self, connect):
+    def test_metrics_periods_fill_missing_days_and_return_nested_models(self, connect):
         today = datetime.now().strftime("%Y-%m-%d")
 
         class PopulatedDatabase(AdminDatabase):
@@ -134,14 +132,13 @@ class AdminMetricsTests(unittest.TestCase):
                 self.assertEqual(period.value, len(metrics.daily))
                 self.assertEqual(0, metrics.daily[0].searches)
                 self.assertEqual(4, metrics.daily[-1].searches)
-                payload = json.loads(json.dumps(metrics, default=json_default))
-                self.assertEqual(period.value, payload["period_days"])
-                self.assertEqual(today, payload["daily"][-1]["date"])
-                self.assertNotIn("event_day", payload["daily"][-1])
-                self.assertIsNone(payload["top_queries"][0]["avg_results"])
-                self.assertEqual("@shop", payload["top_merchants"][0]["handle"])
-                self.assertEqual(3, payload["top_categories"][0]["views"])
-                self.assertEqual(0, payload["kpis"]["zero_rate"])
+                self.assertIs(period, metrics.period_days)
+                self.assertEqual(today, metrics.daily[-1].date)
+                self.assertFalse(hasattr(metrics.daily[-1], "event_day"))
+                self.assertIsNone(metrics.top_queries[0].avg_results)
+                self.assertEqual("@shop", metrics.top_merchants[0].handle)
+                self.assertEqual(3, metrics.top_categories[0].views)
+                self.assertEqual(0, metrics.kpis.zero_rate)
 
     @patch("backend.services.merchants.connect")
     def test_admin_page_preserves_pagination_and_avatar_urls(self, connect):
@@ -180,9 +177,9 @@ class AdminMetricsTests(unittest.TestCase):
         self.assertEqual(("%shop%", "%shop%", 2, 3), database.execute.call_args.args[1])
 
     def test_admin_token_is_required_only_when_configured(self):
-        with patch.multiple("backend.server.http.settings", admin_token=""):
+        with patch.multiple("backend.server.routes.settings", admin_token=""):
             self.assertTrue(admin_mutation_authorized({}))
-        with patch.multiple("backend.server.http.settings", admin_token="secret"):
+        with patch.multiple("backend.server.routes.settings", admin_token="secret"):
             self.assertFalse(admin_mutation_authorized({}))
             self.assertFalse(admin_mutation_authorized({"X-Kahoo-Admin-Token": "wrong"}))
             self.assertTrue(admin_mutation_authorized({"X-Kahoo-Admin-Token": "secret"}))

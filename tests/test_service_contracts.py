@@ -1,12 +1,11 @@
-import json
 import unittest
 from unittest.mock import Mock, patch
 
 from pydantic import ValidationError
 
-from backend.models.media import MerchantMedia
+from backend.models.catalog import CatalogImportResult
+from backend.models.media import ImageCacheResult, MerchantMedia
 from backend.models.merchants import AdminMerchantQuery
-from backend.serialization import json_default
 from backend.services.catalog import import_records
 from backend.services.categories import category_tree
 from backend.services.media import ensure_gallery_images
@@ -53,9 +52,8 @@ class ServiceContractTests(unittest.TestCase):
         tree = category_tree()
         self.assertEqual(1, tree[0].count)
         self.assertEqual("2", tree[0].children[0].code)
-        payload = json.loads(json.dumps(tree, default=json_default))
-        self.assertEqual(1, payload[0]["children"][0]["count"])
-        self.assertEqual([], payload[0]["children"][0]["children"])
+        self.assertEqual(1, tree[0].children[0].count)
+        self.assertEqual([], tree[0].children[0].children)
 
     @patch("backend.services.profiles.merchant_media_rows")
     def test_backfill_status_preserves_missing_media_flags(self, rows):
@@ -66,16 +64,12 @@ class ServiceContractTests(unittest.TestCase):
         self.assertEqual(0, status[0].cached_images)
         self.assertEqual([], instagram_media_backfill_status(handles=["@other"]))
 
-    def test_empty_maintenance_reports_serialize_explicit_zero_counts(self):
+    def test_empty_maintenance_reports_return_explicit_zero_counts(self):
         database = Mock()
         database.execute.return_value = []
         report = import_records(database, [])
-        self.assertEqual(
-            {"created": 0, "created_handles": [], "enriched": 0},
-            json.loads(json.dumps(report, default=json_default)),
-        )
+        self.assertEqual(CatalogImportResult(created=0, created_handles=[], enriched=0), report)
         cached = ensure_gallery_images(database)
         self.assertEqual(
-            {"attempted_images": 0, "cached_images": 0, "failed_images": 0},
-            json.loads(json.dumps(cached, default=json_default)),
+            ImageCacheResult(attempted_images=0, cached_images=0, failed_images=0), cached
         )

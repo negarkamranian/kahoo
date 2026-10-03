@@ -1,53 +1,113 @@
-import io
-import json
 import unittest
-from contextlib import redirect_stderr
 from datetime import datetime, timezone
 from decimal import Decimal
-from http.server import ThreadingHTTPServer
-from unittest.mock import Mock, patch
+from unittest.mock import patch
+from uuid import UUID
 
-from backend.models.analytics import MetricsPeriod
-from backend.models.merchants import AdminMerchantQuery, ImportResult, MerchantImport
-from backend.server.http import Handler
+from fastapi.testclient import TestClient
+
+from backend.models.analytics import AdminMetrics, AnalyticsEvent, MetricsPeriod
+from backend.models.categories import CategoryNode
+from backend.models.merchants import (
+    AdminMerchantPage,
+    AdminMerchantQuery,
+    ImportResult,
+    Merchant,
+    MerchantImport,
+    MerchantSummary,
+)
+from backend.models.search import SearchSuggestion
+from backend.server.app import app
 
 
 class HttpTests(unittest.TestCase):
-    def handler(self, path, body=b"", length=None):
-        handler = Handler.__new__(Handler)
-        handler.path = path
-        handler.headers = {"Content-Length": str(len(body) if length is None else length)}
-        handler.rfile = io.BytesIO(body)
-        handler.wfile = io.BytesIO()
-        handler.send_response = Mock()
-        handler.send_header = Mock()
-        handler.end_headers = Mock()
-        return handler
+    def setUp(self):
+        self.client = TestClient(app)
+        self.addCleanup(self.client.close)
 
     def test_post_rejects_invalid_json_and_non_object_payloads(self):
-        for body in (b"", b"{", b"[]", b"null", b'"text"', b"\xff"):
-            with self.subTest(body=body):
-                handler = self.handler("/api/login/request", body)
-                handler.do_POST()
-                handler.send_response.assert_called_once_with(400)
-                self.assertEqual({"error": "invalid_json"}, json.loads(handler.wfile.getvalue()))
+        for path in ("/api/login/request", "/api/merchants/import-demo"):
+            for body in (b"", b"{", b"[]", b"null", b'"text"', b"\xff"):
+                with self.subTest(path=path, body=body):
+                    response = self.client.post(path, content=body)
+                    self.assertEqual(400, response.status_code)
+                    self.assertEqual({"error": "invalid_json"}, response.json())
 
-    def test_post_rejects_invalid_lengths_before_reading_body(self):
-        for length, status in (("bad", 400), (-1, 400), (1_048_577, 413)):
+    def test_post_rejects_invalid_lengths(self):
+        for length, status, code in (
+            ("bad", 400, "invalid_content_length"),
+            ("-1", 400, "invalid_content_length"),
+            ("1048577", 413, "request_too_large"),
+        ):
             with self.subTest(length=length):
-                handler = self.handler("/api/login/request", b"{}", length)
-                handler.do_POST()
-                handler.send_response.assert_called_once_with(status)
-                self.assertEqual(0, handler.rfile.tell())
+                response = self.client.post(
+                    "/api/login/request", content=b"\xff", headers={"Content-Length": length}
+                )
+                self.assertEqual(status, response.status_code)
+                self.assertEqual({"error": code}, response.json())
 
-    def test_json_response_has_utf8_content_length(self):
-        handler = self.handler("/")
-        handler.send_json({"name": "فروشگاه"}, 201)
-        handler.send_response.assert_called_once_with(201)
-        handler.send_header.assert_any_call("Content-Length", str(len(handler.wfile.getvalue())))
-        self.assertEqual({"name": "فروشگاه"}, json.loads(handler.wfile.getvalue()))
+    @patch("backend.server.routes.merchant_detail")
+    def test_json_response_has_utf8_content_length(self, detail):
+        detail.return_value = Merchant(
+            id=1, name="فروشگاه", handle="@shop", category_code="1", city="Tehran"
+        )
+        response = self.client.get("/api/merchants/1")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("application/json", response.headers["Content-Type"])
+        self.assertEqual(str(len(response.content)), response.headers["Content-Length"])
+        self.assertEqual("فروشگاه", response.json()["name"])
+        self.assertIn("فروشگاه".encode(), response.content)
 
-    @patch("backend.server.http.connect")
+    @patch("backend.server.routes.merchants")
+    def test_list_response_remains_an_array_and_omits_unset_fields(self, service):
+        for merchants in (
+            [],
+            [Merchant(id=1, name="Shop", handle="@shop", category_code="1", city="Tehran")],
+        ):
+            with self.subTest(merchants=merchants):
+                service.return_value = merchants
+                response = self.client.get("/api/merchants")
+                self.assertEqual(
+                    []
+                    if not merchants
+                    else [
+                        {
+                            "id": 1,
+                            "name": "Shop",
+                            "handle": "@shop",
+                            "category_code": "1",
+                            "city": "Tehran",
+                        }
+                    ],
+                    response.json(),
+                )
+
+    def test_list_endpoints_return_typed_arrays(self):
+        category = CategoryNode(
+            code="1",
+            parent_code=None,
+            level=1,
+            label_fa="دسته",
+            label_en=None,
+            icon=None,
+            count=0,
+            children=[],
+        )
+        suggestion = SearchSuggestion(value="@shop", label="Shop", type="merchant")
+        for path, service, model, field, value in (
+            ("/api/categories", "category_tree", category, "children", []),
+            ("/api/search/suggestions?q=shop", "search_suggestions", suggestion, "value", "@shop"),
+        ):
+            with (
+                self.subTest(path=path),
+                patch(f"backend.server.routes.{service}", return_value=[model]),
+            ):
+                response = self.client.get(path)
+                self.assertEqual(200, response.status_code)
+                self.assertIsInstance(response.json(), list)
+                self.assertEqual(value, response.json()[0][field])
+
+    @patch("backend.server.routes.connect")
     def test_cached_media_preserves_content_and_cache_headers(self, connect):
         for path, row in (
             ("/api/media/1", {"image_blob": b"image", "mime_type": "image/jpeg"}),
@@ -55,129 +115,182 @@ class HttpTests(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 connect.return_value.__enter__.return_value.execute.return_value.fetchone.return_value = row
-                handler = self.handler(path)
-                handler.do_GET()
-                handler.send_response.assert_called_once_with(200)
-                handler.send_header.assert_any_call("Content-Type", "image/jpeg")
-                handler.send_header.assert_any_call("Cache-Control", "public, max-age=86400")
-                self.assertEqual(b"image", handler.wfile.getvalue())
+                response = self.client.get(path)
+                self.assertEqual(200, response.status_code)
+                self.assertEqual("image/jpeg", response.headers["Content-Type"])
+                self.assertEqual("public, max-age=86400", response.headers["Cache-Control"])
+                self.assertEqual(b"image", response.content)
 
-    def test_shared_browser_module_is_served(self):
-        handler = self.handler("/assets/js/shared.js")
-        handler.do_GET()
-        handler.send_response.assert_called_once_with(200)
-        self.assertIn(b"export function escapeHtml", handler.wfile.getvalue())
+    def test_browser_pages_and_shared_module_are_served(self):
+        for path, content in (
+            ("/", b"<!doctype html>"),
+            ("/admin.html", b"<!doctype html>"),
+            ("/assets/js/shared.js", b"export function escapeHtml"),
+        ):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(200, response.status_code)
+                self.assertIn(content, response.content)
 
-    @patch("backend.server.http.admin_mutation_authorized", return_value=True)
-    @patch("backend.server.http.add_or_refresh_merchant")
-    def test_import_validates_once_and_passes_a_model(self, import_merchant, authorized):
-        import_merchant.return_value = ImportResult(handle="@shop", created=True, merchant_id=7)
-        handler = self.handler(
-            "/api/admin/merchants", b'{"identifier":"@shop","category_code":"1"}'
-        )
-        handler.do_POST()
-        import_merchant.assert_called_once_with(
-            MerchantImport(identifier="@shop", category_code="1")
-        )
-        handler.send_response.assert_called_once_with(201)
-        self.assertEqual(
-            {"handle": "@shop", "created": True, "merchant_id": 7},
-            json.loads(handler.wfile.getvalue()),
-        )
+    def test_static_files_cannot_escape_public_directory(self):
+        for path in ("/../.env", "/%2e%2e/.env", "/backend/config.py"):
+            with self.subTest(path=path):
+                self.assertEqual(404, self.client.get(path).status_code)
 
-    @patch("backend.server.http.admin_mutation_authorized", return_value=True)
-    @patch("backend.server.http.add_or_refresh_merchant")
-    def test_invalid_import_types_never_reach_the_service(self, import_merchant, authorized):
+    @patch("backend.server.routes.admin_mutation_authorized", return_value=True)
+    @patch("backend.server.routes.add_or_refresh_merchant")
+    def test_import_passes_a_model_and_uses_created_status(self, import_merchant, _authorized):
+        for created, status in ((True, 201), (False, 200)):
+            with self.subTest(created=created):
+                import_merchant.reset_mock()
+                import_merchant.return_value = ImportResult(
+                    handle="@shop", created=created, merchant_id=7
+                )
+                response = self.client.post(
+                    "/api/admin/merchants", json={"identifier": "@shop", "category_code": "1"}
+                )
+                import_merchant.assert_called_once_with(
+                    MerchantImport(identifier="@shop", category_code="1")
+                )
+                self.assertEqual(status, response.status_code)
+                self.assertEqual(
+                    {"handle": "@shop", "created": created, "merchant_id": 7}, response.json()
+                )
+
+    @patch("backend.server.routes.admin_mutation_authorized", return_value=True)
+    @patch("backend.server.routes.add_or_refresh_merchant")
+    def test_invalid_import_types_never_reach_the_service(self, import_merchant, _authorized):
         for payload in (
             {"identifier": []},
             {"identifier": "@shop", "name": "Manual name"},
             {"identifier": "@shop", "description": "Manual description"},
         ):
-            handler = self.handler("/api/admin/merchants", json.dumps(payload).encode())
-            handler.do_POST()
-            handler.send_response.assert_called_once_with(400)
+            with self.subTest(payload=payload):
+                response = self.client.post("/api/admin/merchants", json=payload)
+                self.assertEqual(400, response.status_code)
+                self.assertEqual("merchant_import_failed", response.json()["error"])
         import_merchant.assert_not_called()
 
-    @patch("backend.server.http.record_event")
+    @patch("backend.server.routes.add_or_refresh_merchant")
+    @patch("backend.server.routes.remove_merchant")
+    def test_admin_mutations_require_configured_token(self, remove, add):
+        with patch.multiple("backend.server.routes.settings", admin_token="secret"):
+            for token in (None, "wrong"):
+                headers = {} if token is None else {"X-Kahoo-Admin-Token": token}
+                for method, path in (
+                    ("POST", "/api/admin/merchants"),
+                    ("DELETE", "/api/admin/merchants/1"),
+                ):
+                    with self.subTest(method=method, token=token):
+                        response = self.client.request(
+                            method, path, json={"identifier": "@shop"}, headers=headers
+                        )
+                        self.assertEqual(401, response.status_code)
+                        self.assertEqual("unauthorized", response.json()["error"])
+        add.assert_not_called()
+        remove.assert_not_called()
+
+    @patch("backend.server.routes.record_event")
     def test_invalid_event_types_are_rejected_at_the_http_boundary(self, record_event):
         for value in (True, "7", []):
-            payload = {
-                "event_type": "merchant_click",
-                "session_id": "session-123",
-                "merchant_id": value,
-            }
-            handler = self.handler("/api/analytics/event", json.dumps(payload).encode())
-            handler.headers["X-Kahoo-Session"] = "session-123"
-            handler.do_POST()
-            handler.send_response.assert_called_once_with(400)
+            response = self.client.post(
+                "/api/analytics/event",
+                json={
+                    "event_type": "merchant_click",
+                    "merchant_id": value,
+                    "query": "",
+                    "category_code": "",
+                    "result_count": 0,
+                },
+                headers={"X-Kahoo-Session": "session-123"},
+            )
+            self.assertEqual(400, response.status_code)
+            self.assertEqual({"saved": False}, response.json())
         record_event.assert_not_called()
 
-    @patch("backend.server.http.record_event")
+    @patch("backend.server.routes.record_event")
     def test_event_session_comes_only_from_the_session_header(self, record_event):
-        body = b'{"event_type":"search","session_id":"body-session"}'
-        handler = self.handler("/api/analytics/event", body)
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(400)
+        body = {
+            "event_type": "search",
+            "session_id": "body-session",
+            "query": "shop",
+            "category_code": "1",
+            "merchant_id": 0,
+            "result_count": 0,
+        }
+        response = self.client.post("/api/analytics/event", json=body)
+        self.assertEqual(400, response.status_code)
         record_event.assert_not_called()
-        handler = self.handler("/api/analytics/event", body)
-        handler.headers["X-Kahoo-Session"] = "header-session"
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(201)
+        response = self.client.post(
+            "/api/analytics/event", json=body, headers={"X-Kahoo-Session": "header-session"}
+        )
+        self.assertEqual(201, response.status_code)
+        self.assertEqual({"saved": True}, response.json())
+        self.assertIsInstance(record_event.call_args.args[0], AnalyticsEvent)
         self.assertEqual("header-session", record_event.call_args.args[0].session_id)
 
-    def test_response_serialization_preserves_dates_and_numeric_decimals(self):
-        handler = self.handler("/")
-        handler.send_json(
-            {"date": datetime(2026, 10, 3, tzinfo=timezone.utc), "score": Decimal("1.25")}
+    @patch("backend.server.routes.record_event")
+    @patch("backend.server.routes.merchants", return_value=[])
+    def test_search_records_a_complete_event_with_header_session(self, service, record_event):
+        response = self.client.get(
+            "/api/merchants?q=shop", headers={"X-Kahoo-Session": "session-123"}
         )
-        self.assertEqual(
-            {"date": "2026-10-03T00:00:00+00:00", "score": 1.25},
-            json.loads(handler.wfile.getvalue()),
+        self.assertEqual(200, response.status_code)
+        service.assert_called_once_with(None, "shop")
+        record_event.assert_called_once_with(
+            AnalyticsEvent(
+                event_type="search",
+                session_id="session-123",
+                query="shop",
+                category_code="",
+                merchant_id=0,
+                result_count=0,
+            )
         )
 
-    @patch("backend.server.http.category_tree", side_effect=[RuntimeError("database failed"), []])
-    def test_request_failure_logs_traceback_and_next_request_still_works(self, categories):
-        server = ThreadingHTTPServer.__new__(ThreadingHTTPServer)
-        server.RequestHandlerClass = Handler
-        logs = io.StringIO()
-        responses = []
-        with redirect_stderr(logs):
-            for _ in range(2):
-                connection = Mock()
-                connection.makefile.return_value = io.BytesIO(
-                    b"GET /api/categories HTTP/1.0\r\n\r\n"
-                )
-                server.process_request_thread(connection, ("127.0.0.1", 12345))
-                responses.append(
-                    b"".join(call.args[0] for call in connection.sendall.call_args_list)
-                )
-        self.assertEqual(b"", responses[0])
-        self.assertIn(b"200 OK", responses[1])
-        self.assertIn("Traceback (most recent call last)", logs.getvalue())
-        self.assertIn("RuntimeError: database failed", logs.getvalue())
+    @patch("backend.server.routes.merchant_detail")
+    def test_response_preserves_dates_and_numeric_decimals_and_omits_private_blobs(self, detail):
+        date = datetime(2026, 10, 3, tzinfo=timezone.utc)
+        detail.return_value = Merchant(
+            id=1,
+            name="Shop",
+            handle="@shop",
+            category_code="1",
+            city="Tehran",
+            description_updated_at=date,
+            directory_quality_score=Decimal("1.25"),
+            avatar_blob=b"private",
+        )
+        payload = self.client.get("/api/merchants/1").json()
+        self.assertEqual(date, datetime.fromisoformat(payload["description_updated_at"]))
+        self.assertEqual(1.25, payload["directory_quality_score"])
+        self.assertNotIn("avatar_blob", payload)
 
-    @patch("backend.server.http.add_or_refresh_merchant", side_effect=ValueError("bad profile"))
-    @patch("backend.server.http.admin_mutation_authorized", return_value=True)
-    def test_import_service_failure_is_not_converted_to_a_client_error(self, authorized, service):
-        handler = self.handler("/api/admin/merchants", b'{"identifier":"@shop"}')
+    @patch("backend.server.routes.category_tree", side_effect=[RuntimeError("database failed"), []])
+    def test_request_failure_propagates_and_next_request_still_works(self, _categories):
+        with self.assertRaisesRegex(RuntimeError, "database failed"):
+            self.client.get("/api/categories")
+        response = self.client.get("/api/categories")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual([], response.json())
+
+    @patch("backend.server.routes.add_or_refresh_merchant", side_effect=ValueError("bad profile"))
+    @patch("backend.server.routes.admin_mutation_authorized", return_value=True)
+    def test_import_service_failure_is_not_converted_to_a_client_error(self, _authorized, _service):
         with self.assertRaisesRegex(ValueError, "bad profile"):
-            handler.do_POST()
-        handler.send_response.assert_not_called()
+            self.client.post("/api/admin/merchants", json={"identifier": "@shop"})
 
-    @patch("backend.server.http.admin_metrics")
-    def test_invalid_metrics_period_does_not_default_to_thirty_days(self, metrics):
+    @patch("backend.server.routes.admin_metrics")
+    def test_invalid_metrics_period_is_rejected_before_service_call(self, metrics):
         for value in ("invalid", "", "0", "8", "-7", "7.0", "true"):
             with self.subTest(value=value):
-                handler = self.handler(f"/api/admin/metrics?days={value}")
-                handler.do_GET()
-                handler.send_response.assert_called_once_with(400)
-                self.assertEqual(
-                    {"error": "invalid_metrics_period"}, json.loads(handler.wfile.getvalue())
-                )
+                response = self.client.get(f"/api/admin/metrics?days={value}")
+                self.assertEqual(400, response.status_code)
+                self.assertEqual({"error": "invalid_period"}, response.json())
         metrics.assert_not_called()
 
-    @patch("backend.server.http.admin_metrics", return_value={})
-    def test_metrics_passes_only_period_enum_values_to_service(self, metrics):
+    @patch("backend.server.routes.admin_metrics")
+    def test_metrics_passes_period_enum_and_serializes_nested_models(self, metrics):
         for query, period in (
             ("", MetricsPeriod.MONTH),
             ("?days=7", MetricsPeriod.WEEK),
@@ -186,27 +299,98 @@ class HttpTests(unittest.TestCase):
         ):
             with self.subTest(query=query):
                 metrics.reset_mock()
-                handler = self.handler(f"/api/admin/metrics{query}")
-                handler.do_GET()
+                metrics.return_value = AdminMetrics(
+                    period_days=period,
+                    generated_at=datetime(2026, 10, 3, tzinfo=timezone.utc),
+                    kpis={
+                        "searches": 0,
+                        "visitors": 0,
+                        "clicks": 0,
+                        "zero_rate": 0,
+                        "search_to_click": 0,
+                    },
+                    catalog={
+                        "merchants": 0,
+                        "used_categories": 0,
+                        "posts": 0,
+                        "avatars": 0,
+                        "descriptions": 0,
+                    },
+                    daily=[],
+                    top_queries=[],
+                    missed_queries=[],
+                    top_merchants=[],
+                    top_categories=[],
+                    funnel={
+                        "visitors": 0,
+                        "searched": 0,
+                        "clicked": 0,
+                        "oauth_started": 0,
+                        "oauth_completed": 0,
+                    },
+                )
+                response = self.client.get(f"/api/admin/metrics{query}")
+                self.assertEqual(200, response.status_code)
+                self.assertEqual(period.value, response.json()["period_days"])
+                self.assertEqual(0, response.json()["kpis"]["searches"])
+                self.assertEqual([], response.json()["daily"])
                 self.assertIs(period, metrics.call_args.args[0])
-                handler.send_response.assert_called_once_with(200)
 
-    @patch("backend.server.http.admin_merchants", return_value={})
+    @patch(
+        "backend.server.routes.admin_merchants",
+        return_value=AdminMerchantPage(items=[], total=0, limit=100, offset=2),
+    )
     def test_admin_pagination_is_validated_before_service_call(self, merchants):
         for query in ("limit=0", "limit=101", "offset=-1", "limit=", "offset=bad"):
-            handler = self.handler(f"/api/admin/merchants?{query}")
-            handler.do_GET()
-            handler.send_response.assert_called_once_with(400)
+            response = self.client.get(f"/api/admin/merchants?{query}")
+            self.assertEqual(400, response.status_code)
+            self.assertEqual({"error": "invalid_pagination"}, response.json())
         merchants.assert_not_called()
-        handler = self.handler("/api/admin/merchants?q=shop&limit=100&offset=2")
-        handler.do_GET()
+        response = self.client.get("/api/admin/merchants?q=shop&limit=100&offset=2")
         merchants.assert_called_once_with(AdminMerchantQuery(query="shop", limit=100, offset=2))
+        self.assertEqual({"items": [], "total": 0, "limit": 100, "offset": 2}, response.json())
 
     def test_login_verification_requires_a_five_character_string(self):
         for code in (None, 12345, "", "1234", "123456"):
-            handler = self.handler("/api/login/verify", json.dumps({"code": code}).encode())
-            handler.do_POST()
-            handler.send_response.assert_called_once_with(400)
-        handler = self.handler("/api/login/verify", b'{"code":"12345"}')
-        handler.do_POST()
-        handler.send_response.assert_called_once_with(200)
+            response = self.client.post(
+                "/api/login/verify", json={"phone": "09123456789", "code": code}
+            )
+            self.assertEqual(400, response.status_code)
+            self.assertEqual({"error": "invalid_code"}, response.json())
+        response = self.client.post(
+            "/api/login/verify", json={"phone": "09123456789", "code": "12345"}
+        )
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(
+            {"user": {"phone": "09123456789", "display_name": "حساب من"}}, response.json()
+        )
+
+    def test_login_request_returns_a_challenge_model(self):
+        response = self.client.post("/api/login/request", json={"phone": "09123456789"})
+        self.assertEqual(200, response.status_code)
+        payload = response.json()
+        self.assertEqual("09123456789", payload["phone"])
+        self.assertEqual(4, UUID(payload["challenge_id"]).version)
+
+    def test_demo_import_returns_its_original_response_shape(self):
+        response = self.client.post("/api/merchants/import-demo", json={})
+        self.assertEqual(201, response.status_code)
+        self.assertEqual({"created": False, "mode": "oauth_demo"}, response.json())
+
+    @patch("backend.server.routes.remove_merchant")
+    def test_removal_returns_a_nested_merchant_model(self, remove):
+        remove.return_value = MerchantSummary(id=7, name="Shop", handle="@shop")
+        response = self.client.delete("/api/admin/merchants/7")
+        remove.assert_called_once_with(7)
+        self.assertEqual(200, response.status_code)
+        self.assertEqual({"removed": {"id": 7, "name": "Shop", "handle": "@shop"}}, response.json())
+
+    @patch("backend.server.routes.remove_merchant", return_value=None)
+    def test_removal_errors_keep_their_codes(self, remove):
+        response = self.client.delete("/api/admin/merchants/invalid")
+        self.assertEqual(400, response.status_code)
+        self.assertEqual({"error": "invalid_merchant_id"}, response.json())
+        remove.assert_not_called()
+        response = self.client.delete("/api/admin/merchants/7")
+        self.assertEqual(404, response.status_code)
+        self.assertEqual({"error": "not_found"}, response.json())

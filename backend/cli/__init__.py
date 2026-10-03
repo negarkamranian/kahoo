@@ -1,7 +1,6 @@
 """One command-line interface for server and maintenance operations."""
 
 import argparse
-import json
 from pathlib import Path
 
 from pydantic import TypeAdapter
@@ -11,7 +10,6 @@ from backend.config import PROJECT_ROOT, settings
 from backend.database import initialize_database
 from backend.models.media import MINIMUM_POST_IMAGES
 from backend.models.merchants import AdminMerchantQuery, MerchantImport, MerchantPageSize
-from backend.serialization import json_default
 from backend.server.app import serve
 
 
@@ -35,7 +33,7 @@ def group(commands, name, help_text):
 def register_server(commands):
     server = action(commands, "serve", "Start the HTTP server", serve, False)
     server.add_argument("--host", default=settings.host)
-    server.add_argument("--port", default=settings.port)
+    server.add_argument("--port", type=int, default=settings.port)
 
 
 def register_database(commands):
@@ -170,5 +168,5 @@ def main(argv=None):
         initialize_database()
     result = args.handler(args)
     if result is not None:
-        print(json.dumps(result, ensure_ascii=False, indent=2, default=json_default))
+        print(result)
     return 0
