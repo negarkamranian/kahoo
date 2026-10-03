@@ -1,4 +1,4 @@
-PYTHON ?= .venv/bin/python
+PYTHON = .venv/bin/python
 
 .PHONY: check lint format format-check test
 
@@ -21,3 +21,5 @@ format-check:
 test:
 	$(PYTHON) -m unittest discover -s tests
 	npm test
+run:
+	docker compose up -d app

@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import IntEnum
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from backend.models.common import Count, InputModel
 from backend.models.merchants import MerchantSummary
@@ -21,17 +21,10 @@ class AnalyticsEvent(InputModel):
         "oauth_completed",
     ]
     session_id: str = Field(min_length=8, max_length=80)
-    query: str | None = None
-    category_code: str | None = None
-    merchant_id: Count | None = None
-    result_count: Count | None = None
-
-    @field_validator("session_id")
-    @classmethod
-    def valid_session_id(cls, value: str) -> str:
-        if not all(char.isascii() and (char.isalnum() or char in "_-") for char in value):
-            raise ValueError("invalid session ID")
-        return value
+    query: str
+    category_code: str
+    merchant_id: Count
+    result_count: Count
 
 
 class MetricsPeriod(IntEnum):

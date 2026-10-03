@@ -15,7 +15,7 @@ class CatalogImportResult(BaseModel):
 
 class CatalogMerchant(InputModel):
     handle: InstagramHandle
-    name: str | None = None
+    name: str
     description: str | None = None
     category_code: str | None = None
     city: str | None = None

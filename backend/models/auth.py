@@ -6,7 +6,7 @@ from backend.models.common import InputModel
 
 
 class LoginRequest(InputModel):
-    phone: str | None = None
+    phone: str
 
 
 class LoginVerification(LoginRequest):
