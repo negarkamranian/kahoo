@@ -17,7 +17,7 @@ class CliTests(unittest.TestCase):
         initialize.assert_called_once_with()
         self.assertEqual({"migrated": True}, json.loads(output.getvalue()))
 
-    @patch.dict("os.environ", {"KAHOO_HOST": "localhost", "KAHOO_PORT": "4174"})
+    @patch.multiple("backend.cli.settings", host="localhost", port=4174)
     @patch("backend.server.app.ThreadingHTTPServer")
     @patch("backend.server.app.initialize_database")
     @patch("backend.cli.initialize_database")
@@ -68,6 +68,10 @@ class CliTests(unittest.TestCase):
         for argv in (
             ["search", "reindex", "--batch-size", "0"],
             ["media", "sync", "--limit", "-1"],
+            ["merchants", "list", "--limit", "101"],
+            ["merchants", "list", "--offset", "-1"],
+            ["merchants", "add", "@shop", "--name", "Manual"],
+            ["merchants", "add", "@shop", "--description", "Manual"],
         ):
             with self.subTest(argv=argv), redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit) as error:
@@ -77,23 +81,23 @@ class CliTests(unittest.TestCase):
     @patch("backend.cli.initialize_database")
     @patch(
         "backend.cli.media.refresh_instagram_profiles",
-        return_value=[{"updated": False, "error": "unavailable"}],
+        side_effect=OSError("unavailable"),
     )
-    def test_sync_routes_options_and_exits_nonzero_on_partial_failure(self, refresh, migrate):
+    def test_sync_routes_options_and_propagates_failures(self, refresh, migrate):
         with redirect_stdout(io.StringIO()):
-            status = main(
-                [
-                    "media",
-                    "sync",
-                    "@shop",
-                    "--only-missing",
-                    "--limit",
-                    "5",
-                    "--minimum-post-images",
-                    "4",
-                ]
-            )
-        self.assertEqual(1, status)
+            with self.assertRaisesRegex(OSError, "unavailable"):
+                main(
+                    [
+                        "media",
+                        "sync",
+                        "@shop",
+                        "--only-missing",
+                        "--limit",
+                        "5",
+                        "--minimum-post-images",
+                        "4",
+                    ]
+                )
         refresh.assert_called_once_with(["@shop"], only_missing=True, minimum_images=4, limit=5)
 
     @patch("backend.cli.initialize_database")

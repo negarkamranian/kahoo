@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import Mock, patch
 
+from backend.models.merchants import Merchant
+
 from backend.search.embeddings import embed_texts
 from backend.search.normalization import normalize_search, query_tokens
 from backend.search.ranking import (
@@ -15,7 +17,9 @@ from backend.search.ranking import (
 
 
 class SearchQualityTests(unittest.TestCase):
-    @patch.dict("os.environ", {"EMBEDDING_API_URL": "https://example.test/embeddings"})
+    @patch.multiple(
+        "backend.search.embeddings.settings", embedding_api_url="https://example.test/embeddings"
+    )
     @patch("backend.search.embeddings.urlopen")
     def test_incomplete_embedding_response_is_rejected(self, urlopen):
         urlopen.return_value.__enter__.return_value = Mock(
@@ -26,6 +30,15 @@ class SearchQualityTests(unittest.TestCase):
 
     def test_normalizes_persian_variants_digits_and_half_spaces(self):
         self.assertEqual("کیف های 123", normalize_search("كیف‌های ۱۲۳"))
+
+    def test_hazm_removes_diacritics_and_repeated_letters(self):
+        self.assertEqual("سلام", normalize_search("سَلَاممممم"))
+        self.assertEqual("123 abc", normalize_search("١٢٣ ABC!"))
+
+    def test_normalization_is_idempotent_for_search_text(self):
+        for text in ("كیف‌های ۱۲۳", "سَلَاممممم", "@Example.Shop", "می روم", "کتابها"):
+            normalized = normalize_search(text)
+            self.assertEqual(normalized, normalize_search(normalized))
 
     def test_query_tokens_remove_stopwords(self):
         self.assertEqual(["کفش", "زنانه"], query_tokens("برای کفش زنانه"))
@@ -41,14 +54,29 @@ class SearchQualityTests(unittest.TestCase):
         self.assertGreater(fused[2], fused[3])
 
     def test_quality_is_a_bounded_tie_breaker(self):
-        small = merchant_quality_score({"followers_count": 100, "media_count": 2})
+        small = merchant_quality_score(
+            Merchant(
+                id=1,
+                name="shop",
+                handle="@shop",
+                category_code="1",
+                city="",
+                followers_count=100,
+                media_count=2,
+            )
+        )
         established = merchant_quality_score(
-            {
-                "followers_count": 500_000,
-                "media_count": 2_000,
-                "avatar_source_url": "https://example.com/avatar.jpg",
-                "biography": "فروشگاه",
-            }
+            Merchant(
+                id=2,
+                name="shop",
+                handle="@shop",
+                category_code="1",
+                city="",
+                followers_count=500_000,
+                media_count=2_000,
+                avatar_source_url="https://example.com/avatar.jpg",
+                biography="فروشگاه",
+            )
         )
         self.assertGreater(established, small)
         self.assertLess(established, 9)
@@ -59,8 +87,10 @@ class SearchQualityTests(unittest.TestCase):
             {"id": 2, "category_code": "67020000", "search_score": 7.9},
             {"id": 3, "category_code": "66010000", "search_score": 7.7},
         ]
-        ranked = diversify_results(items)
-        self.assertEqual([1, 3, 2], [item["id"] for item in ranked])
+        ranked = diversify_results(
+            [Merchant(name="shop", handle="@shop", city="", **item) for item in items]
+        )
+        self.assertEqual([1, 3, 2], [item.id for item in ranked])
 
     def test_query_coverage_requires_distinct_query_concepts(self):
         tokens = query_tokens("کفش زنانه چرمی")

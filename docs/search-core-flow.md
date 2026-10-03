@@ -191,8 +191,8 @@ The report contains:
 - per-query and p50/p95 server latency;
 - the top ten handles for regression inspection.
 
-`data/search_benchmarks.json` accepts the existing `expected_handles` format or
-a `relevance` map with graded judgments, for example:
+`data/search_benchmarks.json` uses one `relevance` map with grades from 1 to 3
+(unlisted handles are irrelevant), for example:
 
 ```json
 {"query":"کفش زنانه چرمی","relevance":{"@shop_a":3,"@shop_b":2,"@shop_c":1}}
@@ -207,8 +207,8 @@ manual review and retention/consent decisions.
 - Missing Instagram posts reduce product-level recall, but profile/category
   retrieval still works.
 - Missing embeddings disable only dense candidates.
-- A failed embedding request is caught by the API search path; lexical results
-  continue.
+- A failed embedding request aborts the search request and produces a server
+  traceback. Lexical-only search is available when embeddings are explicitly disabled.
 - Private or restricted profiles may never provide captions or images.
 - A merchant with incomplete categories can still match its profile/post text,
   but category browsing and category explanations are weaker.

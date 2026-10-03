@@ -1,41 +1,10 @@
-import re
-import unicodedata
+from functools import lru_cache
+from unicodedata import decimal, normalize
 
-PERSIAN_TRANSLATION = str.maketrans(
-    {
-        "ي": "ی",
-        "ى": "ی",
-        "ك": "ک",
-        "ة": "ه",
-        "ۀ": "ه",
-        "ؤ": "و",
-        "إ": "ا",
-        "أ": "ا",
-        "ٱ": "ا",
-        "۰": "0",
-        "۱": "1",
-        "۲": "2",
-        "۳": "3",
-        "۴": "4",
-        "۵": "5",
-        "۶": "6",
-        "۷": "7",
-        "۸": "8",
-        "۹": "9",
-        "٠": "0",
-        "١": "1",
-        "٢": "2",
-        "٣": "3",
-        "٤": "4",
-        "٥": "5",
-        "٦": "6",
-        "٧": "7",
-        "٨": "8",
-        "٩": "9",
-    }
-)
+from hazm import Normalizer, Stemmer
 
-
+_NORMALIZER = Normalizer()
+_STEMMER = Stemmer()
 SEARCH_STOPWORDS = {
     "از",
     "به",
@@ -57,21 +26,27 @@ SEARCH_STOPWORDS = {
 }
 
 
-PERSIAN_SUFFIXES = ("ترین", "تر", "هایی", "های", "ها")
+def normalize_persian(value: str) -> str:
+    return _NORMALIZER.normalize(value)
 
 
-DIACRITICS = re.compile(r"[\u064b-\u065f\u0670\u06d6-\u06ed]")
+@lru_cache(maxsize=8192)
+def normalize_search(value: str) -> str:
+    """Hazm normalization plus search-specific case, digit and token separators."""
+    text = normalize_persian(normalize("NFKC", value)).lower()
+    characters = []
+    for char in text:
+        if char.isdecimal():
+            characters.append(str(decimal(char)))
+        elif char.isalnum() or char == "_":
+            characters.append(char)
+        else:
+            characters.append(" ")
+    text = "".join(characters)
+    return " ".join(text.split())
 
 
-def normalize_search(value):
-    """Canonical form shared by indexing, retrieval, metadata, and analytics."""
-    value = unicodedata.normalize("NFKC", value or "").lower()
-    value = DIACRITICS.sub("", value).translate(PERSIAN_TRANSLATION)
-    value = value.replace("\u200c", " ").replace("ـ", " ")
-    return " ".join(re.sub(r"[^\w]+", " ", value).split())
-
-
-def query_tokens(value):
+def query_tokens(value: str) -> list[str]:
     return [
         token
         for token in normalize_search(value).split()
@@ -79,9 +54,8 @@ def query_tokens(value):
     ]
 
 
-def token_variants(token):
-    variants = {token}
-    for suffix in PERSIAN_SUFFIXES:
-        if token.endswith(suffix) and len(token) > len(suffix) + 2:
-            variants.add(token[: -len(suffix)])
-    return variants
+def token_variants(token: str) -> set[str]:
+    stem = _STEMMER.stem(token)
+    if len(stem) > 2:
+        return {token, stem}
+    return {token}

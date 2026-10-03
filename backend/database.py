@@ -1,27 +1,21 @@
-import os
 from contextlib import contextmanager
-from pathlib import Path
 
 import psycopg
 from psycopg.rows import dict_row
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from backend.config import PROJECT_ROOT, settings
+
 MIGRATIONS_ROOT = PROJECT_ROOT / "db" / "migrations"
-DEFAULT_DATABASE_URL = "postgresql://kahoo:kahoo@127.0.0.1:5432/kahoo"
-
-
-def database_url():
-    return os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 
 @contextmanager
 def connect():
-    with psycopg.connect(database_url(), row_factory=dict_row) as connection:
+    with psycopg.connect(settings.database_url, row_factory=dict_row) as connection:
         yield connection
 
 
 def run_migrations():
-    with psycopg.connect(database_url(), autocommit=True, row_factory=dict_row) as database:
+    with psycopg.connect(settings.database_url, autocommit=True, row_factory=dict_row) as database:
         database.execute(
             """CREATE TABLE IF NOT EXISTS schema_migrations (
                  version text PRIMARY KEY,

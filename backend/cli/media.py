@@ -1,4 +1,5 @@
 from backend.database import connect
+from backend.models.media import SyncBatch
 from backend.services.media import ensure_gallery_images
 from backend.services.profiles import (
     instagram_media_backfill_status,
@@ -30,8 +31,8 @@ def sync(args):
             minimum_images=args.minimum_post_images,
             limit=args.limit,
         )
-    return {
-        "attempted": len(profiles),
-        "failed": sum(not item["updated"] for item in profiles),
-        "profiles": profiles,
-    }
+    return SyncBatch(
+        attempted=len(profiles),
+        failed=0,
+        profiles=profiles,
+    )

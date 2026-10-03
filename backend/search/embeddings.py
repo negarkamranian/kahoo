@@ -1,28 +1,25 @@
 import json
-import os
 from functools import lru_cache
 from urllib.request import Request, urlopen
 
+from backend.config import settings
 from backend.search.normalization import normalize_search
-
-DEFAULT_MODEL = "BAAI/bge-m3"
-
 
 VECTOR_DIMENSIONS = 1024
 
 
 def embedding_enabled():
-    return bool(os.environ.get("EMBEDDING_API_URL"))
+    return bool(settings.embedding_api_url)
 
 
 def embed_texts(texts):
     if not texts:
         return []
-    endpoint = os.environ["EMBEDDING_API_URL"]
-    model = os.environ.get("EMBEDDING_MODEL", DEFAULT_MODEL)
+    endpoint = settings.embedding_api_url
+    model = settings.embedding_model
     payload = json.dumps({"model": model, "input": texts}).encode("utf-8")
     headers = {"Content-Type": "application/json"}
-    token = os.environ.get("EMBEDDING_API_KEY")
+    token = settings.embedding_api_key
     if token:
         headers["Authorization"] = f"Bearer {token}"
     with urlopen(Request(endpoint, data=payload, headers=headers), timeout=60) as response:
@@ -48,7 +45,7 @@ def embed_query(query):
 def embed_pending_documents(database, limit=100):
     if not embedding_enabled():
         return 0
-    model = os.environ.get("EMBEDDING_MODEL", DEFAULT_MODEL)
+    model = settings.embedding_model
     rows = database.execute(
         """SELECT id,content FROM search_documents
            WHERE embedding IS NULL OR embedding_model IS DISTINCT FROM %s
@@ -56,7 +53,7 @@ def embed_pending_documents(database, limit=100):
         (model, limit),
     ).fetchall()
     vectors = embed_texts([row["content"] for row in rows])
-    for row, vector in zip(rows, vectors):
+    for row, vector in zip(rows, vectors, strict=True):
         database.execute(
             """UPDATE search_documents
                SET embedding=%s::vector,embedding_model=%s,

@@ -1,7 +1,8 @@
+from backend.models.search import LexicalMatch
 from backend.search.normalization import normalize_search, query_tokens
 
 
-def lexical_merchant_matches(database, query, limit=150):
+def lexical_merchant_matches(database, query, limit=150) -> dict[int, LexicalMatch]:
     tokens = query_tokens(query)
     if not tokens:
         return {}
@@ -45,12 +46,4 @@ def lexical_merchant_matches(database, query, limit=150):
             limit,
         ),
     )
-    return {
-        row["merchant_id"]: {
-            "score": float(row["score"]),
-            "entity_type": row["entity_type"],
-            "entity_id": row["entity_id"],
-            "published_at": row["published_at"],
-        }
-        for row in rows
-    }
+    return {row["merchant_id"]: LexicalMatch.model_validate(row) for row in rows}

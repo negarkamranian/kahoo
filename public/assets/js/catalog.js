@@ -1,4 +1,11 @@
-import { escapeHtml, faNumber, saveItems, storedItems } from "./shared.js";
+import {
+  api,
+  escapeHtml,
+  faNumber,
+  saveItems,
+  storedItems,
+  STORAGE_KEYS,
+} from "./shared.js";
 
 const treeElement = document.querySelector("#category-tree"),
   shopGrid = document.querySelector("#shop-grid"),
@@ -25,16 +32,10 @@ const loaderIcon =
   '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg>';
 const loaderMarkup = (label) =>
   `<div class="kahoo-loader catalog-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true">${loaderIcon.repeat(3)}</div><span>${label}</span></div>`;
-const sessionId = localStorage.getItem("kahoo_session") || crypto.randomUUID();
-localStorage.setItem("kahoo_session", sessionId);
+const sessionId =
+  localStorage.getItem(STORAGE_KEYS.session) || crypto.randomUUID();
+localStorage.setItem(STORAGE_KEYS.session, sessionId);
 
-async function api(path, options = {}) {
-  const headers = new Headers(options.headers || {});
-  headers.set("X-Kahoo-Session", sessionId);
-  const response = await fetch(path, { ...options, headers });
-  if (!response.ok) throw new Error(`API ${response.status}`);
-  return response.json();
-}
 function track(event_type, details = {}) {
   api("/api/analytics/event", {
     method: "POST",
@@ -166,160 +167,204 @@ document.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeCategoryMenu();
 });
+function configureShopNavigation(article, shop, index) {
+  article.style.animationDelay = `${index * 35}ms`;
+  article.tabIndex = 0;
+  article.setAttribute("role", "button");
+  article.setAttribute("aria-label", `نمایش اطلاعات ${shop.name}`);
+  article.addEventListener("click", (event) => {
+    if (!event.target.closest("a,button")) openMerchantProfile(shop.id);
+  });
+  article.addEventListener("keydown", (event) => {
+    if (
+      event.target === article &&
+      (event.key === "Enter" || event.key === " ")
+    ) {
+      event.preventDefault();
+      openMerchantProfile(shop.id);
+    }
+  });
+}
+
+function appendShopAvatar(avatar, shop) {
+  if (shop.avatar_url) {
+    const avatarImage = document.createElement("img");
+    avatarImage.src = shop.avatar_url;
+    avatarImage.alt = `تصویر پروفایل ${shop.name}`;
+    avatarImage.loading = "lazy";
+    avatarImage.addEventListener("error", () => avatarImage.remove(), {
+      once: true,
+    });
+    avatar.append(avatarImage);
+  }
+}
+
+function populateShopCard(card, shop) {
+  card.querySelector("h3").textContent = shop.name;
+  card.querySelector(".shop-copy p").textContent = shop.handle;
+  card.querySelector(".shop-description").textContent = shop.description;
+  const reason = card.querySelector(".match-reason");
+  if (query && shop.match_reason) {
+    reason.textContent = shop.match_reason;
+    reason.hidden = false;
+  }
+  card.querySelector(".location").textContent = shop.city;
+}
+
+function configureShopVisit(card, shop) {
+  const visitLink = card.querySelector(".visit-link");
+  visitLink.href = shop.instagram_url;
+  visitLink.target = "_blank";
+  visitLink.addEventListener("click", () =>
+    track("merchant_click", {
+      merchant_id: shop.id,
+      query,
+      category_code: selectedCategory,
+    }),
+  );
+}
+
+function shopCard(shop, index) {
+  const card = template.content.cloneNode(true);
+  configureShopNavigation(card.querySelector("article"), shop, index);
+  appendShopAvatar(card.querySelector(".shop-avatar"), shop);
+  populateShopCard(card, shop);
+  configureShopVisit(card, shop);
+  reelStops.push(createPostReel(card.querySelector(".post-grid"), shop, index));
+  return card;
+}
+
 function renderShops() {
   reelStops.forEach((stop) => stop());
   reelStops = [];
   shopGrid.innerHTML = "";
   emptyState.hidden = shops.length > 0;
-  shops.forEach((shop, index) => {
-    const card = template.content.cloneNode(true),
-      article = card.querySelector("article"),
-      avatar = card.querySelector(".shop-avatar");
-    article.style.animationDelay = `${index * 35}ms`;
-    article.tabIndex = 0;
-    article.setAttribute("role", "button");
-    article.setAttribute("aria-label", `نمایش اطلاعات ${shop.name}`);
-    article.addEventListener("click", (event) => {
-      if (!event.target.closest("a,button")) openMerchantProfile(shop.id);
-    });
-    article.addEventListener("keydown", (event) => {
-      if (
-        event.target === article &&
-        (event.key === "Enter" || event.key === " ")
-      ) {
-        event.preventDefault();
-        openMerchantProfile(shop.id);
-      }
-    });
-    avatar.style.background = shop.avatar_color;
-    const avatarImage = document.createElement("img");
-    avatarImage.src = shop.avatar_url;
-    avatarImage.alt = `تصویر پروفایل ${shop.name}`;
-    avatarImage.loading = "lazy";
-    avatarImage.addEventListener(
-      "error",
-      () => {
-        avatarImage.remove();
-        avatar.textContent = shop.avatar_initial;
-      },
-      { once: true },
-    );
-    avatar.append(avatarImage);
-    card.querySelector("h3").textContent = shop.name;
-    card.querySelector(".shop-copy p").textContent = shop.handle;
-    card.querySelector(".shop-description").textContent = shop.description;
-    const reason = card.querySelector(".match-reason");
-    if (query && shop.match_reason) {
-      reason.textContent = shop.match_reason;
-      reason.hidden = false;
-    }
-    const visitLink = card.querySelector(".visit-link");
-    visitLink.href = shop.instagram_url;
-    visitLink.target = "_blank";
-    visitLink.addEventListener("click", () =>
-      track("merchant_click", {
-        merchant_id: shop.id,
-        query,
-        category_code: selectedCategory,
-      }),
-    );
-    card.querySelector(".location").textContent = shop.city;
-    const posts = card.querySelector(".post-grid"),
-      track = document.createElement("div");
-    posts.setAttribute("aria-label", `آخرین پست‌های ${shop.name}`);
-    track.className = "post-reel-track";
-    posts.append(track);
-    let reelIndex = 0,
-      reelTimer = null,
-      resetTimer = null;
-    const reelItems =
-      shop.posts.length > 3
-        ? [...shop.posts, ...shop.posts.slice(0, 3)]
-        : shop.posts;
-    reelItems.forEach((post, position) => {
-      const postIndex = position % shop.posts.length,
-        cover = post.media?.[0]?.media_url || post.media_url,
-        button = document.createElement("button"),
-        img = document.createElement("img");
-      button.className = "post";
-      button.type = "button";
-      button.setAttribute(
-        "aria-label",
-        `نمایش فروشگاه ${shop.name} و جزئیات پست ${postIndex + 1}`,
-      );
-      button.addEventListener("click", () => openMerchantProfile(shop.id));
-      img.src = cover;
-      img.alt = `تصویر شاخص پست ${postIndex + 1} فروشگاه ${shop.name}`;
-      img.loading = "lazy";
-      button.append(img);
-      track.append(button);
-    });
-    const updateAccess = () => {
-        [...track.children].forEach((link, position) => {
-          const visible = position >= reelIndex && position < reelIndex + 3;
-          link.tabIndex = visible ? 0 : -1;
-          link.setAttribute("aria-hidden", String(!visible));
-        });
-      },
-      move = (animate = true) => {
-        track.style.transition = animate
-          ? "transform 900ms cubic-bezier(.4,0,.2,1)"
-          : "none";
-        const step =
-          (track.firstElementChild?.getBoundingClientRect().width ||
-            posts.clientWidth / 3) +
-          (parseFloat(getComputedStyle(track).gap) || 0);
-        track.style.transform = `translate3d(${-reelIndex * step}px,0,0)`;
-        updateAccess();
-      },
-      stopReel = () => {
-        if (reelTimer) {
-          clearInterval(reelTimer);
-          reelTimer = null;
-        }
-      },
-      startReel = () => {
-        if (
-          shop.posts.length > 3 &&
-          !matchMedia("(prefers-reduced-motion: reduce)").matches &&
-          !reelTimer &&
-          !posts.matches(":hover") &&
-          !posts.matches(":focus-within")
-        )
-          reelTimer = setInterval(
-            () => {
-              reelIndex += 1;
-              move();
-              if (reelIndex === shop.posts.length) {
-                clearTimeout(resetTimer);
-                resetTimer = setTimeout(() => {
-                  reelIndex = 0;
-                  move(false);
-                }, 920);
-              }
-            },
-            5600 + index * 350,
-          );
-      };
-    move(false);
-    startReel();
-    posts.addEventListener("mouseenter", stopReel);
-    posts.addEventListener("mouseleave", startReel);
-    posts.addEventListener("focusin", stopReel);
-    posts.addEventListener("focusout", startReel);
-    const observer = new ResizeObserver(() => move(false));
-    observer.observe(posts);
-    reelStops.push(() => {
-      stopReel();
-      clearTimeout(resetTimer);
-      observer.disconnect();
-    });
-    shopGrid.append(card);
-  });
+  shops.forEach((shop, index) => shopGrid.append(shopCard(shop, index)));
   resultTitle.textContent = query
     ? `نتایج «${searchInput.value.trim()}»`
     : selectedLabel || "فروشگاه‌ها";
 }
+
+const REEL_VISIBLE_POSTS = 3;
+const REEL_ANIMATION_MS = 900;
+const REEL_RESET_MS = 920;
+const REEL_INTERVAL_MS = 5600;
+const REEL_STAGGER_MS = 350;
+
+function reelPost(shop, post, position) {
+  const postIndex = position % shop.posts.length;
+  const button = document.createElement("button");
+  button.className = "post";
+  button.type = "button";
+  button.setAttribute(
+    "aria-label",
+    `نمایش فروشگاه ${shop.name} و جزئیات پست ${postIndex + 1}`,
+  );
+  button.addEventListener("click", () => openMerchantProfile(shop.id));
+  const image = document.createElement("img");
+  image.src = post.media_url;
+  image.alt = `تصویر شاخص پست ${postIndex + 1} فروشگاه ${shop.name}`;
+  image.loading = "lazy";
+  button.append(image);
+  return button;
+}
+
+class PostReel {
+  constructor(posts, shop, index) {
+    this.posts = posts;
+    this.length = shop.posts.length;
+    this.interval = REEL_INTERVAL_MS + index * REEL_STAGGER_MS;
+    this.position = 0;
+    this.timer = null;
+    this.resetTimer = null;
+    this.track = document.createElement("div");
+    this.track.className = "post-reel-track";
+    posts.setAttribute("aria-label", `آخرین پست‌های ${shop.name}`);
+    posts.append(this.track);
+    const items =
+      this.length > REEL_VISIBLE_POSTS
+        ? [...shop.posts, ...shop.posts.slice(0, REEL_VISIBLE_POSTS)]
+        : shop.posts;
+    items.forEach((post, position) =>
+      this.track.append(reelPost(shop, post, position)),
+    );
+  }
+
+  updateAccess() {
+    [...this.track.children].forEach((item, position) => {
+      const visible =
+        position >= this.position &&
+        position < this.position + REEL_VISIBLE_POSTS;
+      item.tabIndex = visible ? 0 : -1;
+      item.setAttribute("aria-hidden", String(!visible));
+    });
+  }
+
+  move(animate = true) {
+    if (!this.track.childElementCount) return;
+    this.track.style.transition = animate
+      ? `transform ${REEL_ANIMATION_MS}ms cubic-bezier(.4,0,.2,1)`
+      : "none";
+    const step =
+      this.track.firstElementChild.getBoundingClientRect().width +
+      parseFloat(getComputedStyle(this.track).columnGap);
+    this.track.style.transform = `translate3d(${-this.position * step}px,0,0)`;
+    this.updateAccess();
+  }
+
+  stop() {
+    clearInterval(this.timer);
+    this.timer = null;
+  }
+
+  canStart() {
+    return (
+      this.length > REEL_VISIBLE_POSTS &&
+      !matchMedia("(prefers-reduced-motion: reduce)").matches &&
+      !this.timer &&
+      !this.posts.matches(":hover") &&
+      !this.posts.matches(":focus-within")
+    );
+  }
+
+  start() {
+    if (this.canStart())
+      this.timer = setInterval(() => this.advance(), this.interval);
+  }
+
+  advance() {
+    this.position += 1;
+    this.move();
+    if (this.position === this.length) {
+      clearTimeout(this.resetTimer);
+      this.resetTimer = setTimeout(() => {
+        this.position = 0;
+        this.move(false);
+      }, REEL_RESET_MS);
+    }
+  }
+
+  mount() {
+    this.move(false);
+    this.start();
+    this.posts.addEventListener("mouseenter", () => this.stop());
+    this.posts.addEventListener("mouseleave", () => this.start());
+    this.posts.addEventListener("focusin", () => this.stop());
+    this.posts.addEventListener("focusout", () => this.start());
+    const observer = new ResizeObserver(() => this.move(false));
+    observer.observe(this.posts);
+    return () => {
+      this.stop();
+      clearTimeout(this.resetTimer);
+      observer.disconnect();
+    };
+  }
+}
+
+function createPostReel(posts, shop, index) {
+  return new PostReel(posts, shop, index).mount();
+}
+
 const merchantDialog = document.querySelector("#merchant-dialog"),
   merchantDialogLoading = document.querySelector("#merchant-dialog-loading"),
   merchantDialogContent = document.querySelector("#merchant-dialog-content");
@@ -348,130 +393,174 @@ function toggleSaved(key, item, button, compact = false) {
   saveItems(key, items);
   paintSave(button, index < 0, compact);
 }
+function merchantCategorySummary(merchant) {
+  const categoryLabels = merchant.categories.map((category) => category.label),
+    categorySummary = categoryLabels.length
+      ? categoryLabels.slice(0, 3).join("، ") +
+        (categoryLabels.length > 3
+          ? ` +${faNumber(categoryLabels.length - 3)} دسته`
+          : "")
+      : merchant.category_label;
+  return categorySummary;
+}
+
+function renderMerchantAvatar(merchant) {
+  const avatar = document.querySelector("#detail-avatar");
+  avatar.hidden = !merchant.avatar_url;
+  if (merchant.avatar_url) {
+    avatar.src = merchant.avatar_url;
+    avatar.alt = `تصویر پروفایل ${merchant.name}`;
+  } else {
+    avatar.removeAttribute("src");
+  }
+  avatar.onerror = () => {
+    avatar.hidden = true;
+  };
+}
+
+function renderMerchantDetails(merchant) {
+  document.querySelector("#detail-name").textContent = merchant.name;
+  document.querySelector("#detail-handle").textContent = merchant.handle;
+  document.querySelector("#detail-meta").textContent =
+    `${merchantCategorySummary(merchant)} · ${merchant.city}`;
+  document.querySelector("#detail-bio").textContent =
+    merchant.biography || "بیوی اینستاگرام در دسترس نیست";
+  const instagram = document.querySelector("#detail-instagram");
+  instagram.href = merchant.instagram_url;
+  instagram.onclick = () =>
+    track("merchant_click", { merchant_id: merchant.id });
+  document.querySelector("#detail-sync").textContent =
+    merchant.metrics_updated_at
+      ? `به‌روزرسانی ${new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" }).format(new Date(merchant.metrics_updated_at))}`
+      : "اطلاعات محدود";
+}
+
+function configureMerchantSave(merchant) {
+  const merchantSave = document.querySelector("#detail-save"),
+    merchantItem = {
+      key: String(merchant.id),
+      id: merchant.id,
+      name: merchant.name,
+      handle: merchant.handle,
+      description: merchant.description,
+      avatar_url: merchant.avatar_url,
+      instagram_url: merchant.instagram_url,
+      city: merchant.city,
+    };
+  paintSave(
+    merchantSave,
+    storedItems(STORAGE_KEYS.merchants).some(
+      (item) => item.key === merchantItem.key,
+    ),
+  );
+  merchantSave.onclick = () =>
+    toggleSaved(STORAGE_KEYS.merchants, merchantItem, merchantSave);
+}
+
+function postImages(merchant, media, index) {
+  return media.map((item, mediaIndex) => {
+    const image = document.createElement("img");
+    image.src = item.media_url;
+    image.alt = `تصویر ${mediaIndex + 1} از پست ${index + 1} ${merchant.name}`;
+    image.loading = "lazy";
+    return image;
+  });
+}
+
+function collectionThumbnails(images) {
+  const thumbnails = document.createElement("span"),
+    thumbnailCount = images.length,
+    rows = Math.min(3, Math.max(1, Math.round(Math.sqrt(thumbnailCount / 2)))),
+    columns = Math.ceil(thumbnailCount / rows);
+  thumbnails.className = "collection-thumbnails";
+  thumbnails.style.setProperty("--thumbnail-rows", rows);
+  thumbnails.style.setProperty("--thumbnail-columns", columns);
+  thumbnails.append(...images);
+  return thumbnails;
+}
+
+function postPreview(merchant, post, index) {
+  const preview = document.createElement("span");
+  preview.className = `collection-preview count-${Math.min(post.media.length, 4)}`;
+  const images = postImages(merchant, post.media, index);
+  preview.append(images[0]);
+  if (images.length > 1) preview.append(collectionThumbnails(images.slice(1)));
+  return preview;
+}
+
+function savedPostItem(merchant, post) {
+  return {
+    key: post.key,
+    merchant_id: merchant.id,
+    merchant_name: merchant.name,
+    permalink: post.permalink,
+    media_url: post.media[0].media_url,
+    image_count: post.media.length,
+  };
+}
+
+function postLink(merchant, post, index) {
+  const media = post.media;
+  const link = document.createElement("a");
+  link.href = post.permalink;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.setAttribute(
+    "aria-label",
+    `پست ${index + 1} از ${merchant.name}${media.length > 1 ? `، مجموعه ${media.length} تصویر` : ""}`,
+  );
+  link.append(postPreview(merchant, post, index));
+  if (media.length > 1) {
+    const badge = document.createElement("span");
+    badge.className = "collection-count";
+    badge.textContent = `▣ ${faNumber(media.length)}`;
+    link.append(badge);
+  }
+  return link;
+}
+
+function postSaveButton(merchant, post) {
+  const save = document.createElement("button");
+  const item = savedPostItem(merchant, post);
+  save.type = "button";
+  save.className = "post-save";
+  save.setAttribute("aria-label", "ذخیره پست");
+  paintSave(
+    save,
+    storedItems(STORAGE_KEYS.posts).some((saved) => saved.key === item.key),
+    true,
+  );
+  save.addEventListener("click", () =>
+    toggleSaved(STORAGE_KEYS.posts, item, save, true),
+  );
+  return save;
+}
+
+function postTile(merchant, post, index) {
+  const tile = document.createElement("div");
+  tile.className = `saved-post-tile${post.media.length > 1 ? " collection-tile" : ""}`;
+  tile.append(postLink(merchant, post, index), postSaveButton(merchant, post));
+  return tile;
+}
+
+function renderMerchantPosts(merchant) {
+  const posts = document.querySelector("#detail-posts");
+  posts.replaceChildren(
+    ...merchant.posts.map((post, index) => postTile(merchant, post, index)),
+  );
+}
+
 async function openMerchantProfile(merchantId) {
   merchantDialogLoading.innerHTML = loaderMarkup("در حال دریافت فروشگاه");
   merchantDialogLoading.hidden = false;
   merchantDialogContent.hidden = true;
   merchantDialog.showModal();
   try {
-    const merchant = await api(`/api/merchants/${merchantId}`),
-      avatar = document.querySelector("#detail-avatar");
-    avatar.src = merchant.avatar_url;
-    avatar.alt = `تصویر پروفایل ${merchant.name}`;
-    avatar.style.background = merchant.avatar_color;
-    const categoryLabels = (merchant.categories || []).map(
-        (category) => category.label,
-      ),
-      categorySummary = categoryLabels.length
-        ? categoryLabels.slice(0, 3).join("، ") +
-          (categoryLabels.length > 3
-            ? ` +${faNumber(categoryLabels.length - 3)} دسته`
-            : "")
-        : merchant.category_label;
-    document.querySelector("#detail-name").textContent = merchant.name;
-    document.querySelector("#detail-handle").textContent = merchant.handle;
-    document.querySelector("#detail-meta").textContent =
-      `${categorySummary} · ${merchant.city}`;
-    document.querySelector("#detail-bio").textContent =
-      merchant.biography || "بیوی اینستاگرام در دسترس نیست";
-    const instagram = document.querySelector("#detail-instagram");
-    instagram.href = merchant.instagram_url;
-    instagram.onclick = () =>
-      track("merchant_click", { merchant_id: merchant.id });
-    const merchantSave = document.querySelector("#detail-save"),
-      merchantItem = {
-        key: String(merchant.id),
-        id: merchant.id,
-        name: merchant.name,
-        handle: merchant.handle,
-        description: merchant.biography || merchant.description,
-        avatar_url: merchant.avatar_url,
-        instagram_url: merchant.instagram_url,
-        city: merchant.city,
-      };
-    paintSave(
-      merchantSave,
-      storedItems("kahoo_saved_merchants").some(
-        (item) => item.key === merchantItem.key,
-      ),
-    );
-    merchantSave.onclick = () =>
-      toggleSaved("kahoo_saved_merchants", merchantItem, merchantSave);
-    document.querySelector("#detail-sync").textContent =
-      merchant.metrics_updated_at
-        ? `به‌روزرسانی ${new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" }).format(new Date(merchant.metrics_updated_at))}`
-        : "اطلاعات محدود";
-    const posts = document.querySelector("#detail-posts");
-    posts.innerHTML = "";
-    merchant.posts.forEach((post, index) => {
-      const media = post.media?.length
-          ? post.media
-          : [{ media_url: post.media_url }],
-        tile = document.createElement("div"),
-        link = document.createElement("a"),
-        preview = document.createElement("span"),
-        save = document.createElement("button"),
-        item = {
-          key: post.key || post.permalink,
-          merchant_id: merchant.id,
-          merchant_name: merchant.name,
-          permalink: post.permalink,
-          media_url: media[0].media_url,
-          image_count: media.length,
-        };
-      tile.className = `saved-post-tile${media.length > 1 ? " collection-tile" : ""}`;
-      link.href = post.permalink;
-      link.target = "_blank";
-      link.rel = "noreferrer";
-      link.setAttribute(
-        "aria-label",
-        `پست ${index + 1} از ${merchant.name}${media.length > 1 ? `، مجموعه ${media.length} تصویر` : ""}`,
-      );
-      preview.className = `collection-preview count-${Math.min(media.length, 4)}`;
-      const images = media.map((item, mediaIndex) => {
-        const image = document.createElement("img");
-        image.src = item.media_url;
-        image.alt = `تصویر ${mediaIndex + 1} از پست ${index + 1} ${merchant.name}`;
-        image.loading = "lazy";
-        return image;
-      });
-      if (images.length > 1) {
-        const thumbnails = document.createElement("span"),
-          thumbnailCount = images.length - 1,
-          rows = Math.min(
-            3,
-            Math.max(1, Math.round(Math.sqrt(thumbnailCount / 2))),
-          ),
-          columns = Math.ceil(thumbnailCount / rows);
-        thumbnails.className = "collection-thumbnails";
-        thumbnails.style.setProperty("--thumbnail-rows", rows);
-        thumbnails.style.setProperty("--thumbnail-columns", columns);
-        thumbnails.append(...images.slice(1));
-        preview.append(images[0], thumbnails);
-      } else preview.append(images[0]);
-      link.append(preview);
-      if (media.length > 1) {
-        const badge = document.createElement("span");
-        badge.className = "collection-count";
-        badge.textContent = `▣ ${faNumber(media.length)}`;
-        link.append(badge);
-      }
-      save.type = "button";
-      save.className = "post-save";
-      save.setAttribute("aria-label", "ذخیره پست");
-      paintSave(
-        save,
-        storedItems("kahoo_saved_posts").some(
-          (saved) => saved.key === item.key,
-        ),
-        true,
-      );
-      save.addEventListener("click", () =>
-        toggleSaved("kahoo_saved_posts", item, save, true),
-      );
-      tile.append(link, save);
-      posts.append(tile);
-    });
+    const merchant = await api(`/api/merchants/${merchantId}`);
+    renderMerchantAvatar(merchant);
+    renderMerchantDetails(merchant);
+    configureMerchantSave(merchant);
+    renderMerchantPosts(merchant);
     merchantDialogLoading.hidden = true;
     merchantDialogContent.hidden = false;
   } catch {
@@ -500,7 +589,9 @@ async function loadEmptySuggestions() {
       button.addEventListener("click", () => applySuggestion(item.value));
       emptySuggestions.append(button);
     });
-  } catch {}
+  } catch {
+    // Suggestions are optional; keep the current search results available.
+  }
 }
 async function loadShops() {
   const request = ++shopRequest,
@@ -698,7 +789,7 @@ let loginPhone = "",
   challengeId = "";
 const latinDigits = (value) =>
   value.replace(/[۰-۹]/g, (digit) => "۰۱۲۳۴۵۶۷۸۹".indexOf(digit));
-if (localStorage.getItem("kahoo_user")) {
+if (localStorage.getItem(STORAGE_KEYS.user)) {
   loginTrigger.textContent = "حساب من";
   loginTrigger.classList.add("logged-in");
 }
@@ -760,7 +851,7 @@ otpForm.addEventListener("submit", async (event) => {
   });
   track("login_completed");
   localStorage.setItem(
-    "kahoo_user",
+    STORAGE_KEYS.user,
     JSON.stringify({ display_name: response.user.display_name }),
   );
   loginDialog.close();

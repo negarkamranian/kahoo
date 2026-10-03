@@ -4,10 +4,14 @@ import argparse
 import json
 from pathlib import Path
 
-import psycopg
+from pydantic import TypeAdapter
 
 from backend.cli import catalog, media, merchants, search
-from backend.database import PROJECT_ROOT, initialize_database
+from backend.config import PROJECT_ROOT, settings
+from backend.database import initialize_database
+from backend.models.media import MINIMUM_POST_IMAGES
+from backend.models.merchants import AdminMerchantQuery, MerchantImport, MerchantPageSize
+from backend.serialization import json_default
 from backend.server.app import serve
 
 
@@ -25,42 +29,48 @@ def positive(value):
     return number
 
 
-def parser():
-    root = argparse.ArgumentParser(
-        prog="python -m backend", description="Kahoo server and maintenance CLI"
-    )
-    commands = root.add_subparsers(dest="command", required=True)
+def merchant_page_size(value):
+    try:
+        return TypeAdapter(MerchantPageSize).validate_python(int(value))
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("must be between 1 and 100") from error
 
-    def action(parent, name, help_text, handler, needs_db=True):
-        command = parent.add_parser(name, help=help_text, description=help_text)
-        command.set_defaults(handler=handler, needs_db=needs_db)
-        return command
 
-    def group(name, help_text):
-        return commands.add_parser(name, help=help_text).add_subparsers(
-            dest="action", required=True
-        )
+def action(parent, name, help_text, handler, needs_db=True):
+    command = parent.add_parser(name, help=help_text, description=help_text)
+    command.set_defaults(handler=handler, needs_db=needs_db)
+    return command
 
+
+def group(commands, name, help_text):
+    return commands.add_parser(name, help=help_text).add_subparsers(dest="action", required=True)
+
+
+def register_server(commands):
     server = action(commands, "serve", "Start the HTTP server", serve, False)
-    server.add_argument("--host")
-    server.add_argument("--port", type=positive)
+    server.add_argument("--host", default=settings.host)
+    server.add_argument("--port", type=positive, default=settings.port)
 
-    db = group("db", "Database setup")
+
+def register_database(commands):
+    db = group(commands, "db", "Database setup")
     action(db, "migrate", "Apply migrations and the category seed", migrate, False)
 
-    shops = group("merchants", "List, import and remove merchants")
+
+def register_merchants(commands):
+    merchant_defaults = AdminMerchantQuery()
+    default_city = MerchantImport.model_fields["city"].default  # pylint: disable=unsubscriptable-object
+    shops = group(commands, "merchants", "List, import and remove merchants")
     listing = action(shops, "list", "List stored merchants", merchants.list_merchants)
     listing.add_argument("--query", default="")
-    listing.add_argument("--limit", type=positive, default=50)
-    listing.add_argument("--offset", type=nonnegative, default=0)
+    listing.add_argument("--limit", type=merchant_page_size, default=merchant_defaults.limit)
+    listing.add_argument("--offset", type=nonnegative, default=merchant_defaults.offset)
     add = action(shops, "add", "Import a profile; new merchants require --category", merchants.add)
-    add.add_argument("identifier", help="username, @username, or Instagram profile URL")
+    add.add_argument("identifier", help="Instagram handle in @username format")
     add.add_argument(
         "--category", help="GPC category code; existing merchants keep their category if omitted"
     )
-    add.add_argument("--name")
-    add.add_argument("--description")
-    add.add_argument("--city", default="ایران")
+    add.add_argument("--city", default=default_city)
     remove = action(
         shops, "remove", "Remove a merchant and persist its catalog exclusion", merchants.remove
     )
@@ -68,16 +78,18 @@ def parser():
     batch = action(
         shops,
         "import-file",
-        "Import whitespace-separated handles or profile URLs",
+        "Import whitespace-separated @username handles",
         merchants.import_file,
     )
     batch.add_argument("source", type=Path)
     batch.add_argument(
         "--category", help="Required for new merchants; use a separate file for each category"
     )
-    batch.add_argument("--city", default="ایران")
+    batch.add_argument("--city", default=default_city)
 
-    catalogs = group("catalog", "Import reviewed snapshots and build category data")
+
+def register_catalog(commands):
+    catalogs = group(commands, "catalog", "Import reviewed snapshots and build category data")
     seed = action(
         catalogs,
         "import",
@@ -98,7 +110,9 @@ def parser():
     build.add_argument("--output", type=Path, default=PROJECT_ROOT / "data/categories.sql")
     build.add_argument("--download", action="store_true")
 
-    images = group("media", "Inspect, synchronize and cache Instagram media")
+
+def register_media(commands):
+    images = group(commands, "media", "Inspect, synchronize and cache Instagram media")
     status = action(
         images, "status", "Report missing avatars and incomplete galleries", media.status
     )
@@ -108,17 +122,19 @@ def parser():
     )
     for command in (status, sync, cache):
         command.add_argument(
-            "handles", nargs="*", help="Restrict to these handles/profile URLs; defaults to all"
+            "handles", nargs="*", help="Restrict to these @username handles; defaults to all"
         )
     for command in (status, sync):
-        command.add_argument("--minimum-post-images", type=nonnegative, default=3)
+        command.add_argument("--minimum-post-images", type=nonnegative, default=MINIMUM_POST_IMAGES)
     sync.add_argument("--only-missing", action="store_true")
     sync.add_argument("--avatars-only", action="store_true")
     sync.add_argument(
         "--limit", type=nonnegative, default=0, help="Maximum profiles to process; 0 means all"
     )
 
-    index = group("search", "Reindex, evaluate and apply sourced enrichment")
+
+def register_search(commands):
+    index = group(commands, "search", "Reindex, evaluate and apply sourced enrichment")
     reindex = action(
         index, "reindex", "Refresh search metadata, documents and embeddings", search.reindex
     )
@@ -140,22 +156,35 @@ def parser():
     )
     enrich.add_argument("merchant_id", type=positive)
     enrich.add_argument("source", type=Path)
+
+
+def parser():
+    root = argparse.ArgumentParser(
+        prog="python -m backend", description="Kahoo server and maintenance CLI"
+    )
+    commands = root.add_subparsers(dest="command", required=True)
+    for register in (
+        register_server,
+        register_database,
+        register_merchants,
+        register_catalog,
+        register_media,
+        register_search,
+    ):
+        register(commands)
     return root
 
 
-def migrate(args):
+def migrate(_args):
     return initialize_database()
 
 
 def main(argv=None):
     command = parser()
     args = command.parse_args(argv)
-    try:
-        if args.needs_db:
-            initialize_database()
-        result = args.handler(args)
-    except (ValueError, OSError, psycopg.Error) as error:
-        command.exit(1, f"error: {error}\n")
+    if args.needs_db:
+        initialize_database()
+    result = args.handler(args)
     if result is not None:
-        print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
-    return 1 if isinstance(result, dict) and result.get("failed") else 0
+        print(json.dumps(result, ensure_ascii=False, indent=2, default=json_default))
+    return 0

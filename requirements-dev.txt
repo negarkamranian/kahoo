@@ -1,0 +1,5 @@
+-r requirements.txt
+ruff>=0.15,<1
+pylint>=4,<5
+pre-commit>=4,<5
+pre-commit-hooks>=6,<7

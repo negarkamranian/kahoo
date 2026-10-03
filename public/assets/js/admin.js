@@ -1,9 +1,5 @@
-import { escapeHtml } from "./shared.js";
+import { api, escapeHtml, faNumber as fa, STORAGE_KEYS } from "./shared.js";
 
-const fa = (value) =>
-  new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 1 }).format(
-    value || 0,
-  );
 const dateFa = (value) =>
   new Intl.DateTimeFormat("fa-IR", { month: "short", day: "numeric" }).format(
     new Date(`${value}T12:00:00`),
@@ -50,19 +46,20 @@ function renderChart(rows) {
     `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"><g class="grid">${grids}</g><polyline class="search-line" points="${line("searches")}"/><polyline class="click-line" points="${line("clicks")}"/>${labels}</svg>`;
 }
 
-function renderList(container, items, render, emptyText) {
+function renderList(container, items, renderItem, emptyText) {
   container.innerHTML = items.length
-    ? items.map(render).join("")
+    ? items.map(renderItem).join("")
     : empty(emptyText);
 }
-function render(data) {
-  const { kpis, catalog, funnel } = data;
+function renderKpis(kpis) {
   el("kpi-searches").textContent = fa(kpis.searches);
   el("kpi-visitors").textContent = fa(kpis.visitors);
   el("kpi-clicks").textContent = fa(kpis.clicks);
   el("kpi-zero").textContent = `${fa(kpis.zero_rate)}٪`;
   el("kpi-conversion").textContent = `${fa(kpis.search_to_click)}٪`;
-  renderChart(data.daily);
+}
+
+function renderQueries(data) {
   el("query-rows").innerHTML = data.top_queries.length
     ? data.top_queries
         .map(
@@ -78,6 +75,9 @@ function render(data) {
       `<div><span>${escapeHtml(row.query)}</span><b>${fa(row.searches)} بار</b></div>`,
     "فعلاً جستجوی بی‌نتیجه‌ای نیست",
   );
+}
+
+function renderTopMerchants(data) {
   renderList(
     el("merchant-list"),
     data.top_merchants,
@@ -85,6 +85,9 @@ function render(data) {
       `<div class="rank-item"><span class="rank">${fa(index + 1)}</span><div><b>${escapeHtml(row.name)}</b><small>${escapeHtml(row.handle)}</small></div><strong>${fa(row.clicks)} <small>کلیک</small></strong></div>`,
     "هنوز کلیکی ثبت نشده",
   );
+}
+
+function renderFunnel(funnel) {
   const stages = [
       { label: "بازدیدکننده", value: funnel.visitors },
       { label: "جستجو", value: funnel.searched },
@@ -99,6 +102,9 @@ function render(data) {
         `<div><div><span>${stage.label}</span><b>${fa(stage.value)}</b></div><i><em style="width:${Math.max((stage.value / base) * 100, stage.value ? 3 : 0)}%"></em></i></div>`,
     )
     .join("");
+}
+
+function renderCatalog(catalog) {
   el("catalog-merchants").textContent = fa(catalog.merchants);
   el("catalog-categories").textContent = fa(catalog.used_categories);
   el("catalog-posts").textContent = fa(catalog.posts);
@@ -107,6 +113,15 @@ function render(data) {
       100
     : 0;
   el("catalog-profiles").textContent = `${fa(complete)}٪`;
+}
+
+function render(data) {
+  renderKpis(data.kpis);
+  renderChart(data.daily);
+  renderQueries(data);
+  renderTopMerchants(data);
+  renderFunnel(data.funnel);
+  renderCatalog(data.catalog);
   el("updated-at").textContent =
     `آخرین به‌روزرسانی: ${new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(new Date(data.generated_at))}`;
   el("loading").hidden = true;
@@ -115,11 +130,7 @@ function render(data) {
 async function load() {
   el("loading").hidden = false;
   try {
-    const response = await fetch(
-      `/api/admin/metrics?days=${el("period-select").value}`,
-    );
-    if (!response.ok) throw new Error();
-    render(await response.json());
+    render(await api(`/api/admin/metrics?days=${el("period-select").value}`));
   } catch {
     el("loading").textContent =
       "دریافت آمار ممکن نشد. سرور را دوباره بررسی کنید.";
@@ -134,26 +145,19 @@ function managerStatus(message, type = "") {
   node.textContent = message;
   node.className = `manager-status ${type}`.trim();
 }
-async function responseJson(response) {
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || "انجام عملیات ممکن نشد.");
-  return data;
-}
 async function loadManagedMerchants() {
   const query = el("merchant-search").value.trim();
   el("managed-merchant-list").innerHTML = empty("در حال دریافت فروشگاه‌ها…");
   try {
-    const data = await responseJson(
-      await fetch(
-        `/api/admin/merchants?limit=100&q=${encodeURIComponent(query)}`,
-      ),
+    const data = await api(
+      `/api/admin/merchants?limit=100&q=${encodeURIComponent(query)}`,
     );
     el("managed-merchant-count").textContent = `${fa(data.total)} فروشگاه`;
     renderList(
       el("managed-merchant-list"),
       data.items,
       (row) =>
-        `<article class="managed-row"><span class="managed-avatar">${row.avatar_url ? `<img src="${row.avatar_url}" alt="" loading="lazy" />` : escapeHtml((row.name || "؟").slice(0, 1))}</span><div class="managed-copy"><b>${escapeHtml(row.name)}</b><small>${escapeHtml(row.handle)}</small></div><span class="managed-meta">${fa(row.followers_count)} دنبال‌کننده</span><span class="managed-meta">${fa(row.post_count)} تصویر</span><button class="remove-merchant" type="button" data-id="${row.id}" data-name="${escapeHtml(row.name)}">حذف</button></article>`,
+        `<article class="managed-row"><span class="managed-avatar">${row.avatar_url ? `<img src="${row.avatar_url}" alt="" loading="lazy" />` : ""}</span><div class="managed-copy"><b>${escapeHtml(row.name)}</b><small>${escapeHtml(row.handle)}</small></div><span class="managed-meta">${fa(row.followers_count)} دنبال‌کننده</span><span class="managed-meta">${fa(row.post_count)} تصویر</span><button class="remove-merchant" type="button" data-id="${row.id}" data-name="${escapeHtml(row.name)}">حذف</button></article>`,
       "فروشگاهی پیدا نشد",
     );
   } catch (error) {
@@ -168,25 +172,19 @@ el("merchant-add-form").addEventListener("submit", async (event) => {
   const payload = {
     identifier: el("merchant-identifier").value,
     category_code: el("merchant-category").value || null,
-    name: el("merchant-name").value.trim() || null,
-    description: el("merchant-description").value.trim() || null,
-    city: el("merchant-city").value.trim() || "ایران",
+    city: el("merchant-city").value,
   };
   try {
-    const result = await responseJson(
-      await fetch("/api/admin/merchants", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...adminHeaders() },
-        body: JSON.stringify(payload),
-      }),
-    );
+    const result = await api("/api/admin/merchants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...adminHeaders() },
+      body: JSON.stringify(payload),
+    });
     managerStatus(
       `${result.created ? "فروشگاه افزوده شد" : "فروشگاه به‌روزرسانی شد"}؛ ${fa(result.post_images_saved)} تصویر ذخیره شد.`,
       "success",
     );
     el("merchant-identifier").value = "";
-    el("merchant-name").value = "";
-    el("merchant-description").value = "";
     await Promise.all([loadManagedMerchants(), load()]);
   } catch (error) {
     managerStatus(error.message, "error");
@@ -206,12 +204,10 @@ el("managed-merchant-list").addEventListener("click", async (event) => {
   button.disabled = true;
   managerStatus("در حال حذف فروشگاه…");
   try {
-    await responseJson(
-      await fetch(`/api/admin/merchants/${button.dataset.id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-      }),
-    );
+    await api(`/api/admin/merchants/${button.dataset.id}`, {
+      method: "DELETE",
+      headers: adminHeaders(),
+    });
     managerStatus(
       "فروشگاه حذف شد و پس از راه‌اندازی مجدد نیز برنمی‌گردد.",
       "success",
@@ -228,9 +224,9 @@ el("merchant-search").addEventListener("input", () => {
   merchantSearchTimer = setTimeout(loadManagedMerchants, 250);
 });
 el("merchant-refresh").addEventListener("click", loadManagedMerchants);
-el("admin-token").value = sessionStorage.getItem("kahoo_admin_token") || "";
+el("admin-token").value = sessionStorage.getItem(STORAGE_KEYS.adminToken) || "";
 el("admin-token").addEventListener("input", () =>
-  sessionStorage.setItem("kahoo_admin_token", el("admin-token").value),
+  sessionStorage.setItem(STORAGE_KEYS.adminToken, el("admin-token").value),
 );
 el("period-select").addEventListener("change", load);
 load();
@@ -238,7 +234,7 @@ loadManagedMerchants();
 
 async function loadCategoryOptions() {
   try {
-    const tree = await responseJson(await fetch("/api/categories"));
+    const tree = await api("/api/categories");
     const select = el("merchant-category");
     function append(nodes, parents = []) {
       for (const node of nodes) {

@@ -1,23 +1,25 @@
-import re
 from datetime import datetime
+from itertools import groupby
 
 from backend.database import connect
-from backend.instagram import instagram_profile, instagram_shortcode, normalize_identifier
-from backend.search.indexing import sync_search_documents
-from backend.search.metadata import sync_search_metadata
+from backend.instagram import instagram_profile
+from backend.instagram_urls import profile_url
+from backend.models.categories import CategoryLink
+from backend.models.media import MediaAsset, PostCollection
+from backend.models.merchants import (
+    AdminMerchant,
+    AdminMerchantPage,
+    AdminMerchantQuery,
+    ImportResult,
+    Merchant,
+    MerchantImport,
+    MerchantSummary,
+)
+from backend.search.indexing import sync_search_index
 from backend.services.media import cache_merchant_avatar, replace_profile_posts
 
 
-def shared_prefix(left, right):
-    length = 0
-    for left_char, right_char in zip(left, right):
-        if left_char != right_char:
-            break
-        length += 1
-    return left[:length]
-
-
-def merchant_posts(db, merchant_id):
+def merchant_posts(db, merchant_id: int) -> list[PostCollection]:
     rows = list(
         db.execute(
             "SELECT id,image_url,permalink,position,collection_key,media_position FROM merchant_posts "
@@ -25,60 +27,41 @@ def merchant_posts(db, merchant_id):
             (merchant_id,),
         )
     )
-    posts = []
-    index = 0
-    while index < len(rows):
-        first = rows[index]
-        end = index + 1
-        collection_key = first["collection_key"]
-        if collection_key:
-            while end < len(rows) and rows[end]["collection_key"] == collection_key:
-                end += 1
-        elif end < len(rows) and first["image_url"] == rows[end]["image_url"]:
-            prefix = shared_prefix(
-                instagram_shortcode(first["permalink"]), instagram_shortcode(rows[end]["permalink"])
-            )
-            if len(prefix) >= 3:
-                end += 1
-                while end < len(rows) and instagram_shortcode(rows[end]["permalink"]).startswith(
-                    prefix
-                ):
-                    end += 1
-        collection = []
-        seen_images = set()
-        for media in rows[index:end]:
-            if media["image_url"] in seen_images:
-                continue
-            seen_images.add(media["image_url"])
-            collection.append(
-                {"media_url": f"/api/media/{media['id']}", "position": len(collection) + 1}
-            )
-        shortcode = instagram_shortcode(first["permalink"])
-        posts.append(
-            {
-                "post_id": first["id"],
-                "key": collection_key or shortcode or f"{merchant_id}-{first['position']}",
-                "permalink": first["permalink"],
-                "position": len(posts) + 1,
-                "media_url": collection[0]["media_url"],
-                "media": collection,
-                "image_count": len(collection),
-            }
+    return [
+        post_collection(key, list(items), position)
+        for position, (key, items) in enumerate(
+            groupby(rows, key=lambda row: row["collection_key"]), 1
         )
-        index = end
-    return posts
+    ]
 
 
-def merchant_avatar_url(merchant):
-    updated_at = merchant.get("avatar_updated_at")
-    if isinstance(updated_at, datetime):
-        version = str(int(updated_at.timestamp() * 1_000_000))
-    else:
-        version = re.sub(r"[^0-9]", "", str(updated_at or "0")) or "0"
-    return f"/api/avatars/{merchant['id']}?v={version}"
+def post_collection(collection_key, collection_rows, position):
+    first = collection_rows[0]
+    unique_images = {}
+    for row in collection_rows:
+        unique_images.setdefault(row["image_url"], row)
+    collection = [
+        MediaAsset(media_url=f"/api/media/{row['id']}", position=position)
+        for position, row in enumerate(unique_images.values(), 1)
+    ]
+
+    return PostCollection(
+        post_id=first["id"],
+        key=collection_key,
+        permalink=first["permalink"],
+        position=position,
+        media=collection,
+    )
 
 
-def merchant_detail(merchant_id):
+def merchant_avatar_url(merchant_id: int, updated_at: datetime | None) -> str:
+    if updated_at is None:
+        return f"/api/avatars/{merchant_id}"
+    version = int(updated_at.timestamp() * 1_000_000)
+    return f"/api/avatars/{merchant_id}?v={version}"
+
+
+def merchant_detail(merchant_id: int) -> Merchant | None:
     with connect() as db:
         row = db.execute(
             "SELECT m.*,c.label_fa category_label FROM merchants m JOIN categories c ON c.code=m.category_code WHERE m.id=%s",
@@ -86,23 +69,17 @@ def merchant_detail(merchant_id):
         ).fetchone()
         if not row:
             return None
-        merchant = dict(row)
-        merchant.pop("avatar_blob", None)
-        merchant.pop("avatar_mime_type", None)
-        merchant["avatar_url"] = merchant_avatar_url(merchant)
-        merchant["posts"] = merchant_posts(db, merchant_id)
+        merchant = Merchant.model_validate(row)
+        if row["avatar_blob"] is not None:
+            merchant.avatar_url = merchant_avatar_url(merchant.id, merchant.avatar_updated_at)
+        merchant.posts = merchant_posts(db, merchant_id)
         category_rows = {
             item["code"]: dict(item)
             for item in db.execute("SELECT code,parent_code,label_fa FROM categories")
         }
-        breadcrumb = []
-        code = row["category_code"]
-        while code and code in category_rows:
-            breadcrumb.insert(0, {"code": code, "label": category_rows[code]["label_fa"]})
-            code = category_rows[code]["parent_code"]
-        merchant["category_path"] = breadcrumb
-        merchant["categories"] = [
-            dict(item)
+        merchant.category_path = category_breadcrumb(row["category_code"], category_rows)
+        merchant.categories = [
+            CategoryLink.model_validate(item)
             for item in db.execute(
                 """SELECT c.code,c.label_fa label,mc.confidence,mc.source,mc.source_url
             FROM merchant_categories mc JOIN categories c ON c.code=mc.category_code
@@ -113,10 +90,8 @@ def merchant_detail(merchant_id):
         return merchant
 
 
-def admin_merchants(query="", limit=50, offset=0):
-    query = (query or "").strip()[:100]
-    limit = max(1, min(int(limit), 100))
-    offset = max(0, int(offset))
+def admin_merchants(request: AdminMerchantQuery) -> AdminMerchantPage:
+    query = request.query.strip()
     params = []
     where = ""
     if query:
@@ -136,15 +111,22 @@ def admin_merchants(query="", limit=50, offset=0):
           FROM merchants m LEFT JOIN merchant_posts p ON p.merchant_id=m.id
           {where} GROUP BY m.id ORDER BY m.id DESC LIMIT %s OFFSET %s
         """,
-                (*params, limit, offset),
+                (*params, request.limit, request.offset),
             )
         ]
     for row in rows:
-        row["avatar_url"] = f"/api/avatars/{row['id']}" if row.pop("has_avatar") else None
-    return {"items": rows, "total": total, "limit": limit, "offset": offset}
+        row["avatar_url"] = None
+        if row.pop("has_avatar"):
+            row["avatar_url"] = merchant_avatar_url(row["id"], None)
+    return AdminMerchantPage(
+        items=[AdminMerchant.model_validate(row) for row in rows],
+        total=total,
+        limit=request.limit,
+        offset=request.offset,
+    )
 
 
-def remove_merchant(merchant_id):
+def remove_merchant(merchant_id: int) -> MerchantSummary | None:
     with connect() as db:
         merchant = db.execute(
             "SELECT id,name,handle FROM merchants WHERE id=%s", (merchant_id,)
@@ -157,138 +139,131 @@ def remove_merchant(merchant_id):
             (merchant["handle"],),
         )
         db.execute("DELETE FROM merchants WHERE id=%s", (merchant_id,))
-    return dict(merchant)
+    return MerchantSummary.model_validate(merchant)
 
 
-def add_or_refresh_merchant(
-    identifier, category_code=None, name=None, description=None, city="ایران"
-):
-    handle = normalize_identifier(identifier)
-    for field, value in (
-        ("category", category_code),
-        ("name", name),
-        ("description", description),
-        ("city", city),
-    ):
-        if value is not None and not isinstance(value, str):
-            raise ValueError(f"{field} must be text")
+def import_category(request):
+    category_code = request.category_code
     with connect() as db:
         existing = db.execute(
-            "SELECT id,category_code FROM merchants WHERE handle=%s", (handle,)
+            "SELECT id,category_code FROM merchants WHERE handle=%s", (request.identifier,)
         ).fetchone()
-        category_code = (category_code or "").strip() or (
-            existing["category_code"] if existing else None
-        )
+        if category_code is None and existing is not None:
+            category_code = existing["category_code"]
         if not category_code:
             raise ValueError("choose a GPC category for a new merchant (--category)")
         category = db.execute(
-            "SELECT code,label_fa FROM categories WHERE code=%s", (category_code,)
+            "SELECT code FROM categories WHERE code=%s", (category_code,)
         ).fetchone()
         if not category:
             raise ValueError("unknown GPC category code")
-    try:
-        profile = instagram_profile(handle)
-    except (OSError, ValueError) as error:
-        raise ValueError(f"could not read Instagram profile {handle}: {error}") from error
-    username = handle[1:]
-    instagram_url = f"https://www.instagram.com/{username}/"
-    name = (name or profile.get("name") or username).strip() or username
-    description = (description or category["label_fa"]).strip()
-    city = (city or "ایران").strip()[:100]
-    source = profile.get("source", "instagram_public_embed")
+    return category_code
+
+
+def update_imported_merchant(db, merchant_id, request, profile, category_code):
+    instagram_url = profile_url(request.identifier)
+    db.execute(
+        """UPDATE merchants SET name=%s,description=%s,description_source=%s,
+      description_source_url=%s,description_updated_at=CURRENT_TIMESTAMP,
+      source_url=%s,category_code=%s,city=%s,instagram_url=%s,
+      biography=%s,biography_source=%s,biography_updated_at=CURRENT_TIMESTAMP,
+      followers_count=COALESCE(%s,followers_count),
+      following_count=COALESCE(%s,following_count),media_count=COALESCE(%s,media_count),
+      metrics_source=%s,metrics_source_url=%s,metrics_updated_at=CURRENT_TIMESTAMP,
+      updated_label='داده عمومی' WHERE id=%s""",
+        (
+            profile.name,
+            profile.biography,
+            profile.source,
+            instagram_url,
+            instagram_url,
+            category_code,
+            request.city,
+            instagram_url,
+            profile.biography,
+            profile.source,
+            profile.followers_count,
+            profile.following_count,
+            profile.media_count,
+            profile.source,
+            instagram_url,
+            merchant_id,
+        ),
+    )
+
+
+def create_imported_merchant(db, request, profile, category_code):
+    instagram_url = profile_url(request.identifier)
+    return db.execute(
+        """INSERT INTO merchants(
+      instagram_id,name,handle,description,description_source,
+      description_source_url,description_updated_at,source_url,biography,
+      biography_source,biography_updated_at,category_code,city,
+      instagram_url,updated_label,verified,followers_count,
+      following_count,media_count,metrics_source,metrics_source_url,metrics_updated_at)
+      VALUES(%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,%s,%s,%s,CURRENT_TIMESTAMP,%s,%s,%s,
+      'داده عمومی',0,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP) RETURNING id""",
+        (
+            f"import_{request.identifier[1:]}",
+            profile.name,
+            request.identifier,
+            profile.biography,
+            profile.source,
+            instagram_url,
+            instagram_url,
+            profile.biography,
+            profile.source,
+            category_code,
+            request.city,
+            instagram_url,
+            profile.followers_count,
+            profile.following_count,
+            profile.media_count,
+            profile.source,
+            instagram_url,
+        ),
+    ).fetchone()["id"]
+
+
+def add_or_refresh_merchant(request: MerchantImport) -> ImportResult:
+    category_code = import_category(request)
+    profile = instagram_profile(request.identifier)
     with connect() as db:
-        db.execute("DELETE FROM merchant_exclusions WHERE handle=%s", (handle,))
-        existing = db.execute("SELECT id FROM merchants WHERE handle=%s", (handle,)).fetchone()
+        db.execute("DELETE FROM merchant_exclusions WHERE handle=%s", (request.identifier,))
+        existing = db.execute(
+            "SELECT id FROM merchants WHERE handle=%s", (request.identifier,)
+        ).fetchone()
         if existing:
             merchant_id = existing["id"]
-            created = False
-            db.execute(
-                """UPDATE merchants SET name=%s,description=%s,description_source=%s,
-              description_source_url=%s,description_updated_at=CURRENT_TIMESTAMP,
-              source_url=%s,category_code=%s,city=%s,avatar_initial=%s,instagram_url=%s,
-              biography=%s,biography_source=%s,biography_updated_at=CURRENT_TIMESTAMP,
-              followers_count=COALESCE(%s,followers_count),
-              following_count=COALESCE(%s,following_count),media_count=COALESCE(%s,media_count),
-              metrics_source=%s,metrics_source_url=%s,metrics_updated_at=CURRENT_TIMESTAMP,
-              updated_label='داده عمومی' WHERE id=%s""",
-                (
-                    name,
-                    description,
-                    source,
-                    instagram_url,
-                    instagram_url,
-                    category_code,
-                    city,
-                    name[0],
-                    instagram_url,
-                    profile.get("biography") or "",
-                    source,
-                    profile.get("followers_count"),
-                    profile.get("following_count"),
-                    profile.get("media_count"),
-                    source,
-                    instagram_url,
-                    merchant_id,
-                ),
-            )
+            update_imported_merchant(db, merchant_id, request, profile, category_code)
         else:
-            created = True
-            merchant_id = db.execute(
-                """INSERT INTO merchants(
-              instagram_id,name,handle,description,description_source,
-              description_source_url,description_updated_at,source_url,biography,
-              biography_source,biography_updated_at,category_code,city,avatar_initial,
-              avatar_color,instagram_url,updated_label,verified,followers_count,
-              following_count,media_count,metrics_source,metrics_source_url,metrics_updated_at)
-              VALUES(%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,%s,%s,%s,CURRENT_TIMESTAMP,%s,%s,%s,%s,%s,
-              'داده عمومی',0,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP) RETURNING id""",
-                (
-                    f"import_{username}",
-                    name,
-                    handle,
-                    description,
-                    source,
-                    instagram_url,
-                    instagram_url,
-                    profile.get("biography") or "",
-                    source,
-                    category_code,
-                    city,
-                    name[0],
-                    "#e3e7e1",
-                    instagram_url,
-                    profile.get("followers_count"),
-                    profile.get("following_count"),
-                    profile.get("media_count"),
-                    source,
-                    instagram_url,
-                ),
-            ).fetchone()["id"]
-        avatar_saved = bool(
-            profile.get("avatar_url")
-            and cache_merchant_avatar(
-                db, merchant_id, name[0], "#e3e7e1", profile["avatar_url"], profile["avatar_url"]
-            )
-        )
-        images_saved = (
-            replace_profile_posts(db, merchant_id, name, profile) if profile.get("posts") else 0
-        )
-        if images_saved:
-            db.execute(
-                """UPDATE merchants SET instagram_media_sync_version=GREATEST(
-              instagram_media_sync_version,%s),instagram_media_synced_at=CURRENT_TIMESTAMP
-              WHERE id=%s""",
-                (profile.get("media_grouping_version", 1), merchant_id),
-            )
-        sync_search_metadata(db)
-        sync_search_documents(db)
-    return {
-        "created": created,
-        "merchant_id": merchant_id,
-        "handle": handle,
-        "name": name,
-        "category_code": category_code,
-        "followers_count": profile.get("followers_count"),
-        "avatar_saved": avatar_saved,
-        "post_images_saved": images_saved,
-    }
+            merchant_id = create_imported_merchant(db, request, profile, category_code)
+        avatar_saved = save_imported_avatar(db, merchant_id, profile)
+        images_saved = replace_profile_posts(db, merchant_id, profile)
+        sync_search_index(db)
+    return ImportResult(
+        created=not bool(existing),
+        merchant_id=merchant_id,
+        handle=request.identifier,
+        name=profile.name,
+        category_code=category_code,
+        followers_count=profile.followers_count,
+        avatar_saved=avatar_saved,
+        post_images_saved=images_saved,
+    )
+
+
+def save_imported_avatar(db, merchant_id, profile):
+    if not profile.avatar_url:
+        return False
+    cache_merchant_avatar(db, merchant_id, profile.avatar_url, profile.avatar_url)
+    return True
+
+
+def category_breadcrumb(category_code, category_rows):
+    breadcrumb = []
+    code = category_code
+    while code and code in category_rows:
+        breadcrumb.insert(0, CategoryLink(code=code, label=category_rows[code]["label_fa"]))
+        code = category_rows[code]["parent_code"]
+    return breadcrumb

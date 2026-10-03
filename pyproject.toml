@@ -3,4 +3,30 @@ target-version = "py313"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I"]
+select = ["E4", "E7", "E9", "F", "I", "B", "C4", "C90", "PLR0912", "PLR0915"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 8
+
+[tool.pylint.main]
+py-version = "3.13"
+ignore-paths = ["^tests/", "^\\.venv/"]
+persistent = false
+
+[tool.pylint.messages_control]
+# Ruff owns formatting/import checks. Small models and CLI handlers need no boilerplate.
+disable = [
+    "missing-module-docstring", "missing-class-docstring", "missing-function-docstring",
+    "too-few-public-methods", "line-too-long", "wrong-import-order", "ungrouped-imports",
+]
+
+[tool.pylint.design]
+max-statements = 30
+max-branches = 6
+max-returns = 6
+max-args = 8
+max-positional-arguments = 8
+max-attributes = 15
+
+[tool.pylint.basic]
+good-names = ["db", "id", "fa", "T", "do_GET", "do_POST", "do_DELETE"]
