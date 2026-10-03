@@ -3,13 +3,13 @@ import json
 import sys
 from pathlib import Path
 
-PROJECT_ROOT=Path(__file__).resolve().parent.parent
-sys.path.insert(0,str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.database import run_category_seed, run_migrations
 from backend.server import DATA_ROOT, refresh_instagram_profiles
 
-if __name__=="__main__":
+if __name__ == "__main__":
     run_migrations()
     run_category_seed(DATA_ROOT / "categories.sql")
 
@@ -21,6 +21,12 @@ if __name__=="__main__":
                 flush=True,
             )
         else:
-            print(f"{result['handle']}: FAILED - {result['error']}",flush=True)
+            print(f"{result['handle']}: FAILED - {result['error']}", flush=True)
 
-    print(json.dumps(refresh_instagram_profiles(sys.argv[1:],on_result=show_profile),ensure_ascii=False,indent=2))
+    print(
+        json.dumps(
+            refresh_instagram_profiles(sys.argv[1:], on_result=show_profile),
+            ensure_ascii=False,
+            indent=2,
+        )
+    )

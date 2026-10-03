@@ -3,7 +3,6 @@ import json
 import sys
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -15,13 +14,15 @@ from backend.server import ensure_gallery_images, refresh_instagram_profiles
 def main():
     run_migrations()
     with connect() as database:
-        generated = list(database.execute(
-            """DELETE FROM merchant_posts
+        generated = list(
+            database.execute(
+                """DELETE FROM merchant_posts
                WHERE image_url LIKE 'kahoo://gallery-placeholder/%'
                   OR caption='تصویر عمومی فروشگاه؛ منبع در نشانی تصویر ثبت شده است'
                RETURNING id"""
-        ))
-    print("Refreshing shop posts and carousel collections...",flush=True)
+            )
+        )
+    print("Refreshing shop posts and carousel collections...", flush=True)
 
     def show_profile(result):
         if result["updated"]:
@@ -31,7 +32,7 @@ def main():
                 flush=True,
             )
         else:
-            print(f"  {result['handle']}: FAILED - {result['error']}",flush=True)
+            print(f"  {result['handle']}: FAILED - {result['error']}", flush=True)
 
     profiles = refresh_instagram_profiles(on_result=show_profile)
     with connect() as database:

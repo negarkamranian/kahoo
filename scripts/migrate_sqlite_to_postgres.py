@@ -11,7 +11,6 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from backend.database import connect, run_category_seed, run_migrations
 from backend.search import sync_search_documents
 
-
 TABLES = (
     "categories",
     "category_metadata",
@@ -48,9 +47,7 @@ def import_table(source, target, table):
     order = " ORDER BY level,id" if table == "categories" and "id" in source_columns else ""
     if table == "categories":
         order = " ORDER BY level,sort_order"
-    rows = source.execute(
-        f"SELECT {','.join(source_columns)} FROM {table}{order}"
-    ).fetchall()
+    rows = source.execute(f"SELECT {','.join(source_columns)} FROM {table}{order}").fetchall()
     placeholders = ",".join("%s" for _ in source_columns)
     columns = ",".join(source_columns)
     for row in rows:
@@ -63,7 +60,9 @@ def import_table(source, target, table):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Import Kahoo's legacy SQLite database into PostgreSQL")
+    parser = argparse.ArgumentParser(
+        description="Import Kahoo's legacy SQLite database into PostgreSQL"
+    )
     parser.add_argument("--source", type=Path, default=PROJECT_ROOT / "data" / "kahoo.db")
     parser.add_argument("--database-url", help="Overrides DATABASE_URL")
     args = parser.parse_args()

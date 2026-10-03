@@ -17,6 +17,26 @@ docker compose up --build
 
 PostgreSQL data lives in the `kahoo-postgres` Docker volume. SQL migrations in `db/migrations` run automatically at startup.
 
+Set `KAHOO_SEED_DEMO=0` to skip startup merchant seeding, or
+`KAHOO_SYNC_ON_START=1` to enable Instagram reads during startup. The default
+keeps profile synchronization in the explicit commands below.
+
+### Development checks
+
+Use Python 3.13 or newer and Node.js 22 or newer:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt ruff
+.venv/bin/python -m unittest discover -v
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
+node --test tests/*.test.mjs
+```
+
+These checks do not need PostgreSQL or Instagram credentials. Start the Docker
+services separately to exercise live database and synchronization behavior.
+
 ### Import the previous SQLite data
 
 Before starting the application for the first time, start PostgreSQL and import the existing local database:
@@ -48,6 +68,18 @@ galleries, run:
 ```bash
 docker compose run --rm app python3 scripts/sync_profile_images.py
 ```
+
+To check every merchant and retrieve only missing/generated profile pictures
+and incomplete or outdated post galleries, run:
+
+```bash
+docker compose run --rm app python3 scripts/backfill_missing_media.py
+```
+
+The command downloads the files and stores them in PostgreSQL. It is safe to
+run repeatedly: complete avatars and galleries are skipped. Use `--limit 25`
+for resumable batches, `--minimum-post-images 5` to require a larger gallery,
+or pass handles to restrict the check to specific merchants.
 
 Pass one or more handles (for example `@rabostore`) to force-refresh specific
 shops even when they already have a cached profile picture.
@@ -175,6 +207,7 @@ backend/
   server.py              HTTP API, hybrid ranking and analytics
 db/migrations/          Versioned PostgreSQL schema
 data/
+  merchant_seed.json     Initial merchant records and biography snapshots
   categories.sql         Reproducible GS1 category seed
   merchant_catalog.json Versioned merchant enrichment snapshot
   merchant_catalog_expansion_*.json High-audience expansion shards

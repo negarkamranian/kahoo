@@ -1,13 +1,23 @@
 import json
 from pathlib import Path
 
-
 REQUIRED_NEW_MERCHANT_FIELDS = {
     "name",
     "description",
     "category_code",
     "city",
 }
+
+
+def merchant_catalog_paths(data_root: Path):
+    paths = [
+        data_root / "merchant_catalog.json",
+        *sorted(data_root.glob("merchant_catalog_expansion_*.json")),
+    ]
+    shared = data_root / "merchant_catalog_shared.json"
+    if shared.exists():
+        paths.append(shared)
+    return paths
 
 
 def load_merchant_catalog(path: Path):

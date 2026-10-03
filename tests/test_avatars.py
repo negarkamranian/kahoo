@@ -1,7 +1,6 @@
 import unittest
-from unittest.mock import Mock, patch
-
 from datetime import datetime, timezone
+from unittest.mock import Mock, patch
 
 from backend.server import cache_merchant_avatar, merchant_avatar_url
 
@@ -27,14 +26,18 @@ class AvatarCacheTests(unittest.TestCase):
         database.execute.assert_called_once()
 
     def test_avatar_url_changes_with_the_cached_image_timestamp(self):
-        first = merchant_avatar_url({
-            "id": 7,
-            "avatar_updated_at": datetime(2026, 10, 1, tzinfo=timezone.utc),
-        })
-        second = merchant_avatar_url({
-            "id": 7,
-            "avatar_updated_at": datetime(2026, 10, 2, tzinfo=timezone.utc),
-        })
+        first = merchant_avatar_url(
+            {
+                "id": 7,
+                "avatar_updated_at": datetime(2026, 10, 1, tzinfo=timezone.utc),
+            }
+        )
+        second = merchant_avatar_url(
+            {
+                "id": 7,
+                "avatar_updated_at": datetime(2026, 10, 2, tzinfo=timezone.utc),
+            }
+        )
 
         self.assertNotEqual(first, second)
         self.assertTrue(first.startswith("/api/avatars/7?v="))

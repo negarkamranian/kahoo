@@ -8,20 +8,59 @@ from difflib import SequenceMatcher
 from functools import lru_cache
 from urllib.request import Request, urlopen
 
-
 DEFAULT_MODEL = "BAAI/bge-m3"
 VECTOR_DIMENSIONS = 1024
-PERSIAN_TRANSLATION = str.maketrans({
-    "ي": "ی", "ى": "ی", "ك": "ک", "ة": "ه", "ۀ": "ه",
-    "ؤ": "و", "إ": "ا", "أ": "ا", "ٱ": "ا",
-    "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
-    "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
-    "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
-    "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
-})
+PERSIAN_TRANSLATION = str.maketrans(
+    {
+        "ي": "ی",
+        "ى": "ی",
+        "ك": "ک",
+        "ة": "ه",
+        "ۀ": "ه",
+        "ؤ": "و",
+        "إ": "ا",
+        "أ": "ا",
+        "ٱ": "ا",
+        "۰": "0",
+        "۱": "1",
+        "۲": "2",
+        "۳": "3",
+        "۴": "4",
+        "۵": "5",
+        "۶": "6",
+        "۷": "7",
+        "۸": "8",
+        "۹": "9",
+        "٠": "0",
+        "١": "1",
+        "٢": "2",
+        "٣": "3",
+        "٤": "4",
+        "٥": "5",
+        "٦": "6",
+        "٧": "7",
+        "٨": "8",
+        "٩": "9",
+    }
+)
 SEARCH_STOPWORDS = {
-    "از", "به", "با", "در", "برای", "و", "یا", "یک", "های", "این", "آن",
-    "رو", "را", "که", "می", "shop", "store",
+    "از",
+    "به",
+    "با",
+    "در",
+    "برای",
+    "و",
+    "یا",
+    "یک",
+    "های",
+    "این",
+    "آن",
+    "رو",
+    "را",
+    "که",
+    "می",
+    "shop",
+    "store",
 }
 PERSIAN_SUFFIXES = ("ترین", "تر", "هایی", "های", "ها")
 DIACRITICS = re.compile(r"[\u064b-\u065f\u0670\u06d6-\u06ed]")
@@ -37,7 +76,8 @@ def normalize_search(value):
 
 def query_tokens(value):
     return [
-        token for token in normalize_search(value).split()
+        token
+        for token in normalize_search(value).split()
         if len(token) > 1 and token not in SEARCH_STOPWORDS
     ]
 
@@ -46,7 +86,7 @@ def token_variants(token):
     variants = {token}
     for suffix in PERSIAN_SUFFIXES:
         if token.endswith(suffix) and len(token) > len(suffix) + 2:
-            variants.add(token[:-len(suffix)])
+            variants.add(token[: -len(suffix)])
     return variants
 
 
@@ -55,8 +95,7 @@ def query_coverage(tokens, *texts):
     if not tokens:
         return 0.0
     return sum(
-        any(term_match_strength(token, text) > 0 for text in texts)
-        for token in tokens
+        any(term_match_strength(token, text) > 0 for text in texts) for token in tokens
     ) / len(tokens)
 
 
@@ -76,7 +115,8 @@ def phrase_proximity_bonus(phrase, text):
     start = -1
     for token in tokens:
         matches = [
-            index for index, word in enumerate(words)
+            index
+            for index, word in enumerate(words)
             if index > start and term_match_strength(token, word) >= 0.7
         ]
         if not matches:
@@ -103,14 +143,18 @@ def term_match_strength(term, text):
         return 1.0
     if len(term) >= 3 and any(
         word.startswith(term) or term.startswith(word)
-        for word in words if min(len(word), len(term)) >= 3
+        for word in words
+        if min(len(word), len(term)) >= 3
     ):
         return 0.72
     if len(term) < 4:
         return 0.0
     similarity = max(
-        (SequenceMatcher(None, term, word).ratio() for word in words
-         if abs(len(word) - len(term)) <= 2),
+        (
+            SequenceMatcher(None, term, word).ratio()
+            for word in words
+            if abs(len(word) - len(term)) <= 2
+        ),
         default=0.0,
     )
     return 0.55 if similarity >= 0.78 else 0.0
@@ -127,8 +171,10 @@ def reciprocal_rank_fusion(*rankings, k=60):
 
 
 def discounted_cumulative_gain(relevances, limit=10):
-    return sum((2 ** relevance - 1) / math.log2(rank + 2)
-               for rank, relevance in enumerate(relevances[:limit]))
+    return sum(
+        (2**relevance - 1) / math.log2(rank + 2)
+        for rank, relevance in enumerate(relevances[:limit])
+    )
 
 
 def ndcg_at_k(relevances, ideal_relevances=None, limit=10):
@@ -159,8 +205,10 @@ def diversify_results(items, penalty=0.85):
     while remaining:
         best = max(
             remaining,
-            key=lambda item: item.get("search_score", 0)
-            - penalty * segment_counts.get(str(item.get("category_code", ""))[:2], 0),
+            key=lambda item: (
+                item.get("search_score", 0)
+                - penalty * segment_counts.get(str(item.get("category_code", ""))[:2], 0)
+            ),
         )
         remaining.remove(best)
         output.append(best)
@@ -186,6 +234,8 @@ def embed_texts(texts):
     with urlopen(Request(endpoint, data=payload, headers=headers), timeout=60) as response:
         result = json.load(response)
     vectors = [item["embedding"] for item in sorted(result["data"], key=lambda item: item["index"])]
+    if len(vectors) != len(texts):
+        raise ValueError("Embedding provider must return one vector per input")
     if any(len(vector) != VECTOR_DIMENSIONS for vector in vectors):
         raise ValueError(f"Embedding provider must return {VECTOR_DIMENSIONS} dimensions")
     return vectors
@@ -223,22 +273,29 @@ def sync_search_documents(database):
            FROM merchants ORDER BY id"""
     ).fetchall()
     for merchant in merchants:
-        title_content = normalize_search(" ".join(
-            part.strip() for part in (
-                merchant["name"], merchant["handle"],
-                category_labels.get(merchant["id"], ""),
-            ) if part and part.strip()
-        ))
-        body_content = normalize_search(" ".join(
-            part.strip()
-            for part in (
-                merchant["city"],
-                merchant["description"],
-                merchant["biography"],
-                terms_by_merchant.get(merchant["id"], ""),
+        title_content = normalize_search(
+            " ".join(
+                part.strip()
+                for part in (
+                    merchant["name"],
+                    merchant["handle"],
+                    category_labels.get(merchant["id"], ""),
+                )
+                if part and part.strip()
             )
-            if part and part.strip()
-        ))
+        )
+        body_content = normalize_search(
+            " ".join(
+                part.strip()
+                for part in (
+                    merchant["city"],
+                    merchant["description"],
+                    merchant["biography"],
+                    terms_by_merchant.get(merchant["id"], ""),
+                )
+                if part and part.strip()
+            )
+        )
         content = f"{title_content} {body_content}".strip()
         digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
         row = database.execute(
@@ -262,27 +319,37 @@ def sync_search_documents(database):
                    THEN search_documents.embedded_at ELSE NULL END,
                  updated_at=CURRENT_TIMESTAMP
                RETURNING embedding IS NULL AS needs_embedding""",
-            (merchant["id"], merchant["id"], title_content, body_content,
-             content, digest),
+            (merchant["id"], merchant["id"], title_content, body_content, content, digest),
         ).fetchone()
         changed += int(row["needs_embedding"])
-    post_rows=database.execute("""SELECT MIN(p.id) id,p.merchant_id,m.name,m.handle,
+    post_rows = database.execute("""SELECT MIN(p.id) id,p.merchant_id,m.name,m.handle,
       m.description,COALESCE(MAX(NULLIF(p.caption,'')),'') caption,
       MAX(p.published_at) published_at
       FROM merchant_posts p JOIN merchants m ON m.id=p.merchant_id
       GROUP BY p.merchant_id,m.name,m.handle,m.description,
         COALESCE(p.collection_key,p.id::text)
       HAVING COALESCE(MAX(NULLIF(p.caption,'')),'')<>''""").fetchall()
-    current_post_ids=[]
+    current_post_ids = []
     for post in post_rows:
         current_post_ids.append(post["id"])
-        title_content=normalize_search(" ".join(part for part in (
-          post["name"],post["handle"],category_labels.get(post["merchant_id"],"")) if part))
-        body_content=normalize_search(" ".join(part for part in (
-          post["description"],post["caption"]) if part))
-        content=f"{title_content} {body_content}".strip()
-        digest=hashlib.sha256(content.encode("utf-8")).hexdigest()
-        row=database.execute("""INSERT INTO search_documents(merchant_id,entity_type,
+        title_content = normalize_search(
+            " ".join(
+                part
+                for part in (
+                    post["name"],
+                    post["handle"],
+                    category_labels.get(post["merchant_id"], ""),
+                )
+                if part
+            )
+        )
+        body_content = normalize_search(
+            " ".join(part for part in (post["description"], post["caption"]) if part)
+        )
+        content = f"{title_content} {body_content}".strip()
+        digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        row = database.execute(
+            """INSERT INTO search_documents(merchant_id,entity_type,
           entity_id,title_content,body_content,content,content_hash,published_at)
           VALUES(%s,'post',%s,%s,%s,%s,%s,%s) ON CONFLICT(entity_type,entity_id) DO UPDATE SET
           merchant_id=excluded.merchant_id,title_content=excluded.title_content,
@@ -292,11 +359,22 @@ def sync_search_documents(database):
           embedding_model=CASE WHEN search_documents.content_hash=excluded.content_hash THEN search_documents.embedding_model ELSE NULL END,
           embedded_at=CASE WHEN search_documents.content_hash=excluded.content_hash THEN search_documents.embedded_at ELSE NULL END,
           updated_at=CURRENT_TIMESTAMP RETURNING embedding IS NULL AS needs_embedding""",
-          (post["merchant_id"],post["id"],title_content,body_content,content,digest,
-           post["published_at"])).fetchone()
-        changed+=int(row["needs_embedding"])
+            (
+                post["merchant_id"],
+                post["id"],
+                title_content,
+                body_content,
+                content,
+                digest,
+                post["published_at"],
+            ),
+        ).fetchone()
+        changed += int(row["needs_embedding"])
     if current_post_ids:
-        database.execute("DELETE FROM search_documents WHERE entity_type='post' AND NOT (entity_id=ANY(%s))",(current_post_ids,))
+        database.execute(
+            "DELETE FROM search_documents WHERE entity_type='post' AND NOT (entity_id=ANY(%s))",
+            (current_post_ids,),
+        )
     else:
         database.execute("DELETE FROM search_documents WHERE entity_type='post'")
     return changed
@@ -324,13 +402,14 @@ def embed_pending_documents(database, limit=100):
     return len(rows)
 
 
-def lexical_merchant_matches(database,query,limit=150):
-    tokens=query_tokens(query)
-    if not tokens:return {}
-    prefix_query=" | ".join(f"'{token}':*" for token in tokens)
-    normalized=normalize_search(query)
-    rows=database.execute(
-      """WITH matches AS (
+def lexical_merchant_matches(database, query, limit=150):
+    tokens = query_tokens(query)
+    if not tokens:
+        return {}
+    prefix_query = " | ".join(f"'{token}':*" for token in tokens)
+    normalized = normalize_search(query)
+    rows = database.execute(
+        """WITH matches AS (
            SELECT merchant_id,entity_type,entity_id,published_at,
              GREATEST(
                4*ts_rank_cd(ARRAY[0.1,0.2,0.6,1.0]::real[],search_vector,
@@ -354,17 +433,36 @@ def lexical_merchant_matches(database,query,limit=150):
          )
          SELECT merchant_id,entity_type,entity_id,published_at,score FROM ranked
          WHERE position=1 ORDER BY score DESC LIMIT %s""",
-      (prefix_query,normalized,normalized,normalized,normalized,normalized,
-       prefix_query,normalized,normalized,limit))
-    return {row["merchant_id"]:{
-      "score":float(row["score"]),"entity_type":row["entity_type"],
-      "entity_id":row["entity_id"],"published_at":row["published_at"],
-    } for row in rows}
+        (
+            prefix_query,
+            normalized,
+            normalized,
+            normalized,
+            normalized,
+            normalized,
+            prefix_query,
+            normalized,
+            normalized,
+            limit,
+        ),
+    )
+    return {
+        row["merchant_id"]: {
+            "score": float(row["score"]),
+            "entity_type": row["entity_type"],
+            "entity_id": row["entity_id"],
+            "published_at": row["published_at"],
+        }
+        for row in rows
+    }
 
 
-def lexical_merchant_scores(database,query,limit=150):
-    return {merchant_id:match["score"] for merchant_id,match in
-            lexical_merchant_matches(database,query,limit).items()}
+def lexical_merchant_scores(database, query, limit=150):
+    return {
+        merchant_id: match["score"]
+        for merchant_id, match in lexical_merchant_matches(database, query, limit).items()
+    }
+
 
 def semantic_merchant_scores(database, query, limit=50):
     if not query or not embedding_enabled():

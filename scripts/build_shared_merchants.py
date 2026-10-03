@@ -7,7 +7,6 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 HANDLE_PATTERN = re.compile(r"[a-z0-9._]{1,30}")
 
@@ -18,7 +17,11 @@ CATEGORY_RULES = (
     ("53161000", "محصولات آرایشی و زیبایی", ("beauty", "makeup", "cosmetic")),
     ("64010100", "زیورآلات و اکسسوری", ("jewelry", "adorn", "piercing")),
     ("93037400", "گل، گیاه و محصولات گل‌آرایی", ("flower",)),
-    ("73040000", "لوازم خانه، دکوراسیون و محصولات هنری", ("room", "gabbeh", "pallet", "antique", "objects", "craft", "artstore")),
+    (
+        "73040000",
+        "لوازم خانه، دکوراسیون و محصولات هنری",
+        ("room", "gabbeh", "pallet", "antique", "objects", "craft", "artstore"),
+    ),
     ("70011400", "صنایع دستی و آثار هنری", ("handmade", "craft", "art", "print")),
     ("62060100", "لوازم تحریر، چاپ و استیکر", ("stiker", "sticker", "print")),
     ("64010300", "ساعت و اکسسوری", ("watch",)),

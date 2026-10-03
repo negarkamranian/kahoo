@@ -4,24 +4,97 @@
 import argparse
 import json
 import math
-import re
 from pathlib import Path
 from urllib.parse import quote
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RULES = {
-    "beauty": ("53161000", ("آرایش", "میکاپ", "پوست", "ادکلن", "عطر", "زیبایی", "بهداشتی", "ناخن", "cosmetic", "beauty", "haircare", "skincare")),
+    "beauty": (
+        "53161000",
+        (
+            "آرایش",
+            "میکاپ",
+            "پوست",
+            "ادکلن",
+            "عطر",
+            "زیبایی",
+            "بهداشتی",
+            "ناخن",
+            "cosmetic",
+            "beauty",
+            "haircare",
+            "skincare",
+        ),
+    ),
     "shoe_bag": ("63010300", ("کفش", "کیف", "صندل", "کتونی", "نیم بوت", "پاپوش", "shoe", "چرم")),
-    "jewelry": ("64010100", ("طلا", "جواهر", "نقره", "بدلیجات", "زیور", "اکسسوری", "gold", "jewelry")),
-    "mobile": ("66010300", ("موبایل", "گوشی", "قاب", "کاور", "گلس", "لپتاپ", "دیجیتال", "کامپیوتر", "هدفون")),
-    "home": ("73040000", ("لوازم خانگی", "لوازم‌خانگی", "آشپزخانه", "دکور", "ظروف", "فرش", "مبلمان", "جهیزیه", "هوم", "لوستر")),
-    "food": ("50230100", ("قهوه", "شکلات", "شیرینی", "کیک", "عسل", "خشکبار", "آجیل", "سوپرمارکت", "مواد غذایی", "زعفران")),
+    "jewelry": (
+        "64010100",
+        ("طلا", "جواهر", "نقره", "بدلیجات", "زیور", "اکسسوری", "gold", "jewelry"),
+    ),
+    "mobile": (
+        "66010300",
+        ("موبایل", "گوشی", "قاب", "کاور", "گلس", "لپتاپ", "دیجیتال", "کامپیوتر", "هدفون"),
+    ),
+    "home": (
+        "73040000",
+        (
+            "لوازم خانگی",
+            "لوازم‌خانگی",
+            "آشپزخانه",
+            "دکور",
+            "ظروف",
+            "فرش",
+            "مبلمان",
+            "جهیزیه",
+            "هوم",
+            "لوستر",
+        ),
+    ),
+    "food": (
+        "50230100",
+        (
+            "قهوه",
+            "شکلات",
+            "شیرینی",
+            "کیک",
+            "عسل",
+            "خشکبار",
+            "آجیل",
+            "سوپرمارکت",
+            "مواد غذایی",
+            "زعفران",
+        ),
+    ),
     "toy": ("86010400", ("اسباب بازی", "بازی فکری", "عروسک", "سیسمونی", "نوزاد")),
     "book": ("60010200", ("کتاب", "تحریر", "نوشت افزار", "دفتر")),
     "pet": ("10000000", ("پت شاپ", "حیوان خانگی", "غذای سگ", "غذای گربه")),
     "eyewear": ("51102100", ("عینک", "optic")),
-    "fashion": ("67010000", ("مانتو", "شومیز", "لباس", "پوشاک", "مزون", "بوتیک", "استایل", "شلوار", "پیراهن", "دامن", "روسری", "شال", "پارچه", "فشن", "کراپ", "کت زنانه", "کت مردانه", "تیشرت", "fashion", "wear", "پالتو")),
+    "fashion": (
+        "67010000",
+        (
+            "مانتو",
+            "شومیز",
+            "لباس",
+            "پوشاک",
+            "مزون",
+            "بوتیک",
+            "استایل",
+            "شلوار",
+            "پیراهن",
+            "دامن",
+            "روسری",
+            "شال",
+            "پارچه",
+            "فشن",
+            "کراپ",
+            "کت زنانه",
+            "کت مردانه",
+            "تیشرت",
+            "fashion",
+            "wear",
+            "پالتو",
+        ),
+    ),
 }
 DESCRIPTIONS = {
     "beauty": "محصولات آرایشی، مراقبت پوست و مو و زیبایی",
@@ -52,10 +125,12 @@ def follower_count(value):
 
 
 def build_records(source):
-    base = json.loads((PROJECT_ROOT / "data/merchant_catalog.json").read_text(encoding="utf-8"))["merchants"]
-    server_text = (PROJECT_ROOT / "backend/server.py").read_text(encoding="utf-8")
+    base = json.loads((PROJECT_ROOT / "data/merchant_catalog.json").read_text(encoding="utf-8"))[
+        "merchants"
+    ]
+    seed = json.loads((PROJECT_ROOT / "data/merchant_seed.json").read_text(encoding="utf-8"))
     existing = {item["handle"][1:] for item in base}
-    existing.update(handle.lower() for handle in re.findall(r'"@([a-zA-Z0-9._]+)"', server_text))
+    existing.update(item["handle"][1:] for item in seed)
     primary_codes = {name: value[0] for name, value in RULES.items()}
     priority = {"fashion": 3, "beauty": 3, "shoe_bag": 2, "jewelry": 2}
     eligible = []
@@ -64,22 +139,58 @@ def build_records(source):
         followers = follower_count(shop.get("followers"))
         quality = float((shop.get("aiEvaluation") or {}).get("score") or 0)
         reviews, average = int(shop.get("commentsCount") or 0), float(shop.get("avgScore") or 0)
-        if (handle in existing or followers < 100_000 or int(shop.get("posts") or 0) < 50
-                or quality < 4.1 or (reviews >= 2 and average < 2.5)
-                or str(shop.get("bio") or "") in {"style", "custom"}):
+        if (
+            handle in existing
+            or followers < 100_000
+            or int(shop.get("posts") or 0) < 50
+            or quality < 4.1
+            or (reviews >= 2 and average < 2.5)
+            or str(shop.get("bio") or "") in {"style", "custom"}
+        ):
             continue
-        text = " ".join((shop.get("title") or "", shop.get("bio") or "", " ".join(shop.get("hashtags") or []))).lower().replace("_", " ")
-        scores = {name: sum(text.count(keyword) for keyword in keywords) for name, (_, keywords) in RULES.items()}
+        text = (
+            " ".join(
+                (
+                    shop.get("title") or "",
+                    shop.get("bio") or "",
+                    " ".join(shop.get("hashtags") or []),
+                )
+            )
+            .lower()
+            .replace("_", " ")
+        )
+        scores = {
+            name: sum(text.count(keyword) for keyword in keywords)
+            for name, (_, keywords) in RULES.items()
+        }
         scores = {name: score for name, score in scores.items() if score}
         if not scores:
             continue
         category = max(scores, key=lambda name: (scores[name], priority.get(name, 1)))
-        women = any(word in text for word in ("زنانه", "بانوان", "مانتو", "شومیز", "دامن", "روسری", "مزون"))
-        preference = 3 if category == "beauty" else 2.5 if category == "fashion" and women else 2 if category == "fashion" else 1
+        women = any(
+            word in text for word in ("زنانه", "بانوان", "مانتو", "شومیز", "دامن", "روسری", "مزون")
+        )
+        preference = (
+            3
+            if category == "beauty"
+            else 2.5
+            if category == "fashion" and women
+            else 2
+            if category == "fashion"
+            else 1
+        )
         rank = quality * 10 + math.log1p(followers) + preference
         eligible.append((shop, category, scores, followers, quality, rank, women))
-    preferred = sorted((item for item in eligible if item[1] in {"beauty", "fashion"}), key=lambda item: (item[5], item[3]), reverse=True)
-    others = sorted((item for item in eligible if item[1] not in {"beauty", "fashion"}), key=lambda item: (item[5], item[3]), reverse=True)
+    preferred = sorted(
+        (item for item in eligible if item[1] in {"beauty", "fashion"}),
+        key=lambda item: (item[5], item[3]),
+        reverse=True,
+    )
+    others = sorted(
+        (item for item in eligible if item[1] not in {"beauty", "fashion"}),
+        key=lambda item: (item[5], item[3]),
+        reverse=True,
+    )
     selected = (preferred + others)[:300]
     if len(selected) < 300:
         raise ValueError(f"only {len(selected)} eligible shops")
@@ -109,18 +220,30 @@ def build_records(source):
             code = primary_codes[other]
             if other != category and score >= 2 and code not in extra:
                 extra.append(code)
-        source_url = f"https://basaliro.com/shop/{quote(handle)}/{quote(str(shop.get('title') or handle))}"
-        records.append({
-            "handle": f"@{handle}", "is_new": True, "name": str(shop.get("title") or handle),
-            "description": DESCRIPTIONS[category] + (f"؛ {', '.join(tags)}" if tags else ""),
-            "description_source": "curated_public_directory", "category_code": primary_codes[category],
-            "category_codes": extra, "city": str(shop.get("city") or "ایران"),
-            "followers_count": followers, "media_count": int(shop.get("posts") or 0),
-            "source_url": source_url, "metrics_source": "basaliro_public_directory",
-            "metrics_source_url": source_url, "quality_score": quality,
-            "review_count": int(shop.get("commentsCount") or 0), "quality_source": "basaliro_ai_trust",
-            "quality_source_url": source_url,
-        })
+        source_url = (
+            f"https://basaliro.com/shop/{quote(handle)}/{quote(str(shop.get('title') or handle))}"
+        )
+        records.append(
+            {
+                "handle": f"@{handle}",
+                "is_new": True,
+                "name": str(shop.get("title") or handle),
+                "description": DESCRIPTIONS[category] + (f"؛ {', '.join(tags)}" if tags else ""),
+                "description_source": "curated_public_directory",
+                "category_code": primary_codes[category],
+                "category_codes": extra,
+                "city": str(shop.get("city") or "ایران"),
+                "followers_count": followers,
+                "media_count": int(shop.get("posts") or 0),
+                "source_url": source_url,
+                "metrics_source": "basaliro_public_directory",
+                "metrics_source_url": source_url,
+                "quality_score": quality,
+                "review_count": int(shop.get("commentsCount") or 0),
+                "quality_source": "basaliro_ai_trust",
+                "quality_source_url": source_url,
+            }
+        )
     return records
 
 
@@ -132,9 +255,10 @@ def main():
     records = build_records(json.loads(args.source.read_text(encoding="utf-8")))
     start = args.shard * 50
     payload = {
-        "version": 1, "snapshot_at": "2026-10-02T12:00:00+03:30",
+        "version": 1,
+        "snapshot_at": "2026-10-02T12:00:00+03:30",
         "notes": "High-audience active public-directory shops: >=100K followers, >=50 posts, automated trust score >=4.1/5, without materially low multi-review scores. Women clothing and beauty are prioritized. This is discovery evidence, not Kahoo verification.",
-        "merchants": records[start:start + 50],
+        "merchants": records[start : start + 50],
     }
     print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 

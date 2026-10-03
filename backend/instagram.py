@@ -5,10 +5,7 @@ from urllib.request import Request, urlopen
 
 
 def business_discovery_enabled():
-    return all(
-        os.environ.get(name)
-        for name in ("META_IG_USER_ID", "META_ACCESS_TOKEN")
-    )
+    return all(os.environ.get(name) for name in ("META_IG_USER_ID", "META_ACCESS_TOKEN"))
 
 
 def business_discovery_profile(handle):
@@ -55,8 +52,7 @@ def business_discovery_profile(handle):
                 "instagram_media_id": media.get("id"),
                 "collection_key": media.get("id"),
                 "caption": media.get("caption") or "",
-                "permalink": media.get("permalink")
-                or f"https://www.instagram.com/{username}/",
+                "permalink": media.get("permalink") or f"https://www.instagram.com/{username}/",
                 "published_at": media.get("timestamp"),
                 "position": position,
                 "media": images,

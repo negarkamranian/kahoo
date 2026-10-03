@@ -4,7 +4,6 @@ from http.server import ThreadingHTTPServer
 
 from backend.server import Handler, initialize_database
 
-
 if __name__ == "__main__":
     host = os.environ.get("KAHOO_HOST", "127.0.0.1")
     port = int(os.environ.get("KAHOO_PORT", "4173"))
