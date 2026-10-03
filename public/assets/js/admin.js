@@ -235,3 +235,24 @@ el("admin-token").addEventListener("input", () =>
 el("period-select").addEventListener("change", load);
 load();
 loadManagedMerchants();
+
+async function loadCategoryOptions() {
+  try {
+    const tree = await responseJson(await fetch("/api/categories"));
+    const select = el("merchant-category");
+    function append(nodes, parents = []) {
+      for (const node of nodes) {
+        const labels = [...parents, node.label_fa];
+        const option = document.createElement("option");
+        option.value = node.code;
+        option.textContent = `${labels.join(" / ")} (${node.code})`;
+        select.append(option);
+        append(node.children, labels);
+      }
+    }
+    append(tree);
+  } catch (error) {
+    managerStatus(error.message, "error");
+  }
+}
+loadCategoryOptions();

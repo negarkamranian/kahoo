@@ -4,23 +4,20 @@
 import json
 import math
 import statistics
-import sys
 import time
-from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+from backend.database import connect
+from backend.search.embeddings import embed_pending_documents, embedding_enabled
+from backend.search.indexing import sync_search_documents
+from backend.search.metadata import sync_search_metadata
+from backend.search.ranking import ndcg_at_k
+from backend.search.service import merchants
 
-from backend.database import run_migrations
-from backend.search import ndcg_at_k
-from backend.server import merchants
 
-
-def main():
-    benchmark = json.loads(
-        (PROJECT_ROOT / "data" / "search_benchmarks.json").read_text(encoding="utf-8")
-    )
-    run_migrations()
+def evaluate(args):
+    benchmark = json.loads(args.benchmark.read_text(encoding="utf-8"))
+    if not benchmark.get("queries"):
+        raise ValueError("benchmark must contain at least one query")
     reciprocal_ranks = []
     ndcg_scores = []
     recalls = []
@@ -64,8 +61,22 @@ def main():
         },
         "results": rows,
     }
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return report
 
 
-if __name__ == "__main__":
-    main()
+def reindex(args):
+    with connect() as db:
+        sync_search_metadata(db)
+        pending = sync_search_documents(db)
+    embedded = 0
+    while True:
+        with connect() as db:
+            batch = embed_pending_documents(db, args.batch_size)
+        embedded += batch
+        if not args.all or batch < args.batch_size:
+            break
+    return {
+        "pending_documents": pending,
+        "embedded": embedded,
+        "embedding_enabled": embedding_enabled(),
+    }

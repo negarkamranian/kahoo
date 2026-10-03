@@ -1,48 +1,67 @@
+import io
 import unittest
-from unittest.mock import patch
+from contextlib import redirect_stdout
+from unittest.mock import Mock, patch
 
-from backend.merchant_import import infer_category, normalize_identifier
+from backend.instagram import normalize_identifier
+from scripts.cli import main
+from scripts.merchants import add_or_refresh_merchant
 
 
 class AddMerchantTests(unittest.TestCase):
-    @patch("scripts.add_merchant.print")
-    @patch("scripts.add_merchant.add_or_refresh_merchant")
-    @patch("scripts.add_merchant.run_category_seed")
-    @patch("scripts.add_merchant.run_migrations")
-    def test_cli_uses_the_shared_import_service(self, migrations, seed, import_merchant, output):
-        from scripts.add_merchant import main
-
+    @patch("scripts.database.migrate")
+    @patch("scripts.merchants.add_or_refresh_merchant")
+    def test_cli_uses_the_shared_import_workflow(self, import_merchant, migrate):
         import_merchant.return_value = {"handle": "@shop", "created": True}
-        with patch("sys.argv", ["add_merchant.py", "@shop", "--category", "66010100"]):
-            main()
-        migrations.assert_called_once()
-        seed.assert_called_once()
-        import_merchant.assert_called_once_with(
-            "@shop", category_code="66010100", name=None, description=None, city="ایران"
-        )
-        self.assertIn('"created": true', output.call_args.args[0])
+        output = io.StringIO()
+        with redirect_stdout(output):
+            status = main(["merchants", "add", "@shop", "--category", "66010100"])
+        self.assertEqual(0, status)
+        migrate.assert_called_once()
+        import_merchant.assert_called_once_with("@shop", "66010100", None, None, "ایران")
+        self.assertIn('"created": true', output.getvalue())
 
     def test_normalizes_handle_and_profile_url(self):
         self.assertEqual("@example.shop", normalize_identifier("@Example.Shop"))
         self.assertEqual(
-            "@example.shop",
-            normalize_identifier("https://www.instagram.com/example.shop/?hl=fa"),
+            "@example.shop", normalize_identifier("https://www.instagram.com/example.shop/?hl=fa")
         )
 
     def test_rejects_non_instagram_url(self):
         with self.assertRaises(ValueError):
             normalize_identifier("https://example.com/shop")
 
-    def test_infers_category_from_recent_post_captions(self):
-        profile = {
-            "name": "فروشگاه نمونه",
-            "biography": "",
-            "posts": [{"caption": "قاب و کاور جدید موبایل"}],
-        }
-        code, description = infer_category(profile)
-        self.assertEqual("66010100", code)
-        self.assertIn("موبایل", description)
+    @patch("scripts.merchants.instagram_profile")
+    @patch("scripts.merchants.connect")
+    def test_new_merchant_requires_category_before_contacting_instagram(self, connect, profile):
+        connect.return_value.__enter__.return_value.execute.return_value.fetchone.return_value = (
+            None
+        )
+        with self.assertRaisesRegex(ValueError, "choose a GPC category"):
+            add_or_refresh_merchant("@shop")
+        profile.assert_not_called()
 
+    @patch("scripts.merchants.sync_search_documents")
+    @patch("scripts.merchants.sync_search_metadata")
+    @patch("scripts.merchants.instagram_profile", return_value={"name": "Shop", "posts": []})
+    @patch("scripts.merchants.connect")
+    def test_refresh_preserves_existing_category_without_keyword_rules(
+        self, connect, profile, metadata, index
+    ):
+        database = connect.return_value.__enter__.return_value
 
-if __name__ == "__main__":
-    unittest.main()
+        def execute(query, params=None):
+            if "SELECT id,category_code" in query:
+                return Mock(fetchone=lambda: {"id": 7, "category_code": "custom-code"})
+            if "SELECT code,label_fa" in query:
+                self.assertEqual(("custom-code",), params)
+                return Mock(fetchone=lambda: {"code": "custom-code", "label_fa": "دسته جدید"})
+            return Mock(fetchone=lambda: {"id": 7})
+
+        database.execute.side_effect = execute
+        result = add_or_refresh_merchant("@shop")
+        self.assertEqual("custom-code", result["category_code"])
+        self.assertFalse(result["created"])
+        profile.assert_called_once_with("@shop")
+        metadata.assert_called_once_with(database)
+        index.assert_called_once_with(database)

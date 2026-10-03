@@ -4,11 +4,25 @@ import unittest
 from pathlib import Path
 
 from backend.catalog import load_merchant_catalog, load_merchant_catalogs, merchant_catalog_paths
+from scripts.catalog import catalog_records
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class MerchantCatalogTests(unittest.TestCase):
+    def test_default_import_combines_snapshot_data_without_duplicate_merchants(self):
+        records = catalog_records()
+        self.assertEqual(len(records), len({row["handle"] for row in records}))
+        for row in records:
+            self.assertTrue(
+                {"name", "description", "category_code", "city", "source_url"} <= row.keys()
+            )
+            self.assertNotIn("photos", row)
+        _, shards = load_merchant_catalogs(merchant_catalog_paths(PROJECT_ROOT / "data"))
+        imported = {row["handle"]: row for row in records}
+        for row in shards:
+            self.assertEqual(row["snapshot_at"], imported[row["handle"]]["snapshot_at"])
+
     def test_catalog_is_valid_and_contains_the_expected_expansion(self):
         snapshot_at, merchants = load_merchant_catalog(
             PROJECT_ROOT / "data" / "merchant_catalog.json"

@@ -64,5 +64,5 @@ def load_merchant_catalogs(paths):
             if handle in handles:
                 raise ValueError(f"duplicate merchant handle across catalogs: {handle}")
             handles.add(handle)
-            merchants.append(merchant)
+            merchants.append({**merchant, "snapshot_at": snapshot_at})
     return max(snapshots), merchants

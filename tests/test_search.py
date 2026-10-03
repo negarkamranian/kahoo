@@ -1,15 +1,14 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from backend.search import (
+from backend.search.embeddings import embed_texts
+from backend.search.normalization import normalize_search, query_tokens
+from backend.search.ranking import (
     diversify_results,
-    embed_texts,
     merchant_quality_score,
     ndcg_at_k,
-    normalize_search,
     phrase_proximity_bonus,
     query_coverage,
-    query_tokens,
     reciprocal_rank_fusion,
     term_match_strength,
 )
@@ -17,7 +16,7 @@ from backend.search import (
 
 class SearchQualityTests(unittest.TestCase):
     @patch.dict("os.environ", {"EMBEDDING_API_URL": "https://example.test/embeddings"})
-    @patch("backend.search.urlopen")
+    @patch("backend.search.embeddings.urlopen")
     def test_incomplete_embedding_response_is_rejected(self, urlopen):
         urlopen.return_value.__enter__.return_value = Mock(
             read=lambda: '{"data": [{"index": 0, "embedding": [0]}]}'

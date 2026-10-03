@@ -2,11 +2,9 @@ import json
 import unittest
 from unittest.mock import Mock, patch
 
-from backend.server import (
-    extract_embed_posts,
-    merchant_media_needs,
-    replace_profile_posts,
-)
+from backend.instagram import extract_embed_posts
+from backend.server.media import replace_profile_posts
+from backend.server.profiles import merchant_media_needs
 
 
 class ProfileMediaTests(unittest.TestCase):
@@ -79,7 +77,7 @@ class ProfileMediaTests(unittest.TestCase):
             ["child-1", "child-2"], [item["instagram_media_id"] for item in posts[0]["media"]]
         )
 
-    @patch("backend.server.download_image", return_value=(b"jpeg", "image/jpeg"))
+    @patch("backend.server.media.download_image", return_value=(b"jpeg", "image/jpeg"))
     def test_profile_posts_are_downloaded_and_inserted(self, _download):
         database = Mock()
         profile = {

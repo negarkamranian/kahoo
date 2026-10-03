@@ -1,61 +1,31 @@
 [
   {
-    "instagram_id": "ig_nila",
     "name": "شیرینی بی‌بی",
     "handle": "@bibi_confectionery",
     "description": "کیک تولد، شیرینی تر و خشک، شکلاتی، دسر و سفارش شیرینی",
     "category_code": "50182000",
     "city": "تهران",
-    "avatar_initial": "ب",
-    "avatar_color": "#f2e2be",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://gzlocation.com/the-best-sweet-shop-in-tehran/",
-    "photos": [
-      "photo-1578985545062-69928b1d9587",
-      "photo-1558961363-fa8fdf82db35",
-      "photo-1559620192-032c4bc4674e"
-    ],
     "category_codes": []
   },
   {
-    "instagram_id": "ig_narin",
     "name": "پوشاک ایران",
     "handle": "@iranclothings",
     "description": "تیشرت، پولوشرت، لباس کار، لباس فرم، پوشاک زنانه و مردانه، چاپ و گلدوزی",
     "category_code": "67010800",
     "city": "تهران",
-    "avatar_initial": "پ",
-    "avatar_color": "#eee1d2",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://t.me/s/iranclothing",
-    "photos": [
-      "photo-1551488831-00ddcb6c6bd3",
-      "photo-1529139574466-a303027c1d8b",
-      "photo-1483985988355-763728e1935b"
-    ],
     "category_codes": [
       "67010300"
     ]
   },
   {
-    "instagram_id": "ig_soft",
     "name": "ست‌سیتی",
     "handle": "@set.city.store",
     "description": "لوازم آرایشی و بهداشتی، مراقبت پوست، رنگ مو، عطر و ادکلن",
     "category_code": "53131100",
     "city": "تهران",
-    "avatar_initial": "س",
-    "avatar_color": "#f3dfe0",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://setcitystore.com/",
-    "photos": [
-      "photo-1608248597279-f99d160bfcbc",
-      "photo-1598440947619-2c35fc9aa908",
-      "photo-1556229010-6c3f2c9ca5f8"
-    ],
     "category_codes": [
       "53131100",
       "53141100",
@@ -63,41 +33,21 @@
     ]
   },
   {
-    "instagram_id": "ig_moss",
     "name": "دکوطرح",
     "handle": "@decotarhco",
     "description": "طراحی داخلی، دکوراسیون منزل، بازسازی، کناف و چیدمان",
     "category_code": "75030100",
     "city": "تهران",
-    "avatar_initial": "د",
-    "avatar_color": "#e2eadc",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://decotarhco.com/",
-    "photos": [
-      "photo-1610701596007-11502861dcfa",
-      "photo-1618220179428-22790b461013",
-      "photo-1494438639946-1ebd1d20bf85"
-    ],
     "category_codes": []
   },
   {
-    "instagram_id": "ig_sofal",
     "name": "فروغ هوم",
     "handle": "@forough_homegallery",
     "description": "لوازم خانه و آشپزخانه، ظروف پذیرایی، لیوان، پارچ، بانکه و محصولات چوبی",
     "category_code": "73040400",
     "city": "گرگان",
-    "avatar_initial": "ف",
-    "avatar_color": "#ead8ca",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://pelazaa.ir/business/forough-home/",
-    "photos": [
-      "photo-1610701596007-11502861dcfa",
-      "photo-1578749556568-bc2c40e68b61",
-      "photo-1618220179428-22790b461013"
-    ],
     "category_codes": [
       "73040100",
       "73050000",
@@ -107,165 +57,89 @@
     "biography_source": "https://pelazaa.ir/business/forough-home/"
   },
   {
-    "instagram_id": "ig_lune",
     "name": "صنایع دستی ایران‌زمین",
     "handle": "@sanayedastiiranzamin",
     "description": "صنایع دستی ایرانی، آثار هنری، هدیه و محصولات دست‌ساز",
     "category_code": "70011400",
     "city": "ایران",
-    "avatar_initial": "ص",
-    "avatar_color": "#f0ddd3",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://imginn.com/sanayedastiiranzamin/",
-    "photos": [
-      "photo-1561214115-f2f134cc4912",
-      "photo-1578749556568-bc2c40e68b61",
-      "photo-1579783902614-a3fb3927b6a5"
-    ],
     "category_codes": [],
     "biography": "محصولات دستساز و با کیفیت هنرمندان ایرانی❤️\nبیش از ۱۰ سال سابقه فروش\nفروش حضوری و آنلاین\nثبت سفارش واتساپ/دایرکت\n📞۰۲۱۸۸۳۷۲۶۱۴",
     "biography_source": "https://imginn.com/sanayedastiiranzamin/"
   },
   {
-    "instagram_id": "ig_bean",
     "name": "هایپرتوی",
     "handle": "@hyper.toy",
     "description": "اسباب‌بازی، بازی فکری، پازل، لگو و عروسک",
     "category_code": "86010400",
     "city": "تهران",
-    "avatar_initial": "ه",
-    "avatar_color": "#dbeaec",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://www.hypertoy.ir/contactus",
-    "photos": [
-      "photo-1599443015574-be5fe8a05783",
-      "photo-1516627145497-ae6968895b74",
-      "photo-1560961911-ba7ef651a56c"
-    ],
     "category_codes": [
       "86010100",
       "86010200"
     ]
   },
   {
-    "instagram_id": "ig_rose",
     "name": "نقره رُز",
     "handle": "@noghre_rose",
     "description": "نقره، انگشتر، دستبند، گوشواره، گردنبند و زیورآلات",
     "category_code": "64010100",
     "city": "ایران",
-    "avatar_initial": "ن",
-    "avatar_color": "#e5e5eb",
-    "updated_label": "تأیید کاربر",
-    "verified": 1,
     "source_url": "https://www.instagram.com/noghre_rose/",
-    "photos": [
-      "photo-1515562141207-7a88fb7ce338",
-      "photo-1617038260897-41a1f14a8ca0",
-      "photo-1535632066927-ab7c9ab60908"
-    ],
     "category_codes": []
   },
   {
-    "instagram_id": "ig_hirad",
     "name": "پاندورا چالوس",
     "handle": "@pandora_chalus",
     "description": "کفش اسپرت و چرمی، بوت، صندل، کیف، کمربند و کیف پول",
     "category_code": "63010300",
     "city": "چالوس",
-    "avatar_initial": "پ",
-    "avatar_color": "#ead8c6",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://socialauditor.io/profile/pandora_chalus",
-    "photos": [
-      "photo-1542291026-7eec264c27ff",
-      "photo-1549298916-b41d501d3772",
-      "photo-1608256246200-53e635b5b65f"
-    ],
     "category_codes": [
       "64010200"
     ]
   },
   {
-    "instagram_id": "ig_homino",
     "name": "ویداس",
     "handle": "@vidasco.ir",
     "description": "لوازم خانگی، خردکن، ساندویچ‌ساز و لوازم برقی آشپزخانه",
     "category_code": "72020100",
     "city": "تهران",
-    "avatar_initial": "و",
-    "avatar_color": "#dbe6e4",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://www.t.me/s/VIDASOFFICIAL",
-    "photos": [
-      "photo-1585515320310-259814833e62",
-      "photo-1556911220-bff31c812dba",
-      "photo-1570222094114-d054a817e56b"
-    ],
     "category_codes": [
       "72020200"
     ]
   },
   {
-    "instagram_id": "ig_kaghaz",
     "name": "کوچه تحریر",
     "handle": "@koocheh_tahrir",
     "description": "لوازم‌التحریر، نوشت‌افزار، دفتر، خودکار و وسایل طراحی",
     "category_code": "62060100",
     "city": "گرگان",
-    "avatar_initial": "ک",
-    "avatar_color": "#f0dfbf",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://pelazaa.ir/business/koochehtahrir/",
-    "photos": [
-      "photo-1455390582262-044cdead277a",
-      "photo-1517841905240-472988babdf9",
-      "photo-1531346878377-a5be20888e57"
-    ],
     "category_codes": [
       "62060400",
       "62061100"
     ]
   },
   {
-    "instagram_id": "ig_sabz",
     "name": "سارینالند",
     "handle": "@sarinaland_com",
     "description": "گل و گیاه آپارتمانی، گلدان، خاک و لوازم نگهداری گیاه",
     "category_code": "93037400",
     "city": "تهران",
-    "avatar_initial": "س",
-    "avatar_color": "#d9ead6",
-    "updated_label": "اطلاعات نمونه",
-    "verified": 1,
     "source_url": "https://socialveins.com/influencer/instagram/sarinaland_com",
-    "photos": [
-      "photo-1485955900006-10f4d324d411",
-      "photo-1416879595882-3373a0480b5b",
-      "photo-1501004318641-b39e6451bec6"
-    ],
     "category_codes": [],
     "biography": "ارسال گیاهان آپارتمانی ارزان از محلات به سراسر ایران 🪴 انتخاب از بین بیش از ۶۰ گیاه آپارتمانی مقاوم 📌 بسته‌بندی ویژه و تحویل درب منزل شما 📦🛒",
     "biography_source": "https://socialveins.com/influencer/instagram/sarinaland_com"
   },
   {
-    "instagram_id": "ig_digistyle",
     "name": "دیجی‌استایل",
     "handle": "@digistylecom",
     "description": "پوشاک زنانه و مردانه، لباس راحتی و خواب، شلوار و جین، کیف، کفش و اکسسوری",
     "category_code": "67010000",
     "city": "تهران",
-    "avatar_initial": "د",
-    "avatar_color": "#e5e0dc",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/digistylecom",
-    "photos": [],
     "category_codes": [
       "67010200",
       "67010300",
@@ -277,18 +151,12 @@
     ]
   },
   {
-    "instagram_id": "ig_khanoumi",
     "name": "خانومی",
     "handle": "@khanoumi_shop",
     "description": "لوازم آرایشی و بهداشتی، مراقبت پوست و مو، عطر، ضدآفتاب و لوازم برقی شخصی",
     "category_code": "53161000",
     "city": "تهران",
-    "avatar_initial": "خ",
-    "avatar_color": "#f1dde4",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/khanoumi_shop",
-    "photos": [],
     "category_codes": [
       "53131100",
       "53141100",
@@ -297,18 +165,12 @@
     ]
   },
   {
-    "instagram_id": "ig_roja",
     "name": "روژا",
     "handle": "@rojashop",
     "description": "عطر و ادکلن، آرایش، مراقبت پوست و مو، شامپو، رنگ مو و محصولات بهداشتی",
     "category_code": "53161000",
     "city": "تهران",
-    "avatar_initial": "ر",
-    "avatar_color": "#eadde5",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/rojashop",
-    "photos": [],
     "category_codes": [
       "53131100",
       "53141100",
@@ -317,18 +179,12 @@
     ]
   },
   {
-    "instagram_id": "ig_mootanroo",
     "name": "مو تن رو",
     "handle": "@mootanroo",
     "description": "محصولات آرایشی و بهداشتی، مراقبت پوست و مو، عطر و ابزار زیبایی",
     "category_code": "53161000",
     "city": "تهران",
-    "avatar_initial": "م",
-    "avatar_color": "#eee1e2",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/mootanroo",
-    "photos": [],
     "category_codes": [
       "53131100",
       "53141100",
@@ -337,36 +193,24 @@
     ]
   },
   {
-    "instagram_id": "ig_asenwear",
     "name": "آسن ویر",
     "handle": "@asenwear",
     "description": "پوشاک زنانه روزمره، شومیز، تیشرت، تاپ، شلوار و ست‌های هماهنگ",
     "category_code": "67010000",
     "city": "اندیشه",
-    "avatar_initial": "آ",
-    "avatar_color": "#e5e4df",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/asenwear",
-    "photos": [],
     "category_codes": [
       "67010300",
       "67010800"
     ]
   },
   {
-    "instagram_id": "ig_ballentine",
     "name": "گالری بلنتین",
     "handle": "@ballentine_gallery",
     "description": "پوشاک زنانه، مانتو، کت، شومیز، پیراهن، کفتان، شال و روسری",
     "category_code": "67010000",
     "city": "تهران",
-    "avatar_initial": "ب",
-    "avatar_color": "#e7ded8",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/ballentine_gallery",
-    "photos": [],
     "category_codes": [
       "67010200",
       "67010800",
@@ -374,242 +218,158 @@
     ]
   },
   {
-    "instagram_id": "ig_kifkafsh",
     "name": "کیف و کفش آنلاین",
     "handle": "@kif_kafsh_onlinee",
     "description": "کیف و کفش زنانه، بوت، نیم‌بوت، صندل، کفش مجلسی و روزمره",
     "category_code": "63010300",
     "city": "ایران",
-    "avatar_initial": "ک",
-    "avatar_color": "#e8dfd5",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/kif_kafsh_onlinee",
-    "photos": [],
     "category_codes": [
       "64010200"
     ]
   },
   {
-    "instagram_id": "ig_kajjshoe",
     "name": "کیف و کفش کاج",
     "handle": "@kajjshoe",
     "description": "کفش، کیف و صندل زنانه برای استفاده روزمره و استایل مجلسی",
     "category_code": "63010300",
     "city": "بوشهر",
-    "avatar_initial": "ک",
-    "avatar_color": "#e6ddd1",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/kajjshoe",
-    "photos": [],
     "category_codes": [
       "64010200"
     ]
   },
   {
-    "instagram_id": "ig_traffic",
     "name": "ترافیک",
     "handle": "@kif.kafsh.traffic",
     "description": "کیف، کفش راحتی و رسمی، کوله‌پشتی مدرسه، سفر و دانشگاه",
     "category_code": "63010300",
     "city": "گنبدکاووس",
-    "avatar_initial": "ت",
-    "avatar_color": "#deded8",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/kif.kafsh.traffic",
-    "photos": [],
     "category_codes": [
       "64010200"
     ]
   },
   {
-    "instagram_id": "ig_stiletto",
     "name": "تهران استیلتو",
     "handle": "@tehran_stiletto",
     "description": "کفش زنانه، کفش مجلسی، پاشنه‌بلند و استیلتو",
     "category_code": "63010300",
     "city": "تهران",
-    "avatar_initial": "ت",
-    "avatar_color": "#eadcd7",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/tehran_stiletto",
-    "photos": [],
     "category_codes": []
   },
   {
-    "instagram_id": "ig_vartan",
     "name": "گالری ورتان",
     "handle": "@vartan_gallery",
     "description": "زیورآلات دست‌ساز و هنری، قطعات تک‌نسخه با الهام از فرهنگ ایرانی",
     "category_code": "64010100",
     "city": "اصفهان",
-    "avatar_initial": "و",
-    "avatar_color": "#e2e0dc",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/vartan_gallery",
-    "photos": [],
     "category_codes": [
       "70011400"
     ]
   },
   {
-    "instagram_id": "ig_nazmara",
     "name": "نظم آرا",
     "handle": "@luxe_organizer",
     "description": "نظم‌دهنده، لوازم کاربردی خانه و آشپزخانه و محصولات سازمان‌دهی منزل",
     "category_code": "73040100",
     "city": "ایران",
-    "avatar_initial": "ن",
-    "avatar_color": "#dfe7df",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/luxe_organizer",
-    "photos": [],
     "category_codes": [
       "75030100"
     ]
   },
   {
-    "instagram_id": "ig_khaneariaee",
     "name": "خانه آریایی",
     "handle": "@khaneariaee",
     "description": "لوازم آشپزخانه، وسایل دکوری، گل مصنوعی، جهیزیه و محصولات خانه",
     "category_code": "75030100",
     "city": "ایران",
-    "avatar_initial": "خ",
-    "avatar_color": "#e5e2d8",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/khaneariaee",
-    "photos": [],
     "category_codes": [
       "73040000"
     ]
   },
   {
-    "instagram_id": "ig_hihome",
     "name": "های هوم",
     "handle": "@hihome_opal",
     "description": "لوازم خانه و آشپزخانه، محصولات لوکس، دکوراسیون و لوازم نظافت منزل",
     "category_code": "73040000",
     "city": "تهران",
-    "avatar_initial": "ه",
-    "avatar_color": "#dfe5e1",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/hihome_opal",
-    "photos": [],
     "category_codes": [
       "72020400",
       "75030100"
     ]
   },
   {
-    "instagram_id": "ig_niloofarabi",
     "name": "گالری نیلوفر آبی",
     "handle": "@gallery.niloofarabi",
     "description": "لوازم آشپزخانه، وسایل دکوری، ظروف و هدایای خانه",
     "category_code": "75030100",
     "city": "امیرکلا",
-    "avatar_initial": "ن",
-    "avatar_color": "#e0e6e5",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/gallery.niloofarabi",
-    "photos": [],
     "category_codes": [
       "73040000",
       "73050000"
     ]
   },
   {
-    "instagram_id": "ig_haghgoo",
     "name": "گالری حق‌گو",
     "handle": "@haghgoo_galleri",
     "description": "دکوریجات، ظروف چوبی، لوازم خانه و وسایل کاربردی آشپزخانه",
     "category_code": "73040400",
     "city": "مشهد",
-    "avatar_initial": "ح",
-    "avatar_color": "#e7dfd3",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/haghgoo_galleri",
-    "photos": [],
     "category_codes": [
       "75030100"
     ]
   },
   {
-    "instagram_id": "ig_favstor",
     "name": "فیواستور",
     "handle": "@favstor",
     "description": "لوازم تحریر فانتزی، خودکار، مداد، پاک‌کن، دفتر، کاغذ و ماژیک",
     "category_code": "62060100",
     "city": "ایران",
-    "avatar_initial": "ف",
-    "avatar_color": "#e2e5eb",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/favstor",
-    "photos": [],
     "category_codes": [
       "62060400",
       "62061100"
     ]
   },
   {
-    "instagram_id": "ig_tahrirshop",
     "name": "تحریر شاپ",
     "handle": "@tahrir._shopp",
     "description": "لوازم تحریر فانتزی، پلنر، دفتر، روان‌نویس و ابزار برنامه‌ریزی",
     "category_code": "62060400",
     "city": "تهران",
-    "avatar_initial": "ت",
-    "avatar_color": "#e8e1eb",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/tahrir._shopp",
-    "photos": [],
     "category_codes": [
       "62060100",
       "62061100"
     ]
   },
   {
-    "instagram_id": "ig_fantasymarket",
     "name": "فانتزی مارکت",
     "handle": "@fantasy_markett",
     "description": "لوازم تحریر رنگی و فانتزی، اکسسوری و محصولات خلاقانه کودک و بزرگسال",
     "category_code": "62060100",
     "city": "قزوین",
-    "avatar_initial": "ف",
-    "avatar_color": "#ebe0e7",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/fantasy_markett",
-    "photos": [],
     "category_codes": [
       "62060400",
       "62061100"
     ]
   },
   {
-    "instagram_id": "ig_homebazi",
     "name": "خانه بازی",
     "handle": "@home.bazi",
     "description": "اسباب‌بازی چوبی، آشپزخانه کودک، پارکینگ طبقاتی و بازی‌های کودک",
     "category_code": "86010400",
     "city": "ایران",
-    "avatar_initial": "خ",
-    "avatar_color": "#dfe8df",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/home.bazi",
-    "photos": [],
     "category_codes": [
       "86010700",
       "86011100",
@@ -617,35 +377,23 @@
     ]
   },
   {
-    "instagram_id": "ig_kadopich",
     "name": "کادوپیچ",
     "handle": "@kadopich.shops",
     "description": "ماگ، قمقمه، فلاسک، نوشیدنی‌افزار و لوازم کاربردی خانه و آشپزخانه",
     "category_code": "73050000",
     "city": "ایران",
-    "avatar_initial": "ک",
-    "avatar_color": "#e4e0d8",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/kadopich.shops",
-    "photos": [],
     "category_codes": [
       "73050300"
     ]
   },
   {
-    "instagram_id": "ig_homekala",
     "name": "هوم‌کالا",
     "handle": "@homekala_20",
     "description": "لوازم خانه و آشپزخانه، وسایل دکوراسیون و محصولات کاربردی منزل",
     "category_code": "73040000",
     "city": "ایران",
-    "avatar_initial": "ه",
-    "avatar_color": "#e1e5de",
-    "updated_label": "منبع مستقل",
-    "verified": 1,
     "source_url": "https://basaliro.com/shop/homekala_20",
-    "photos": [],
     "category_codes": [
       "75030100"
     ]

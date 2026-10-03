@@ -2,12 +2,10 @@ import unittest
 from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
-from backend.server import (
-    admin_metrics,
-    admin_mutation_authorized,
-    remove_merchant,
-    seed_search_metadata,
-)
+from backend.search.metadata import sync_search_metadata
+from backend.server.analytics import admin_metrics
+from backend.server.http import admin_mutation_authorized
+from backend.server.merchants import remove_merchant
 
 
 class Cursor:
@@ -61,19 +59,17 @@ class AdminMetricsTests(unittest.TestCase):
         database.execute.side_effect = lambda query, params=None: (
             [merchant] if "SELECT id,handle,category_code" in query else []
         )
-        with patch("backend.server.MERCHANT_CATEGORY_SEED", {"@shop": ("new", "extra")}):
-            seed_search_metadata(database)
+        sync_search_metadata(database)
         category_calls = [
             call.args
             for call in database.execute.call_args_list
             if "merchant_categories" in call.args[0]
         ]
-        self.assertEqual(3, len(category_calls))
+        self.assertEqual(2, len(category_calls))
         self.assertIn("DELETE FROM merchant_categories", category_calls[0][0])
-        self.assertIn("source IN ('merchant_primary','curated_catalog')", category_calls[0][0])
+        self.assertIn("source='merchant_primary'", category_calls[0][0])
         self.assertIn("'merchant_primary'", category_calls[1][0])
         self.assertEqual("new", category_calls[1][1][1])
-        self.assertEqual("extra", category_calls[2][1][1])
 
     def test_daily_query_uses_a_postgres_safe_alias(self):
         database = AdminDatabase()
@@ -82,7 +78,7 @@ class AdminMetricsTests(unittest.TestCase):
         def fake_connect():
             yield database
 
-        with patch("backend.server.connect", fake_connect):
+        with patch("backend.server.analytics.connect", fake_connect):
             result = admin_metrics(7)
 
         self.assertEqual(7, result["period_days"])
@@ -115,7 +111,7 @@ class AdminMetricsTests(unittest.TestCase):
         def fake_connect():
             yield database
 
-        with patch("backend.server.connect", fake_connect):
+        with patch("backend.server.merchants.connect", fake_connect):
             removed = remove_merchant(12)
 
         self.assertEqual("@shop", removed["handle"])

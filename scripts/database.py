@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-import argparse
 import os
 import sqlite3
-import sys
-from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-from backend.database import connect, run_category_seed, run_migrations
-from backend.search import sync_search_documents
+from backend.database import PROJECT_ROOT, connect, run_category_seed, run_migrations
+from backend.search.indexing import sync_search_documents
+from backend.search.metadata import sync_search_metadata
 
 TABLES = (
     "categories",
@@ -18,7 +13,6 @@ TABLES = (
     "merchant_posts",
     "merchant_categories",
     "merchant_search_terms",
-    "search_aliases",
     "analytics_events",
 )
 SERIAL_TABLES = ("merchants", "merchant_posts", "merchant_search_terms", "analytics_events")
@@ -44,9 +38,7 @@ def import_table(source, target, table):
     ]
     if not source_columns:
         return 0
-    order = " ORDER BY level,id" if table == "categories" and "id" in source_columns else ""
-    if table == "categories":
-        order = " ORDER BY level,sort_order"
+    order = " ORDER BY level,sort_order" if table == "categories" else ""
     rows = source.execute(f"SELECT {','.join(source_columns)} FROM {table}{order}").fetchall()
     placeholders = ",".join("%s" for _ in source_columns)
     columns = ",".join(source_columns)
@@ -59,17 +51,11 @@ def import_table(source, target, table):
     return len(rows)
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Import Kahoo's legacy SQLite database into PostgreSQL"
-    )
-    parser.add_argument("--source", type=Path, default=PROJECT_ROOT / "data" / "kahoo.db")
-    parser.add_argument("--database-url", help="Overrides DATABASE_URL")
-    args = parser.parse_args()
+def import_sqlite(args):
     if args.database_url:
         os.environ["DATABASE_URL"] = args.database_url
     if not args.source.is_file():
-        parser.error(f"SQLite source does not exist: {args.source}")
+        raise ValueError(f"SQLite source does not exist: {args.source}")
 
     run_migrations()
     run_category_seed(PROJECT_ROOT / "data" / "categories.sql")
@@ -85,13 +71,15 @@ def main():
                     f"""SELECT setval(pg_get_serial_sequence('{table}','id'),
                          COALESCE((SELECT MAX(id) FROM {table}),1),true)"""
                 )
+            sync_search_metadata(target)
             sync_search_documents(target)
     finally:
         source.close()
 
-    for table, count in imported.items():
-        print(f"{table}: {count}")
+    return imported
 
 
-if __name__ == "__main__":
-    main()
+def migrate(args):
+    run_migrations()
+    seeded = run_category_seed(PROJECT_ROOT / "data/categories.sql")
+    return {"migrated": True, "categories_seeded": seeded}

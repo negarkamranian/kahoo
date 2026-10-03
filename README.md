@@ -1,10 +1,10 @@
 # Kahoo
 
-Kahoo (کاهو) is a Persian RTL discovery layer for Iranian Instagram shops. Shoppers search by product or category, inspect merchant trust information in place, and continue to Instagram.
+Kahoo (کاهو) is a Persian RTL discovery layer for Iranian Instagram shops.
+Shoppers search stored merchant profiles and posts, save items locally, and
+continue to Instagram.
 
 ## Run
-
-Kahoo now uses PostgreSQL with `pgvector`; the application does not write runtime data into Git or its container image.
 
 ```bash
 cp .env.example .env
@@ -13,15 +13,177 @@ docker compose up --build
 
 - Marketplace: `http://127.0.0.1:4173`
 - Saved items: `http://127.0.0.1:4173/saved.html`
-- Admin analytics: `http://127.0.0.1:4173/admin.html`
+- Admin: `http://127.0.0.1:4173/admin.html`
 
-PostgreSQL data lives in the `kahoo-postgres` Docker volume. SQL migrations in `db/migrations` run automatically at startup.
+PostgreSQL with pgvector stores runtime data in the `kahoo-postgres` Docker
+volume. Startup applies SQL migrations and the GS1 category seed. It does not
+import merchant snapshots, overwrite merchant profiles, or contact Instagram.
+For a new database, import the reviewed catalogs explicitly:
 
-Set `KAHOO_SEED_DEMO=0` to skip startup merchant seeding, or
-`KAHOO_SYNC_ON_START=1` to enable Instagram reads during startup. The default
-keeps profile synchronization in the explicit commands below.
+```bash
+docker compose run --rm app python3 -m scripts catalog import
+docker compose run --rm app python3 -m scripts media sync --only-missing --limit 25
+```
 
-### Development checks
+Existing merchant records remain available without reimporting. The old
+`KAHOO_SEED_DEMO` and `KAHOO_SYNC_ON_START` settings have been removed.
+
+## CLI
+
+All maintained operations use `python3 -m scripts`. Each command has `--help`.
+Inside Docker, prefix commands with `docker compose run --rm app`.
+
+| Command | Purpose |
+| --- | --- |
+| `serve [--host HOST] [--port PORT]` | Start the HTTP server; defaults also read `KAHOO_HOST` and `KAHOO_PORT`. |
+| `db migrate` | Apply schema migrations and seed categories. |
+| `db import-sqlite --source PATH [--database-url URL]` | Import a legacy SQLite database. |
+| `merchants list [--query TEXT] [--limit N] [--offset N]` | Inspect stored merchants. |
+| `merchants add IDENTIFIER [--category CODE]` | Add or refresh a public Instagram profile. |
+| `merchants remove ID` | Delete a merchant and record a persistent catalog exclusion. |
+| `merchants import-file PATH [--category CODE]` | Import whitespace-separated handles or Instagram profile URLs. |
+| `catalog import [PATH ...]` | Import supplied JSON catalogs; no paths means the checked-in snapshots. |
+| `catalog build-categories --current PATH --persian PATH [--download]` | Rebuild the GS1 category seed using `data/gpc_policy.json`. |
+| `media status [HANDLE ...]` | Report missing/generated avatars and incomplete/outdated galleries. |
+| `media sync [HANDLE ...]` | Refresh profiles, avatars, and post galleries. |
+| `media cache [HANDLE ...]` | Download uncached post URLs already stored in the database. |
+| `search reindex [--batch-size N] [--all]` | Refresh metadata, documents, and optional embeddings. |
+| `search evaluate [--benchmark PATH]` | Measure relevance against reviewed benchmark judgments. |
+| `search enrich ID PATH` | Apply a JSON description and search terms with source/model provenance. |
+
+JSON reports are written to stdout. Failures return a nonzero exit status,
+including partial failures in batch profile imports and media synchronization.
+
+### Merchant imports
+
+New merchants require an explicit GPC category. Existing merchants retain their
+assigned category when `--category` is omitted. The admin selector reads the
+same database category tree; there are no keyword-to-category rules or default
+assignments to clothing. Optional `--name`, `--description`, and `--city` values
+override profile defaults. Use separate input files when importing new merchants
+into different categories.
+
+```bash
+python3 -m scripts merchants add @shop_username --category 66010100
+python3 -m scripts merchants import-file phone-shops.txt --category 66010100
+python3 -m scripts merchants list --query shop_username
+```
+
+Catalog imports preserve source URLs and each shard's snapshot timestamp. They
+respect persistent exclusions, preserve LLM descriptions and newer live metrics,
+and store additional categories as database assignments. The initial seed is
+ordinary snapshot data in `data/merchant_seed.json`; it contains no synthetic
+gallery entries. Imports and media synchronization refresh search documents.
+
+### Instagram media
+
+Set `META_IG_USER_ID` and `META_ACCESS_TOKEN` in `.env` to use Meta Business
+Discovery. Without credentials, the existing public-embed reader can read
+available public profiles. Profile availability and downloadable media depend
+on Instagram. Failed downloads preserve existing saved media.
+
+```bash
+python3 -m scripts media status
+python3 -m scripts media sync --only-missing --limit 25
+python3 -m scripts media sync @shop_username --avatars-only
+python3 -m scripts media sync --avatars-only --only-missing --limit 25
+python3 -m scripts media cache @shop_username
+```
+
+`--minimum-post-images N` controls gallery completeness for status and sync;
+it defaults to 3. `--limit 0` means all matching profiles. `--avatars-only`
+updates profile pictures without replacing galleries. `media cache` operates
+only on the requested handles when provided.
+
+The former profile, avatar, gallery-backfill, and missing-media scripts are
+replaced by these commands. The one-off expansion and shared-list builders
+were removed; checked-in catalogs remain importable, and new handle lists use
+`merchants import-file` with an explicit category.
+
+### Search
+
+Search indexes merchant names, handles, descriptions, biographies, assigned
+category labels, sourced enrichment, and post captions. Persian normalization,
+morphology, weighted full-text search, and trigram matching handle lexical
+retrieval. Optional embeddings provide semantic matches; ranking combines the
+retrievers with coverage, proximity, and bounded behavioral signals.
+
+There is no seeded synonym dictionary or alias-expansion stage. Suggestions
+come from stored merchants, category labels, extracted terms, and successful
+search history. A new product term becomes searchable through import or reindex,
+without changing application code. Without embeddings, unrelated spellings or
+synonyms need evidence in the indexed content to match. Normalization rules and
+ranking parameters remain algorithmic constants, not lists of products or shops.
+
+Migration `011_remove_search_aliases.sql` removes the unused legacy alias table.
+To rebuild the index after updating:
+
+```bash
+python3 -m scripts search reindex --all
+python3 -m scripts search evaluate
+```
+
+For semantic retrieval, configure an OpenAI-compatible embedding endpoint with
+1024-dimensional vectors using `EMBEDDING_API_URL`, `EMBEDDING_API_KEY`, and
+`EMBEDDING_MODEL`. Embedding batches commit individually. Enrichment JSON needs
+`description`, `terms` (a list), `model`, and `source_url`; `confidence` is optional.
+See [the search flow](docs/search-core-flow.md).
+
+### Admin and legacy data
+
+Set `KAHOO_ADMIN_TOKEN` in `.env` and enter it in the admin panel to protect
+merchant mutations. An empty token leaves mutations unlocked for development.
+The login and OAuth-shaped onboarding screens remain prototypes.
+
+To import the previous SQLite data before serving:
+
+```bash
+docker compose up -d db
+docker compose build app
+docker compose run --rm \
+  -v ./data/kahoo.db:/legacy/kahoo.db:ro \
+  app python3 -m scripts db import-sqlite --source /legacy/kahoo.db
+```
+
+## Structure
+
+```text
+backend/
+  database.py          PostgreSQL connections and migrations
+  catalog.py           Snapshot parsing and validation
+  instagram.py         Instagram identity parsing and profile readers
+  server/
+    app.py             HTTP server lifecycle
+    http.py            Routing, validation, authentication and responses
+    analytics.py       Event recording and metrics
+    categories.py      Database category tree
+    merchants.py       Merchant reads, gallery presentation and removal
+    media.py           Image downloads and persistence
+    profiles.py        Profile/media synchronization and completeness
+  search/
+    normalization.py   Persian normalization and tokenization
+    metadata.py        Metadata derived from stored merchant records
+    indexing.py        Merchant and post documents
+    retrieval.py       PostgreSQL lexical retrieval
+    embeddings.py      Embedding API and vector retrieval
+    ranking.py         Matching, relevance and diversity functions
+    service.py         Search orchestration and result assembly
+    suggestions.py     Database-backed autocomplete
+scripts/
+  cli.py               CLI commands and validation
+  merchants.py         Shared CLI/admin import workflow
+  catalog.py           Explicit snapshot imports
+  categories.py        GS1 publication processing
+  media.py             Media maintenance actions
+  search.py            Indexing and evaluation actions
+  enrichment.py        Sourced enrichment import
+  database.py          Database setup and legacy import
+public/                Marketplace, saved-items and admin UI
+data/                  Reviewed catalogs, taxonomy policy and relevance judgments
+db/migrations/         Versioned PostgreSQL schema
+```
+
+## Checks
 
 Use Python 3.13 or newer and Node.js 22 or newer:
 
@@ -32,239 +194,8 @@ python3 -m venv .venv
 .venv/bin/ruff check .
 .venv/bin/ruff format --check .
 node --test tests/*.test.mjs
+.venv/bin/python -m scripts --help
 ```
 
-These checks do not need PostgreSQL or Instagram credentials. Start the Docker
-services separately to exercise live database and synchronization behavior.
-
-### Import the previous SQLite data
-
-Before starting the application for the first time, start PostgreSQL and import the existing local database:
-
-```bash
-docker compose up -d db
-docker compose build app
-docker compose run --rm \
-  -v ./data/kahoo.db:/legacy/kahoo.db:ro \
-  app python3 scripts/migrate_sqlite_to_postgres.py --source /legacy/kahoo.db
-docker compose up app
-```
-
-The SQLite file is ignored by both Git and Docker after migration.
-
-### Instagram synchronization
-
-Set `META_IG_USER_ID` and `META_ACCESS_TOKEN` in `.env` to use Meta Business
-Discovery. Without them, the public-embed reader scrapes the public Instagram
-embed page as a best-effort fallback. Then run:
-
-```bash
-docker compose run --rm app python3 scripts/sync_instagram_profiles.py
-```
-
-To repair only missing or generated profile pictures without replacing post
-galleries, run:
-
-```bash
-docker compose run --rm app python3 scripts/sync_profile_images.py
-```
-
-To check every merchant and retrieve only missing/generated profile pictures
-and incomplete or outdated post galleries, run:
-
-```bash
-docker compose run --rm app python3 scripts/backfill_missing_media.py
-```
-
-The command downloads the files and stores them in PostgreSQL. It is safe to
-run repeatedly: complete avatars and galleries are skipped. Use `--limit 25`
-for resumable batches, `--minimum-post-images 5` to require a larger gallery,
-or pass handles to restrict the check to specific merchants.
-
-Pass one or more handles (for example `@rabostore`) to force-refresh specific
-shops even when they already have a cached profile picture.
-
-Business Discovery is the supported source for reading another public
-professional account. It returns biography, profile picture,
-follower/following counts, media counts, recent posts and carousel children.
-It requires `instagram_basic`, `instagram_manage_insights` and
-`pages_read_engagement`. Personal, private and age-gated accounts remain
-unavailable, and Meta may omit downloadable media for licensed-audio videos or
-Reels whose owner disabled downloads.
-
-### Admin merchant management
-
-The admin panel can add a shop from an Instagram username/profile URL and can
-remove a shop together with its cached posts and search data. A removed catalog
-shop is recorded in `merchant_exclusions`, so it will not return on restart.
-Set a mutation token in `.env` before exposing the admin panel:
-
-```dotenv
-KAHOO_ADMIN_TOKEN=replace-with-a-long-random-value
-```
-
-Enter the same value in the admin panel when adding or removing a shop. Leaving
-the variable empty keeps mutations unlocked for local development.
-
-### Refresh the curated merchant catalog
-
-The reviewed public-directory snapshot in `data/merchant_catalog.json` enriches
-existing shops with sourced follower/post counts and adds new shops without
-marking an external directory listing as Kahoo verification. On every run, the
-import detects catalog shops that still have fewer than three cached post images
-and fills them from their own account. Reapply it safely at any time (the import
-is idempotent). Rebuild the app image first after pulling script changes:
-
-```bash
-docker compose build app
-docker compose run --rm app python3 scripts/seed_merchants.py
-docker compose up -d app
-```
-
-Large expansions are added to PostgreSQL immediately, while Instagram media is
-synchronized in resumable batches of 25. Run the seed command repeatedly to
-finish later batches, or choose a different batch size:
-
-```bash
-docker compose run --rm app python3 scripts/seed_merchants.py --media-limit 50
-```
-
-Use `--skip-media` for a fast catalog-only import, `--media-limit 0` for one
-long-running full sync, or `--repair-avatars` for a separate retry pass over
-missing/generated profile pictures.
-
-The profiles shared in `shops.txt` are stored in
-`data/merchant_catalog_shared.json`. To rebuild that catalog after changing the
-list, run:
-
-```bash
-python3 scripts/build_shared_merchants.py shops.txt --output data/merchant_catalog_shared.json
-```
-
-Then rebuild the app image and run the seed command above. The catalog import
-adds every shop immediately; subsequent resumable media batches fill its real
-profile picture, biography, metrics, posts, and carousel children.
-
-Live Instagram synchronization takes precedence over snapshot metrics on its
-next successful refresh. Every metric stores its source URL and timestamp.
-
-To add one shop directly from its public Instagram identifier, run:
-
-```bash
-docker compose run --rm app python3 scripts/add_merchant.py @shop_username
-```
-
-The identifier may also be a profile URL. The command is idempotent and stores
-the merchant, current profile picture, metrics, recent posts, and carousel
-children. It infers the GPC category from the public profile and captions; for
-an ambiguous account, provide it explicitly, for example
-`--category 66010100`. Optional `--name`, `--description`, and `--city` flags
-can override the public defaults.
-
-To replace any earlier generated gallery entries, collect the shops' own posts,
-and cache the returned media in PostgreSQL:
-
-```bash
-docker compose run --rm app python3 scripts/backfill_gallery_images.py
-```
-
-The command tries Meta Business Discovery first when credentials are configured,
-otherwise it reads each public Instagram embed. It stores only successfully
-downloaded shop media in `merchant_posts.image_blob`; it does not create gallery
-placeholders. The JSON report lists failures and image counts per handle.
-
-### Search quality
-
-Search includes Persian normalization and morphology, commerce synonyms,
-weighted full-text and trigram retrieval, post-level evidence, optional BGE-M3
-vector retrieval with RRF, coverage/proximity scoring, bounded behavioral
-signals, autocomplete, explanations, and empty-result recovery. The complete
-flow and runbook are in `docs/search-core-flow.md`; research notes remain in
-`docs/search-quality.md`.
-
-Run the reviewed Persian-commerce relevance benchmark with:
-
-```bash
-docker compose run --rm app python3 scripts/evaluate_search.py
-```
-
-Configure an OpenAI-compatible embedding endpoint that returns 1024-dimensional
-BGE-M3 vectors, then index changed documents:
-
-```bash
-docker compose run --rm app python3 scripts/reindex_search.py --batch-size 500 --all
-```
-
-If no embedding endpoint is configured, Persian-normalized lexical, alias and category search continues to work.
-
-## Structure
-
-```text
-backend/
-  database.py            PostgreSQL connection and migration runner
-  instagram.py           Meta Business Discovery client
-  search.py              Search documents and embedding retrieval
-  server.py              HTTP API, hybrid ranking and analytics
-db/migrations/          Versioned PostgreSQL schema
-data/
-  merchant_seed.json     Initial merchant records and biography snapshots
-  categories.sql         Reproducible GS1 category seed
-  merchant_catalog.json Versioned merchant enrichment snapshot
-  merchant_catalog_expansion_*.json High-audience expansion shards
-  merchant_catalog_shared.json User-submitted Instagram shops
-docs/
-  product-research.md
-  market-benchmarks.md
-  archive/                Earlier challenge notes
-public/
-  index.html
-  saved.html
-  admin.html
-  assets/
-    css/                  Marketplace, theme and admin styles
-    js/                   Catalog and admin behavior
-server.py                 Development entrypoint
-```
-
-## Current product
-
-- Hierarchical, Iran-relevant GS1 category tree
-- Persian-normalized merchant search
-- Real merchant handles, cached profile photos and stored post images
-- Three-image, low-distraction rotating preview
-- In-page merchant profile and trust modal
-- Locally persisted saved merchants and posts with an account view
-- Direct Instagram handoff from merchant buttons and posts
-- Instagram OAuth-shaped onboarding prototype
-- Anonymous usage analytics and RTL admin dashboard
-- Responsive, keyboard-accessible interface with reduced-motion support
-
-## API
-
-```text
-GET  /api/categories
-GET  /api/search/suggestions?q={query}
-GET  /api/merchants?category={gpc_code}&q={query}
-GET  /api/merchants/{id}
-GET  /api/media/{id}
-GET  /api/avatars/{id}
-GET  /api/admin/metrics?days=7|30|90
-POST /api/analytics/event
-POST /api/login/request
-POST /api/login/verify
-POST /api/merchants/import-demo
-```
-
-The production onboarding path is Instagram OAuth → profile/media import → suggested category → merchant confirmation. Public-profile extraction is only a prototype fallback; authenticated synchronization should be the production source of truth.
-
-## Category data
-
-The database contains the four GS1 GPC levels—segment, family, class and brick—filtered for Kahoo's Iranian marketplace scope. The generated seed currently contains 6,031 categories from the May 2026 schema. Tobacco/cannabis, postmortem products, sexual products, weapons, gambling, alcohol-related branches and other excluded areas are defined in `data/gpc_policy.json`.
-
-To rebuild the seed from the official current and Persian GS1 publications:
-
-```bash
-python3 scripts/build_gpc_categories.py --download
-```
-
-Runtime category reads come only from PostgreSQL; `data/categories.sql` is the reproducible database seed.
+Unit tests and command help do not need database or Instagram credentials.
+Live search evaluation and database operations require PostgreSQL.

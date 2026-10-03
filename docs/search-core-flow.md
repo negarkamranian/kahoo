@@ -13,13 +13,13 @@ when configured.
 flowchart LR
     A[Merchant profile and categories] --> I[Index builder]
     B[Post and carousel captions] --> I
-    C[Curated aliases and enrichment terms] --> I
+    C[Stored descriptions, biographies and sourced enrichment] --> I
     I --> W[Weighted PostgreSQL FTS]
     I --> T[pg_trgm fields]
     I --> V[1024-d pgvector embeddings]
 
     Q[User query] --> N[Persian normalization]
-    N --> U[Tokens, morphology, aliases]
+    N --> U[Tokens and morphology]
     U --> L[Lexical candidates]
     U --> D[Dense candidates]
     L --> F[RRF candidate fusion]
@@ -60,7 +60,7 @@ Changing `EMBEDDING_MODEL` makes old-model vectors pending automatically.
 
 ## 2. Query understanding
 
-The same canonicalizer is used for indexing, aliases, analytics, and queries:
+The same canonicalizer is used for indexing, metadata, analytics, and queries:
 
 1. Unicode NFKC normalization.
 2. Arabic-to-Persian character normalization (`ي` → `ی`, `ك` → `ک`).
@@ -68,7 +68,7 @@ The same canonicalizer is used for indexing, aliases, analytics, and queries:
 4. Diacritic, tatweel, punctuation, and half-space handling.
 5. Stopword removal.
 6. Conservative Persian suffix variants (`ها`, `های`, `هایی`, `تر`, `ترین`).
-7. Curated commerce alias expansion, including common spelling mistakes.
+7. Retrieve actual indexed text with full-text and trigram matching; optional embeddings supply semantic evidence. There is no manual alias expansion.
 
 Aliases are weighted and never replace the original query. Exact user tokens
 always remain the strongest lexical evidence.
@@ -129,7 +129,7 @@ The final scorer adds:
 - full query-token coverage, preventing one common word from winning a
   multi-concept query;
 - ordered phrase proximity;
-- weighted alias evidence;
+- sourced terms from stored merchant metadata;
 - a bounded exact-query click signal over 90 days;
 - a much smaller bounded merchant-quality tie-breaker.
 
@@ -152,7 +152,7 @@ Results report the strongest human-readable reason:
 - typo/near match.
 
 Autocomplete is separate from retrieval and suggests merchants, categories,
-aliases, and historically popular queries. Empty-result recovery reuses those
+extracted merchant terms, and historically successful queries. Empty-result recovery reuses those
 suggestions rather than silently broadening to unrelated shops.
 
 ## 6. Embedding setup and reindexing
@@ -168,7 +168,7 @@ EMBEDDING_MODEL=BAAI/bge-m3
 Rebuild every changed document and embed all pending/stale-model rows:
 
 ```bash
-docker compose run --rm app python3 scripts/reindex_search.py --batch-size 250 --all
+docker compose run --rm app python3 -m scripts search reindex --batch-size 250 --all
 ```
 
 Without `--all`, one embedding batch is processed. Without an embedding
@@ -179,7 +179,7 @@ endpoint, indexing still refreshes lexical documents and exits cleanly.
 Run the reviewed query set after any ranking or data change:
 
 ```bash
-docker compose run --rm app python3 scripts/evaluate_search.py
+docker compose run --rm app python3 -m scripts search evaluate
 ```
 
 The report contains:

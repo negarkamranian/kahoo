@@ -3,7 +3,7 @@ import json
 import unittest
 from unittest.mock import Mock, patch
 
-from backend.server import Handler
+from backend.server.http import Handler
 
 
 class HttpTests(unittest.TestCase):
@@ -41,7 +41,7 @@ class HttpTests(unittest.TestCase):
         handler.send_header.assert_any_call("Content-Length", str(len(handler.wfile.getvalue())))
         self.assertEqual({"name": "فروشگاه"}, json.loads(handler.wfile.getvalue()))
 
-    @patch("backend.server.connect")
+    @patch("backend.server.http.connect")
     def test_cached_media_preserves_content_and_cache_headers(self, connect):
         for path, row in (
             ("/api/media/1", {"image_blob": b"image", "mime_type": "image/jpeg"}),
