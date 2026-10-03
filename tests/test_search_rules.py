@@ -4,7 +4,6 @@ import unittest
 from unittest.mock import patch
 
 from backend.models.search import LexicalMatch
-
 from backend.search.ranking import TextMatch
 from backend.search.service import SearchEvidence, match_quality, match_reason, relevant_match
 from backend.search.suggestions import search_suggestions

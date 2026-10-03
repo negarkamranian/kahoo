@@ -5,12 +5,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from backend.models.categories import GpcPublication
-from backend.models.merchants import Merchant
 from pydantic import ValidationError
 
 from backend.cli.catalog import build
 from backend.cli.search import evaluate
+from backend.models.categories import GpcPublication
+from backend.models.merchants import Merchant
 
 
 class MaintenanceContractTests(unittest.TestCase):

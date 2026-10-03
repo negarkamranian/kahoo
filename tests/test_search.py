@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import Mock, patch
 
 from backend.models.merchants import Merchant
-
 from backend.search.embeddings import embed_texts
 from backend.search.normalization import normalize_search, query_tokens
 from backend.search.ranking import (

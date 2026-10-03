@@ -8,7 +8,7 @@ const shared = await readFile(
   "utf8",
 );
 
-async function loadPage(page, script, response) {
+async function loadPage(page, script, response, stored = {}) {
   const html = await readFile(
     new URL(`../public/${page}`, import.meta.url),
     "utf8",
@@ -22,6 +22,8 @@ async function loadPage(page, script, response) {
     runScripts: "outside-only",
   });
   const { window } = dom;
+  for (const [key, items] of Object.entries(stored))
+    window.localStorage.setItem(key, JSON.stringify(items));
   window.matchMedia = () => ({ matches: false });
   window.ResizeObserver = class {
     observe() {}
@@ -41,7 +43,7 @@ async function loadPage(page, script, response) {
   };
   window.Headers = Headers;
   window.eval(
-    `${shared.replaceAll("export ", "")}\n${source.replace(/^import[\s\S]*?;\s*/, "")}`,
+    `${shared.replaceAll("export ", "")}\n${source.replace(/^import[\s\S]*?;\s*/, script === "admin.js" ? "const fa = faNumber;" : "")}`,
   );
   await new Promise((resolve) => setImmediate(resolve));
   return { dom, window, requests };
@@ -130,4 +132,85 @@ test("saved page presents empty collections", async (t) => {
     window.document.querySelectorAll(".empty-state.compact").length,
     2,
   );
+});
+
+test("saved cards preserve collection previews and delete only the selected item", async (t) => {
+  const { dom, window } = await loadPage("saved.html", "saved.js", () => ({}), {
+    kahoo_saved_merchants: [{ ...merchant, key: "1" }],
+    kahoo_saved_posts: [
+      {
+        key: "post-1",
+        merchant_name: merchant.name,
+        media_url: "/api/media/1",
+        permalink: merchant.posts[0].permalink,
+        image_count: 2,
+      },
+      {
+        key: "post-2",
+        merchant_name: merchant.name,
+        media_url: "/api/media/2",
+        permalink: merchant.posts[1].permalink,
+        image_count: 1,
+      },
+    ],
+  });
+  t.after(() => dom.window.close());
+  assert.equal(window.document.querySelectorAll(".saved-merchant").length, 1);
+  assert.equal(window.document.querySelectorAll(".saved-post").length, 2);
+  window.document.querySelector(".saved-post .remove-button").click();
+  assert.equal(window.document.querySelectorAll(".saved-post").length, 1);
+  assert.equal(
+    JSON.parse(window.localStorage.getItem("kahoo_saved_posts"))[0].key,
+    "post-2",
+  );
+  window.document.querySelector(".saved-merchant .remove-button").click();
+  assert.equal(
+    JSON.parse(window.localStorage.getItem("kahoo_saved_merchants")).length,
+    0,
+  );
+});
+
+test("admin dashboard renders metrics and managed merchants independently", async (t) => {
+  const metrics = {
+    kpis: {
+      searches: 5,
+      visitors: 3,
+      clicks: 2,
+      zero_rate: 0,
+      search_to_click: 50,
+    },
+    daily: [{ date: "2026-10-03", searches: 5, clicks: 2 }],
+    top_queries: [],
+    missed_queries: [],
+    top_merchants: [],
+    funnel: {
+      visitors: 3,
+      searched: 2,
+      clicked: 1,
+      oauth_started: 0,
+      oauth_completed: 0,
+    },
+    catalog: {
+      merchants: 1,
+      used_categories: 1,
+      posts: 4,
+      avatars: 1,
+      descriptions: 1,
+    },
+    generated_at: "2026-10-03T10:00:00",
+  };
+  const { dom, window } = await loadPage("admin.html", "admin.js", (path) => {
+    if (path.startsWith("/api/admin/metrics")) return metrics;
+    if (path.startsWith("/api/admin/merchants"))
+      return {
+        total: 1,
+        items: [{ ...merchant, post_count: 4, followers_count: 10 }],
+      };
+    return [];
+  });
+  t.after(() => dom.window.close());
+  assert.equal(window.document.querySelector("#dashboard").hidden, false);
+  assert.equal(window.document.querySelectorAll("#trend-chart svg").length, 1);
+  assert.equal(window.document.querySelectorAll(".managed-row").length, 1);
+  assert.equal(window.document.querySelectorAll("#funnel em").length, 5);
 });

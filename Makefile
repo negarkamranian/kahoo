@@ -1,4 +1,4 @@
-PYTHON ?= python3
+PYTHON ?= .venv/bin/python
 
 .PHONY: check lint format format-check test
 

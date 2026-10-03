@@ -1,3 +1,5 @@
+exclude: ^(data/|db/|docs/)
+
 repos:
   - repo: local
     hooks:

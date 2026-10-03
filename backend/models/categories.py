@@ -1,8 +1,29 @@
-"""GS1 publication and local category-policy contracts."""
+"""Category trees, links, GS1 publications, and category generation contracts."""
+
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from backend.models import NonEmptyText
+from backend.models.common import Count, NonEmptyText
+
+
+class CategoryNode(BaseModel):
+    code: str
+    parent_code: str | None
+    level: Literal[1, 2, 3, 4]
+    label_fa: str
+    label_en: str | None
+    icon: str | None
+    count: Count
+    children: list["CategoryNode"]
+
+
+class CategoryLink(BaseModel):
+    code: str
+    label: str
+    confidence: float | None = None
+    source: str | None = None
+    source_url: str | None = None
 
 
 class GpcNode(BaseModel):
@@ -25,3 +46,9 @@ class CategoryPolicy(BaseModel):
     excluded_terms: list[str]
     segment_labels_fa: dict[str, NonEmptyText]
     segment_excluded_terms: dict[str, list[str]]
+
+
+class CategoryBuildResult(BaseModel):
+    categories: Count
+    excluded_branches: Count
+    output: str

@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import Mock, patch
 
 from backend.models.media import InstagramProfile, MerchantMedia
-
 from backend.services.profiles import refresh_instagram_avatars, refresh_instagram_profiles
 
 

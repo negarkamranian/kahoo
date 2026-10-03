@@ -2,10 +2,10 @@ import json
 import unittest
 from unittest.mock import Mock, patch
 
-from backend.models.media import MerchantMedia
-from backend.models.merchants import AdminMerchantQuery
 from pydantic import ValidationError
 
+from backend.models.media import MerchantMedia
+from backend.models.merchants import AdminMerchantQuery
 from backend.serialization import json_default
 from backend.services.catalog import import_records
 from backend.services.categories import category_tree

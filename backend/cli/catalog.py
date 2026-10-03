@@ -112,18 +112,14 @@ def category_deletions():
 
 
 def category_seed_metadata(policy, category_count, excluded_count):
-    lines = []
-    lines.extend(
-        [
-            f"INSERT INTO category_metadata(key,value) VALUES('gpc_source',{sql(policy.source)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
-            f"INSERT INTO category_metadata(key,value) VALUES('category_count',{sql(category_count)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
-            f"INSERT INTO category_metadata(key,value) VALUES('excluded_branch_count',{sql(excluded_count)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
-            "DROP TABLE _category_seed;",
-            "COMMIT;",
-            "",
-        ]
-    )
-    return lines
+    return [
+        f"INSERT INTO category_metadata(key,value) VALUES('gpc_source',{sql(policy.source)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
+        f"INSERT INTO category_metadata(key,value) VALUES('category_count',{sql(category_count)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
+        f"INSERT INTO category_metadata(key,value) VALUES('excluded_branch_count',{sql(excluded_count)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
+        "DROP TABLE _category_seed;",
+        "COMMIT;",
+        "",
+    ]
 
 
 def build(args):

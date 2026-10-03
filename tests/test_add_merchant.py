@@ -3,11 +3,11 @@ import unittest
 from contextlib import redirect_stdout
 from unittest.mock import Mock, patch
 
-from backend.models.media import InstagramProfile
-from backend.models.merchants import ImportResult, MerchantImport
 from pydantic import ValidationError
 
 from backend.cli import main
+from backend.models.media import InstagramProfile
+from backend.models.merchants import ImportResult, MerchantImport
 from backend.services.merchants import add_or_refresh_merchant
 
 

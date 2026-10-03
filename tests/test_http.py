@@ -9,7 +9,6 @@ from unittest.mock import Mock, patch
 
 from backend.models.analytics import MetricsPeriod
 from backend.models.merchants import AdminMerchantQuery, ImportResult, MerchantImport
-
 from backend.server.http import Handler
 
 

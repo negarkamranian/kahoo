@@ -4,7 +4,7 @@ import json
 from html.parser import HTMLParser
 from urllib.request import Request, urlopen
 
-from backend.instagram_urls import profile_url
+from backend.instagram.urls import profile_url
 from backend.models.instagram.embed import EmbedContext, EmbedPosts
 from backend.models.media import InstagramPost, InstagramProfile
 

@@ -2,9 +2,8 @@ import json
 import unittest
 from unittest.mock import Mock, patch
 
+from backend.instagram.embed import extract_embed_posts
 from backend.models.media import InstagramImage, InstagramPost, InstagramProfile, MerchantMedia
-
-from backend.instagram import extract_embed_posts
 from backend.services.media import replace_profile_posts
 
 

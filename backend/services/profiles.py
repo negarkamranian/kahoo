@@ -2,8 +2,8 @@ from collections.abc import Callable
 from functools import partial
 
 from backend.database import connect
-from backend.instagram import instagram_profile
-from backend.instagram_urls import profile_url
+from backend.instagram.service import instagram_profile
+from backend.instagram.urls import profile_url
 from backend.models.media import (
     MINIMUM_POST_IMAGES,
     InstagramProfile,

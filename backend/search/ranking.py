@@ -1,8 +1,8 @@
 import math
-from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 
 from backend.models.merchants import Merchant
+from backend.models.search import SearchField, TextMatch
 from backend.search.normalization import normalize_search, query_tokens, token_variants
 
 # Conservative token matching: short prefixes and loose typos overmatch Persian words.
@@ -95,35 +95,29 @@ def fuzzy_term_strength(term, words):
     return FUZZY_TERM_STRENGTH if similarity >= MIN_TYPO_SIMILARITY else 0.0
 
 
-@dataclass
-class TextMatch:
-    score: float = 0
-    phrase_bonus: float = 0
-    coverage: float = 0
-    matched_tokens: int = 0
-    fields: set[str] = field(default_factory=set)
-    fuzzy: bool = False
-
-
 def searchable_fields(merchant, category_labels):
     fields = [
-        ("name", f"{merchant.name} {merchant.handle}", 14, 20),
-        ("description", merchant.description, 7, 13),
-        ("biography", merchant.biography, 5, 9),
-        ("category", " ".join(category_labels), 9, 14),
-        ("city", merchant.city, 3, 0),
+        SearchField(
+            "name", f"{merchant.name} {merchant.handle}", token_weight=14, phrase_weight=20
+        ),
+        SearchField("description", merchant.description, token_weight=7, phrase_weight=13),
+        SearchField("biography", merchant.biography, token_weight=5, phrase_weight=9),
+        SearchField("category", " ".join(category_labels), token_weight=9, phrase_weight=14),
+        SearchField("city", merchant.city, token_weight=3, phrase_weight=0),
     ]
-    fields = [(name, normalize_search(text), weight, bonus) for name, text, weight, bonus in fields]
-    return fields
+    return [
+        SearchField(item.name, normalize_search(item.text), item.token_weight, item.phrase_weight)
+        for item in fields
+    ]
 
 
 def score_token(match, token, fields, stored_terms):
     token_score = 0
-    for name, text, weight, _ in fields:
-        strength = term_match_strength(token, text)
-        token_score += weight * strength
+    for content in fields:
+        strength = term_match_strength(token, content.text)
+        token_score += content.token_weight * strength
         if strength >= STRONG_TERM_THRESHOLD:
-            match.fields.add(name)
+            match.fields.add(content.name)
         match.fuzzy |= 0 < strength < STRONG_TERM_THRESHOLD
     metadata = max(
         (weight * term_match_strength(token, term) for term, weight in stored_terms), default=0
@@ -137,9 +131,11 @@ def score_token(match, token, fields, stored_terms):
 
 def content_phrase_bonus(phrase, fields):
     return sum(
-        bonus * term_match_strength(phrase, text) for _, text, _, bonus in fields if bonus
+        content.phrase_weight * term_match_strength(phrase, content.text)
+        for content in fields
+        if content.phrase_weight
     ) + PROXIMITY_WEIGHT * max(
-        phrase_proximity_bonus(phrase, text) for _, text, _, bonus in fields if bonus
+        phrase_proximity_bonus(phrase, content.text) for content in fields if content.phrase_weight
     )
 
 
@@ -157,7 +153,7 @@ def match_content(
         score_token(match, token, fields, stored_terms)
     match.phrase_bonus = content_phrase_bonus(phrase, fields)
     match.coverage = query_coverage(
-        tokens, *(text for _, text, _, _ in fields), " ".join(term for term, _ in stored_terms)
+        tokens, *(content.text for content in fields), " ".join(term for term, _ in stored_terms)
     )
     return match
 

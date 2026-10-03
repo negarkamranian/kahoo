@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
-from backend.instagram_urls import post_url
+from backend.instagram.urls import post_url
 from backend.models.common import NonEmptyText
 from backend.models.instagram.common import Caption, Connection, CountConnection, SourceProfile
 from backend.models.media import MAX_PROFILE_POSTS, InstagramImage, InstagramPost, InstagramProfile

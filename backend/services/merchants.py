@@ -2,8 +2,8 @@ from datetime import datetime
 from itertools import groupby
 
 from backend.database import connect
-from backend.instagram import instagram_profile
-from backend.instagram_urls import profile_url
+from backend.instagram.service import instagram_profile
+from backend.instagram.urls import profile_url
 from backend.models.categories import CategoryLink
 from backend.models.media import MediaAsset, PostCollection
 from backend.models.merchants import (
@@ -90,6 +90,11 @@ def merchant_detail(merchant_id: int) -> Merchant | None:
         return merchant
 
 
+def admin_merchant_item(row):
+    row["avatar_url"] = merchant_avatar_url(row["id"], None) if row.pop("has_avatar") else None
+    return AdminMerchant.model_validate(row)
+
+
 def admin_merchants(request: AdminMerchantQuery) -> AdminMerchantPage:
     query = request.query.strip()
     params = []
@@ -114,12 +119,8 @@ def admin_merchants(request: AdminMerchantQuery) -> AdminMerchantPage:
                 (*params, request.limit, request.offset),
             )
         ]
-    for row in rows:
-        row["avatar_url"] = None
-        if row.pop("has_avatar"):
-            row["avatar_url"] = merchant_avatar_url(row["id"], None)
     return AdminMerchantPage(
-        items=[AdminMerchant.model_validate(row) for row in rows],
+        items=[admin_merchant_item(row) for row in rows],
         total=total,
         limit=request.limit,
         offset=request.offset,

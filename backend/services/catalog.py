@@ -4,7 +4,7 @@ from pydantic import TypeAdapter
 
 from backend.config import PROJECT_ROOT
 from backend.database import connect
-from backend.instagram_urls import profile_url
+from backend.instagram.urls import profile_url
 from backend.models.catalog import CatalogImportResult, CatalogMerchant, MerchantCatalog
 from backend.search.indexing import sync_search_index
 
@@ -65,10 +65,7 @@ def update_catalog_details(db, merchant_id, item):
 
 def create_catalog_merchant(db, item):
     item.require_details()
-    username = item.handle[1:]
-    name = item.name
-    source_url = item.source_url
-    cursor = db.execute(
+    return db.execute(
         """INSERT INTO merchants(
           instagram_id,name,handle,description,description_source,
           description_source_url,description_updated_at,source_url,
@@ -78,14 +75,14 @@ def create_catalog_merchant(db, item):
           VALUES(%s,%s,%s,%s,%s,%s,%s,%s, %s,%s,%s,'داده عمومی',0,%s,%s,
             %s,%s,%s) RETURNING id""",
         (
-            f"catalog_{username}",
-            name,
+            f"catalog_{item.handle[1:]}",
+            item.name,
             item.handle,
             item.description,
             item.description_source,
-            source_url,
+            item.source_url,
             item.snapshot_at,
-            source_url,
+            item.source_url,
             item.category_code,
             item.city,
             profile_url(item.handle),
@@ -95,8 +92,7 @@ def create_catalog_merchant(db, item):
             item.metrics_source_url,
             item.snapshot_at,
         ),
-    )
-    return cursor.fetchone()["id"]
+    ).fetchone()["id"]
 
 
 def save_catalog_biography(db, merchant_id, item):

@@ -1,11 +1,10 @@
 """Compose merchant retrieval, relevance ranking and media presentation."""
 
 import math
-from dataclasses import dataclass
 
 from backend.database import connect
 from backend.models.merchants import Merchant
-from backend.models.search import LexicalMatch
+from backend.models.search import SearchContext, SearchEvidence
 from backend.search.data import (
     load_categories,
     load_category_assignments,
@@ -16,7 +15,6 @@ from backend.search.data import (
 from backend.search.embeddings import semantic_merchant_scores
 from backend.search.normalization import normalize_search, query_tokens
 from backend.search.ranking import (
-    TextMatch,
     diversify_results,
     match_content,
     merchant_quality_score,
@@ -25,8 +23,6 @@ from backend.search.ranking import (
 from backend.search.retrieval import lexical_merchant_matches
 from backend.services.merchants import merchant_avatar_url, merchant_posts
 
-SEMANTIC_MATCH_THRESHOLD = 0.55
-DOCUMENT_MATCH_THRESHOLD = 0.25
 MAX_QUERY_LENGTH = 120
 FUSION_WEIGHT = 300
 COVERAGE_WEIGHT = 8
@@ -45,39 +41,6 @@ MATCH_REASONS = (
     ({"semantic"}, "نتیجه معنایی نزدیک"),
 )
 DEFAULT_MATCH_REASON = "عبارت مشابه"
-
-
-@dataclass
-class SearchContext:
-    phrase: str
-    tokens: list[str]
-    categories: dict
-    assignments: dict
-    terms: dict
-    lexical: dict[int, LexicalMatch]
-    semantic: dict[int, float]
-    fused: dict[int, float]
-    clicks: dict[int, int]
-    query_clicks: dict[int, int]
-
-
-@dataclass
-class SearchEvidence:
-    text: TextMatch
-    lexical: LexicalMatch | None
-    semantic: float
-
-    @property
-    def has_post(self):
-        return self.lexical is not None and self.lexical.entity_type == "post"
-
-    @property
-    def has_semantic_match(self):
-        return self.semantic >= SEMANTIC_MATCH_THRESHOLD
-
-    @property
-    def has_document_match(self):
-        return self.lexical is not None and self.lexical.score >= DOCUMENT_MATCH_THRESHOLD
 
 
 def load_search_context(db, query):

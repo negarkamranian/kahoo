@@ -14,7 +14,7 @@ from backend.models.search import (
     SearchBenchmark,
     SearchEvaluation,
 )
-from backend.search.embeddings import embed_pending_documents, embedding_enabled
+from backend.search.embeddings import embed_pending_documents
 from backend.search.enrichment import save_llm_enrichment
 from backend.search.indexing import sync_search_index
 from backend.search.ranking import ndcg_at_k
@@ -75,9 +75,7 @@ def reindex(args):
         embedded += batch
         if not args.all or batch < args.batch_size:
             break
-    return ReindexResult(
-        pending_documents=pending, embedded=embedded, embedding_enabled=embedding_enabled()
-    )
+    return ReindexResult(pending_documents=pending, embedded=embedded)
 
 
 def enrich(args):

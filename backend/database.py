@@ -38,11 +38,6 @@ def run_migrations():
 
 def run_category_seed(path):
     with connect() as database:
-        exists = database.execute(
-            "SELECT 1 FROM category_metadata WHERE key='gpc_source'"
-        ).fetchone()
-        if exists:
-            return False
         script = path.read_text(encoding="utf-8")
         script = script.replace("BEGIN;", "", 1).rsplit("COMMIT;", 1)[0]
         database.execute(script)

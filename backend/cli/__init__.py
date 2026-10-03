@@ -15,20 +15,6 @@ from backend.serialization import json_default
 from backend.server.app import serve
 
 
-def nonnegative(value):
-    number = int(value)
-    if number < 0:
-        raise argparse.ArgumentTypeError("must be zero or greater")
-    return number
-
-
-def positive(value):
-    number = nonnegative(value)
-    if number == 0:
-        raise argparse.ArgumentTypeError("must be greater than zero")
-    return number
-
-
 def merchant_page_size(value):
     try:
         return TypeAdapter(MerchantPageSize).validate_python(int(value))
@@ -49,7 +35,7 @@ def group(commands, name, help_text):
 def register_server(commands):
     server = action(commands, "serve", "Start the HTTP server", serve, False)
     server.add_argument("--host", default=settings.host)
-    server.add_argument("--port", type=positive, default=settings.port)
+    server.add_argument("--port", default=settings.port)
 
 
 def register_database(commands):
@@ -64,7 +50,7 @@ def register_merchants(commands):
     listing = action(shops, "list", "List stored merchants", merchants.list_merchants)
     listing.add_argument("--query", default="")
     listing.add_argument("--limit", type=merchant_page_size, default=merchant_defaults.limit)
-    listing.add_argument("--offset", type=nonnegative, default=merchant_defaults.offset)
+    listing.add_argument("--offset", default=merchant_defaults.offset)
     add = action(shops, "add", "Import a profile; new merchants require --category", merchants.add)
     add.add_argument("identifier", help="Instagram handle in @username format")
     add.add_argument(
@@ -74,7 +60,7 @@ def register_merchants(commands):
     remove = action(
         shops, "remove", "Remove a merchant and persist its catalog exclusion", merchants.remove
     )
-    remove.add_argument("merchant_id", type=positive)
+    remove.add_argument("merchant_id")
     batch = action(
         shops,
         "import-file",
@@ -125,12 +111,10 @@ def register_media(commands):
             "handles", nargs="*", help="Restrict to these @username handles; defaults to all"
         )
     for command in (status, sync):
-        command.add_argument("--minimum-post-images", type=nonnegative, default=MINIMUM_POST_IMAGES)
+        command.add_argument("--minimum-post-images", default=MINIMUM_POST_IMAGES)
     sync.add_argument("--only-missing", action="store_true")
     sync.add_argument("--avatars-only", action="store_true")
-    sync.add_argument(
-        "--limit", type=nonnegative, default=0, help="Maximum profiles to process; 0 means all"
-    )
+    sync.add_argument("--limit", default=0, help="Maximum profiles to process; 0 means all")
 
 
 def register_search(commands):
@@ -138,7 +122,7 @@ def register_search(commands):
     reindex = action(
         index, "reindex", "Refresh search metadata, documents and embeddings", search.reindex
     )
-    reindex.add_argument("--batch-size", type=positive, default=100)
+    reindex.add_argument("--batch-size", default=100)
     reindex.add_argument(
         "--all", action="store_true", help="Embed all pending documents in committed batches"
     )
@@ -154,7 +138,7 @@ def register_search(commands):
         "Apply a JSON description and search terms with provenance",
         search.enrich,
     )
-    enrich.add_argument("merchant_id", type=positive)
+    enrich.add_argument("merchant_id")
     enrich.add_argument("source", type=Path)
 
 

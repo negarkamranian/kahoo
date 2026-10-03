@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 
 from backend.models.analytics import AdminMetrics, MetricsPeriod
 from backend.models.merchants import AdminMerchantQuery
-
 from backend.search.metadata import sync_search_metadata
 from backend.serialization import json_default
 from backend.server.http import admin_mutation_authorized

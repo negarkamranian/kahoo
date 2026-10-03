@@ -1,8 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
 from urllib.request import Request, urlopen
 
-from backend.models.media import ImageCacheResult, InstagramImage, InstagramPost, InstagramProfile
+from backend.models.media import ImageCacheResult, InstagramProfile, PostImage
 
 MAX_IMAGE_BYTES = 8_000_000
 IMAGE_DOWNLOAD_WORKERS = 6
@@ -70,16 +69,10 @@ def ensure_gallery_images(db, handles=None) -> ImageCacheResult:
     )
 
 
-@dataclass
-class PostImage:
-    post: InstagramPost
-    image: InstagramImage
-
-
 def replace_profile_posts(db, merchant_id: int, profile: InstagramProfile) -> int:
-    candidates = [PostImage(post, image) for post in profile.posts for image in post.media]
-    if not candidates:
-        return 0
+    candidates = [
+        PostImage(post=post, image=image) for post in profile.posts for image in post.media
+    ]
 
     workers = min(IMAGE_DOWNLOAD_WORKERS, len(candidates))
     with ThreadPoolExecutor(max_workers=workers) as executor:

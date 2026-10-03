@@ -8,13 +8,7 @@ from backend.search.normalization import normalize_search
 VECTOR_DIMENSIONS = 1024
 
 
-def embedding_enabled():
-    return bool(settings.embedding_api_url)
-
-
 def embed_texts(texts):
-    if not texts:
-        return []
     endpoint = settings.embedding_api_url
     model = settings.embedding_model
     payload = json.dumps({"model": model, "input": texts}).encode("utf-8")
@@ -43,8 +37,6 @@ def embed_query(query):
 
 
 def embed_pending_documents(database, limit=100):
-    if not embedding_enabled():
-        return 0
     model = settings.embedding_model
     rows = database.execute(
         """SELECT id,content FROM search_documents
@@ -65,8 +57,6 @@ def embed_pending_documents(database, limit=100):
 
 
 def semantic_merchant_scores(database, query, limit=50):
-    if not query or not embedding_enabled():
-        return {}
     vector = vector_literal(embed_query(query))
     return {
         row["merchant_id"]: float(row["score"])

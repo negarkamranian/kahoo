@@ -55,8 +55,12 @@ backend/
     search.py          Search, enrichment, benchmarks, and command reports
     instagram/         Instagram wire schemas: common, embed, and Meta
   serialization.py     JSON serialization at HTTP and CLI output boundaries
-  instagram/           Instagram profile adapters and embed parsing
-  instagram_urls.py    Shared Instagram URL construction
+  config.py            Environment loading and shared typed settings
+  instagram/           Instagram profile sources, embed parsing, and URL helpers
+    service.py         Select the configured profile source
+    embed.py           Public embed parsing
+    meta.py            Meta Business Discovery requests
+    urls.py            Canonical Instagram URLs
 public/                HTML pages and browser CSS/JavaScript
   assets/css/
   assets/js/
@@ -182,6 +186,9 @@ make check
 pre-commit install
 python -m backend --help
 ```
+
+Make targets use `.venv/bin/python` by default, so they work without activating
+the virtual environment. Use `PYTHON=python` to select another interpreter explicitly.
 
 `make check` runs Ruff lint/import/complexity checks, Pylint, ESLint, Ruff and
 Prettier formatting checks, and Python and JavaScript tests. `make format` applies

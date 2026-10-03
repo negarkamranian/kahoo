@@ -5,9 +5,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from backend.models.catalog import CatalogMerchant, MerchantCatalog
 from pydantic import ValidationError
 
+from backend.models.catalog import CatalogMerchant, MerchantCatalog
 from backend.services.catalog import (
     catalog_records,
     load_merchant_catalog,

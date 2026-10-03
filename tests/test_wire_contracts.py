@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from pydantic import ValidationError
 
-from backend.instagram import extract_embed_posts
+from backend.instagram.embed import extract_embed_posts
 from backend.models.instagram.embed import EmbedPosts
 from backend.models.instagram.meta import MetaProfile
 from backend.models.media import InstagramImage, InstagramPost

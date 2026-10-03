@@ -5,11 +5,9 @@ from unittest.mock import patch
 
 from pydantic import ValidationError
 
-from backend.instagram import (
-    business_discovery_profile,
-    instagram_shortcode,
-    public_embed_profile,
-)
+from backend.instagram.embed import public_embed_profile
+from backend.instagram.meta import business_discovery_profile
+from backend.instagram.urls import instagram_shortcode
 
 
 def embed_html(profile, posts=None):
