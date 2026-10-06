@@ -1,0 +1,184 @@
+{
+  "version": 3,
+  "notes": "Reviewed Persian commerce relevance set covering categories, navigational queries, spelling variants, multi-concept queries, and long-tail products.",
+  "queries": [
+    {
+      "query": "قاب موبایل",
+      "relevance": {
+        "@casecenters": 1,
+        "@royal_coverr": 1,
+        "@ghab_center": 1,
+        "@tisacase": 1,
+        "@coverto.ir": 1
+      }
+    },
+    {
+      "query": "کاور گوشی",
+      "relevance": {
+        "@casecenters": 1,
+        "@royal_coverr": 1,
+        "@ghab_center": 1,
+        "@tisacase": 1,
+        "@coverto.ir": 1
+      }
+    },
+    {
+      "query": "لوازم آرایشی",
+      "relevance": {
+        "@khanomi.shop": 1,
+        "@nili.plus": 1,
+        "@nelsa.shop1": 1,
+        "@riiha_ir": 1,
+        "@lafemmegallery_": 1
+      }
+    },
+    {
+      "query": "عطر و ادکلن",
+      "relevance": {
+        "@riiha_ir": 1
+      }
+    },
+    {
+      "query": "کفش زنانه",
+      "relevance": {
+        "@liyohappy": 1,
+        "@aldo.gallery": 1,
+        "@lomana_shoes": 1,
+        "@avishan.shoes.bag": 1
+      }
+    },
+    {
+      "query": "کتونی",
+      "relevance": {
+        "@liyohappy": 1,
+        "@aldo.gallery": 1,
+        "@lomana_shoes": 1,
+        "@avishan.shoes.bag": 1
+      }
+    },
+    {
+      "query": "لباس زنانه",
+      "relevance": {
+        "@nil_shopp_": 1,
+        "@conolabel": 1,
+        "@womshik": 1,
+        "@coral_wear": 1,
+        "@niik_women": 1
+      }
+    },
+    {
+      "query": "اسباب بازی",
+      "relevance": {
+        "@toyzzshop": 1,
+        "@hyper.toy": 1,
+        "@home.bazi": 1
+      }
+    },
+    {
+      "query": "پت شاپ",
+      "relevance": {
+        "@petkharid": 1
+      }
+    },
+    {
+      "query": "کتاب",
+      "relevance": {
+        "@iranketab.ir": 1
+      }
+    },
+    {
+      "query": "موبایل",
+      "relevance": {
+        "@nazari_mobile": 1,
+        "@alodigital": 1,
+        "@digikalacom": 1
+      }
+    },
+    {
+      "query": "لوازم خانه",
+      "relevance": {
+        "@dominokala": 1,
+        "@hihome_opal": 1,
+        "@forough_homegallery": 1,
+        "@homekala_20": 1
+      }
+    },
+    {
+      "query": "مبایل",
+      "relevance": {
+        "@nazari_mobile": 1,
+        "@alodigital": 1,
+        "@digikalacom": 1
+      }
+    },
+    {
+      "query": "لوازم ارایش",
+      "relevance": {
+        "@khanomi.shop": 1,
+        "@nili.plus": 1,
+        "@nelsa.shop1": 1,
+        "@riiha_ir": 1
+      }
+    },
+    {
+      "query": "کفش اسپرت زنانه",
+      "relevance": {
+        "@liyohappy": 1,
+        "@aldo.gallery": 1,
+        "@lomana_shoes": 1,
+        "@avishan.shoes.bag": 1
+      }
+    },
+    {
+      "query": "مانتو زنانه",
+      "relevance": {
+        "@ballentine_gallery": 1,
+        "@asenwear": 1,
+        "@nil_shopp_": 1,
+        "@niik_women": 1
+      }
+    },
+    {
+      "query": "شال و روسری",
+      "relevance": {
+        "@ballentine_gallery": 1
+      }
+    },
+    {
+      "query": "ظروف آشپزخانه",
+      "relevance": {
+        "@forough_homegallery": 1,
+        "@hihome_opal": 1,
+        "@homekala_20": 1
+      }
+    },
+    {
+      "query": "نوشت افزار",
+      "relevance": {
+        "@koocheh_tahrir": 1,
+        "@favstor": 1,
+        "@tahrir._shopp": 1,
+        "@fantasy_markett": 1
+      }
+    },
+    {
+      "query": "غذای گربه",
+      "relevance": {
+        "@petkharid": 1
+      }
+    },
+    {
+      "query": "دیجی استایل",
+      "relevance": {
+        "@digistylecom": 3
+      }
+    },
+    {
+      "query": "نظم دهنده خانه",
+      "relevance": {
+        "@luxe_organizer": 3,
+        "@hihome_opal": 1
+      }
+    }
+  ]
+}
