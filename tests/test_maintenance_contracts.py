@@ -3,14 +3,15 @@ import unittest
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from pydantic import ValidationError
 
 from backend.cli.catalog import build
-from backend.cli.search import evaluate
+from backend.cli.search import evaluate, reindex
 from backend.models.categories import GpcPublication
 from backend.models.merchants import Merchant
+from backend.search.embeddings import embed_pending_documents, semantic_merchant_scores
 
 
 class MaintenanceContractTests(unittest.TestCase):
@@ -94,3 +95,35 @@ class MaintenanceContractTests(unittest.TestCase):
         self.assertEqual(1, report.success_at_5)
         self.assertEqual(1, report.ndcg_at_10)
         self.assertEqual(["@shop"], report.results[0].top_10)
+
+    @patch.multiple("backend.search.embeddings.settings", embedding_api_url="")
+    @patch("backend.search.embeddings.embed_texts")
+    def test_disabled_embeddings_leave_lexical_search_available(self, embed):
+        database = Mock()
+        self.assertEqual(0, embed_pending_documents(database))
+        self.assertEqual({}, semantic_merchant_scores(database, "shop"))
+        database.execute.assert_not_called()
+        embed.assert_not_called()
+
+    @patch.multiple(
+        "backend.search.embeddings.settings", embedding_api_url="https://example.test/embeddings"
+    )
+    @patch("backend.search.embeddings.embed_texts")
+    def test_empty_embedding_batch_does_not_call_the_provider(self, embed):
+        database = Mock()
+        database.execute.return_value.fetchall.return_value = []
+        self.assertEqual(0, embed_pending_documents(database))
+        embed.assert_not_called()
+
+    @patch.multiple("backend.search.embeddings.settings", embedding_api_url="")
+    @patch("backend.search.embeddings.embed_texts")
+    @patch("backend.cli.search.sync_search_index", return_value=7)
+    @patch("backend.cli.search.connect")
+    def test_reindex_commits_lexical_documents_without_an_embedding_provider(
+        self, connect, sync, embed
+    ):
+        result = reindex(Namespace(batch_size=100, all=True))
+        self.assertEqual(7, result.pending_documents)
+        self.assertEqual(0, result.embedded)
+        sync.assert_called_once_with(connect.return_value.__enter__.return_value)
+        embed.assert_not_called()

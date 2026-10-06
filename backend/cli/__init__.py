@@ -20,6 +20,23 @@ def merchant_page_size(value):
         raise argparse.ArgumentTypeError("must be between 1 and 100") from error
 
 
+def nonnegative_integer(value):
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("must be an integer at least 0") from error
+    if number < 0:
+        raise argparse.ArgumentTypeError("must be an integer at least 0")
+    return number
+
+
+def positive_integer(value):
+    number = nonnegative_integer(value)
+    if number == 0:
+        raise argparse.ArgumentTypeError("must be an integer at least 1")
+    return number
+
+
 def action(parent, name, help_text, handler, needs_db=True):
     command = parent.add_parser(name, help=help_text, description=help_text)
     command.set_defaults(handler=handler, needs_db=needs_db)
@@ -48,7 +65,7 @@ def register_merchants(commands):
     listing = action(shops, "list", "List stored merchants", merchants.list_merchants)
     listing.add_argument("--query", default="")
     listing.add_argument("--limit", type=merchant_page_size, default=merchant_defaults.limit)
-    listing.add_argument("--offset", default=merchant_defaults.offset)
+    listing.add_argument("--offset", type=nonnegative_integer, default=merchant_defaults.offset)
     add = action(shops, "add", "Import a profile; new merchants require --category", merchants.add)
     add.add_argument("identifier", help="Instagram handle in @username format")
     add.add_argument(
@@ -109,10 +126,17 @@ def register_media(commands):
             "handles", nargs="*", help="Restrict to these @username handles; defaults to all"
         )
     for command in (status, sync):
-        command.add_argument("--minimum-post-images", default=MINIMUM_POST_IMAGES)
+        command.add_argument(
+            "--minimum-post-images", type=positive_integer, default=MINIMUM_POST_IMAGES
+        )
     sync.add_argument("--only-missing", action="store_true")
     sync.add_argument("--avatars-only", action="store_true")
-    sync.add_argument("--limit", default=0, help="Maximum profiles to process; 0 means all")
+    sync.add_argument(
+        "--limit",
+        type=nonnegative_integer,
+        default=0,
+        help="Maximum profiles to process; 0 means all",
+    )
 
 
 def register_search(commands):
@@ -120,7 +144,7 @@ def register_search(commands):
     reindex = action(
         index, "reindex", "Refresh search metadata, documents and embeddings", search.reindex
     )
-    reindex.add_argument("--batch-size", default=100)
+    reindex.add_argument("--batch-size", type=positive_integer, default=100)
     reindex.add_argument(
         "--all", action="store_true", help="Embed all pending documents in committed batches"
     )
@@ -130,14 +154,25 @@ def register_search(commands):
     evaluate.add_argument(
         "--benchmark", type=Path, default=PROJECT_ROOT / "data/search_benchmarks.json"
     )
+    register_enrichment(index)
+
+
+def register_enrichment(index):
     enrich = action(
         index,
         "enrich",
         "Apply a JSON description and search terms with provenance",
         search.enrich,
     )
-    enrich.add_argument("merchant_id")
+    enrich.add_argument("merchant_id", type=positive_integer)
     enrich.add_argument("source", type=Path)
+    batch = action(
+        index,
+        "enrich-file",
+        "Atomically apply a researched enrichment batch matched by Instagram handle",
+        search.enrich_file,
+    )
+    batch.add_argument("source", type=Path)
 
 
 def parser():

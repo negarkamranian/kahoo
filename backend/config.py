@@ -1,10 +1,10 @@
 """Read environment configuration once at startup."""
 
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -14,17 +14,16 @@ def load_environment():
     load_dotenv(PROJECT_ROOT / ".env.example", override=False)
 
 
-@dataclass
-class Settings:
-    database_url: str = field(repr=False)
+class Settings(BaseModel):
+    database_url: str = Field(repr=False)
     host: str
     port: int
-    admin_token: str = field(repr=False)
+    admin_token: str = Field(repr=False)
     meta_graph_version: str
     meta_ig_user_id: str
-    meta_access_token: str = field(repr=False)
+    meta_access_token: str = Field(repr=False)
     embedding_api_url: str
-    embedding_api_key: str = field(repr=False)
+    embedding_api_key: str = Field(repr=False)
     embedding_model: str
 
     @classmethod

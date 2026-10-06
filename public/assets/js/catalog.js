@@ -2,9 +2,9 @@ import {
   api,
   escapeHtml,
   faNumber,
-  saveItems,
-  storedItems,
-  STORAGE_KEYS,
+  initializeSession,
+  isSaved,
+  setSaved,
 } from "./shared.js";
 
 const treeElement = document.querySelector("#category-tree"),
@@ -20,7 +20,8 @@ const treeElement = document.querySelector("#category-tree"),
   categoryMenu = document.querySelector("#category-menu-trigger"),
   categoryMenuLabel = document.querySelector("#category-menu-label"),
   categoryPopover = document.querySelector("#category-popover");
-let categoryTree = [],
+let renderingTree = false,
+  categoryTree = [],
   shops = [],
   selectedCategory = null,
   selectedLabel = "",
@@ -28,20 +29,27 @@ let categoryTree = [],
 const expanded = new Set();
 let reelStops = [];
 const finePointer = matchMedia("(hover: hover) and (pointer: fine)");
-const loaderIcon =
-  '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg>';
 const loaderMarkup = (label) =>
-  `<div class="kahoo-loader catalog-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true">${loaderIcon.repeat(3)}</div><span>${label}</span></div>`;
-const sessionId =
-  localStorage.getItem(STORAGE_KEYS.session) || crypto.randomUUID();
-localStorage.setItem(STORAGE_KEYS.session, sessionId);
+  `<div class="kahoo-loader catalog-loader" role="status"><span>${label}</span></div>`;
 
 function track(event_type, details = {}) {
-  api("/api/analytics/event", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ event_type, ...details }),
-  }).catch(() => {});
+  initializeSession()
+    .then(() =>
+      api("/api/analytics/event", {
+        method: "POST",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_type,
+          query: "",
+          category_code: "",
+          merchant_id: 0,
+          result_count: 0,
+          ...details,
+        }),
+      }),
+    )
+    .catch(() => {});
 }
 
 function collapseBranch(node) {
@@ -60,18 +68,46 @@ function queueBranch(node, siblings) {
   if (node.children.length && !expanded.has(node.code))
     branchOpenTimer = setTimeout(() => revealBranch(node, siblings), 260);
 }
+
+function treeToggle(node, siblings) {
+  const toggle = document.createElement(
+    node.children.length ? "button" : "span",
+  );
+  toggle.className = `tree-toggle${node.children.length ? "" : " empty"}`;
+  if (!node.children.length) {
+    toggle.setAttribute("aria-hidden", "true");
+    return toggle;
+  }
+  toggle.type = "button";
+  toggle.dataset.branch = node.code;
+  toggle.setAttribute("aria-label", `زیرگروه‌های ${node.label_fa}`);
+  toggle.setAttribute("aria-expanded", String(expanded.has(node.code)));
+  toggle.addEventListener("click", () => {
+    clearTimeout(branchOpenTimer);
+    if (expanded.has(node.code)) {
+      collapseBranch(node);
+      renderTree();
+    } else revealBranch(node, siblings);
+    [...treeElement.querySelectorAll("[data-branch]")]
+      .find((button) => button.dataset.branch === node.code)
+      ?.focus();
+  });
+  return toggle;
+}
+
 function treeNode(node, siblings) {
   const item = document.createElement("li");
   item.className = `tree-item level-${node.level}`;
   item.setAttribute("role", "treeitem");
   item.setAttribute("aria-selected", node.code === selectedCategory);
+  if (node.children.length)
+    item.setAttribute("aria-expanded", String(expanded.has(node.code)));
   const row = document.createElement("div");
   row.className = `tree-node${node.code === selectedCategory ? " selected" : ""}${expanded.has(node.code) ? " active" : ""}`;
-  const toggle = document.createElement("span");
-  toggle.className = `tree-toggle${node.children.length ? "" : " empty"}${expanded.has(node.code) ? " expanded" : ""}`;
-  toggle.setAttribute("aria-hidden", "true");
+  const toggle = treeToggle(node, siblings);
   const select = document.createElement("button");
   select.className = "tree-select";
+  select.dataset.category = node.code;
   select.type = "button";
   select.innerHTML = `<span>${escapeHtml(node.label_fa)}</span>`;
   select.title = `GS1 ${node.code}`;
@@ -85,11 +121,7 @@ function treeNode(node, siblings) {
       revealBranch(node, siblings);
       return;
     }
-    selectedCategory = node.code;
-    selectedLabel = node.label_fa;
-    renderTree();
-    closeCategoryMenu();
-    loadShops();
+    selectCategory(node);
   });
   row.addEventListener("pointerenter", (event) => {
     if (event.pointerType === "mouse") queueBranch(node, siblings);
@@ -100,6 +132,10 @@ function treeNode(node, siblings) {
 }
 
 function renderTree() {
+  const focused = document.activeElement,
+    focusKey = focused.dataset.branch ? "branch" : "category",
+    focusValue = focused.dataset[focusKey];
+  renderingTree = true;
   treeElement.innerHTML = "";
   let siblings = categoryTree,
     depth = 0;
@@ -122,13 +158,23 @@ function renderTree() {
   categoryMenuLabel.textContent = selectedCategory
     ? selectedLabel
     : "دسته‌بندی‌ها";
+  if (focusValue)
+    [...treeElement.querySelectorAll(`[data-${focusKey}]`)]
+      .find((button) => button.dataset[focusKey] === focusValue)
+      ?.focus();
+  renderingTree = false;
 }
 function openCategoryMenu() {
+  categoryPopover.style.setProperty(
+    "--category-top",
+    `${Math.round(categoryDropdown.getBoundingClientRect().bottom) + 1}px`,
+  );
   categoryPopover.hidden = false;
   categoryMenu.setAttribute("aria-expanded", "true");
 }
 function closeCategoryMenu() {
   clearTimeout(branchOpenTimer);
+  if (categoryPopover.contains(document.activeElement)) categoryMenu.focus();
   categoryPopover.hidden = true;
   categoryMenu.setAttribute("aria-expanded", "false");
 }
@@ -149,26 +195,26 @@ categoryDropdown.addEventListener("pointerleave", (event) => {
 treeElement.addEventListener("pointerleave", () =>
   clearTimeout(branchOpenTimer),
 );
-categoryDropdown.addEventListener("focusin", () => {
+categoryDropdown.addEventListener("focusin", (event) => {
   clearTimeout(categoryOpenTimer);
   clearTimeout(categoryCloseTimer);
-  openCategoryMenu();
+  if (event.target !== categoryMenu) openCategoryMenu();
 });
 categoryDropdown.addEventListener("focusout", (event) => {
-  if (!categoryDropdown.contains(event.relatedTarget)) closeCategoryMenu();
+  if (!renderingTree && !categoryDropdown.contains(event.relatedTarget))
+    closeCategoryMenu();
 });
 categoryMenu.addEventListener("click", (event) => {
   if (finePointer.matches && event.detail > 0) return;
   categoryPopover.hidden ? openCategoryMenu() : closeCategoryMenu();
 });
 document.addEventListener("click", (event) => {
-  if (!event.target.closest("#categories")) closeCategoryMenu();
+  if (!event.composedPath().includes(categoryDropdown)) closeCategoryMenu();
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeCategoryMenu();
 });
-function configureShopNavigation(article, shop, index) {
-  article.style.animationDelay = `${index * 35}ms`;
+function configureShopNavigation(article, shop) {
   article.tabIndex = 0;
   article.setAttribute("role", "button");
   article.setAttribute("aria-label", `نمایش اطلاعات ${shop.name}`);
@@ -209,6 +255,13 @@ function populateShopCard(card, shop) {
     reason.hidden = false;
   }
   card.querySelector(".location").textContent = shop.city;
+  card.querySelector(".shop-category").textContent =
+    shop.category_label || categoryLabel(shop.category_code);
+  const activity = card.querySelector(".shop-activity");
+  if (shop.followers_count != null) {
+    activity.textContent = `${faNumber(shop.followers_count)} دنبال‌کننده در اینستاگرام`;
+    activity.hidden = false;
+  }
 }
 
 function configureShopVisit(card, shop) {
@@ -226,7 +279,7 @@ function configureShopVisit(card, shop) {
 
 function shopCard(shop, index) {
   const card = template.content.cloneNode(true);
-  configureShopNavigation(card.querySelector("article"), shop, index);
+  configureShopNavigation(card.querySelector("article"), shop);
   appendShopAvatar(card.querySelector(".shop-avatar"), shop);
   populateShopCard(card, shop);
   configureShopVisit(card, shop);
@@ -241,9 +294,158 @@ function renderShops() {
   emptyState.hidden = shops.length > 0;
   shops.forEach((shop, index) => shopGrid.append(shopCard(shop, index)));
   resultTitle.textContent = query
-    ? `نتایج «${searchInput.value.trim()}»`
-    : selectedLabel || "فروشگاه‌ها";
+    ? `نتایج «${query}»`
+    : selectedLabel || "همه فروشگاه‌ها";
+  document.querySelector("#result-count").textContent =
+    `${faNumber(shops.length)} فروشگاه`;
+  renderDiscovery();
 }
+
+function selectCategory(node) {
+  const fromMenu = categoryPopover.contains(document.activeElement);
+  selectedCategory = node.code;
+  selectedLabel = node.label_fa;
+  renderTree();
+  closeCategoryMenu();
+  if (fromMenu) categoryMenu.focus();
+  loadShops();
+}
+
+function browseCategories() {
+  return categoryTree.filter((node) => node.count > 0).slice(0, 6);
+}
+
+const browseCategoryLabels = Object.freeze({
+  "هنر، صنایع دستی و خیاطی": "هنر و دست‌سازها",
+  "زیبایی و بهداشت شخصی": "زیبایی و بهداشت",
+  "خانه، مبلمان و دکور": "خانه و دکور",
+  "آشپزخانه و پذیرایی": "آشپزخانه",
+  "لوازم‌التحریر و اداری": "لوازم‌التحریر",
+  "اکسسوری شخصی": "اکسسوری",
+});
+
+function browseCategoryLabel(node) {
+  return browseCategoryLabels[node.label_fa] || node.label_fa;
+}
+
+function renderQuickCategories() {
+  const navigation = document.querySelector("#quick-categories");
+  navigation.replaceChildren();
+  browseCategories().forEach((node) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.category = node.code;
+    button.classList.toggle("active", selectedCategory === node.code);
+    button.setAttribute("aria-pressed", String(selectedCategory === node.code));
+    button.innerHTML = `<span>${escapeHtml(browseCategoryLabel(node))}</span><small>${faNumber(node.count)}</small>`;
+    button.addEventListener("click", () => selectCategory(node));
+    navigation.append(button);
+  });
+  navigation.hidden = !navigation.childElementCount;
+}
+
+function categoryContains(node, code) {
+  return (
+    node.code === code ||
+    node.children.some((child) => categoryContains(child, code))
+  );
+}
+
+function categoryLabel(code, nodes = categoryTree) {
+  for (const node of nodes) {
+    if (node.code === code) return node.label_fa;
+    const label = categoryLabel(code, node.children);
+    if (label) return label;
+  }
+  return "";
+}
+
+function shopInCategory(shop, node) {
+  return (
+    categoryContains(node, shop.category_code) ||
+    (shop.category_path || []).some(
+      (category) => category.code === node.code,
+    ) ||
+    (shop.categories || []).some((category) =>
+      categoryContains(node, category.code),
+    )
+  );
+}
+
+function discoveryCollection(node, merchants) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "discovery-collection";
+  button.dataset.category = node.code;
+  button.setAttribute("aria-label", `دیدن فروشگاه‌های ${node.label_fa}`);
+  const copy = document.createElement("span");
+  copy.className = "collection-copy";
+  copy.innerHTML = `<span class="eyebrow">در این دسته بگرد</span><span class="collection-title">${escapeHtml(browseCategoryLabel(node))}</span><span class="collection-total">${faNumber(node.count)} فروشگاه</span><span class="collection-action">دیدن فروشگاه‌ها</span>`;
+  const photos = document.createElement("span");
+  photos.className = "collection-photos";
+  const candidates = merchants
+    .map((shop) => ({ shop, post: shop.posts[0] }))
+    .concat(
+      merchants.flatMap((shop) =>
+        shop.posts.slice(1).map((post) => ({ shop, post })),
+      ),
+    );
+  const images = [
+    ...new Map(candidates.map((item) => [item.post.media_url, item])).values(),
+  ];
+  images.slice(0, 2).forEach(({ shop, post }) => {
+    const image = document.createElement("img");
+    image.src = post.media_url;
+    image.alt = `از پست‌های ${shop.name}`;
+    image.loading = "lazy";
+    photos.append(image);
+  });
+  button.append(copy, photos);
+  button.addEventListener("click", () => selectCategory(node));
+  return button;
+}
+
+function renderDiscovery() {
+  const filtered = Boolean(query || selectedCategory),
+    section = document.querySelector("#discovery"),
+    grid = document.querySelector("#discovery-grid");
+  document.querySelector(".catalog").classList.toggle("is-filtered", filtered);
+  document.querySelector("#browse-intro").hidden = filtered;
+  document.querySelector("#clear-filters").hidden = !filtered;
+  document.querySelector("#result-context").textContent =
+    selectedLabel || "فروشگاه‌ها و آخرین پست‌ها";
+  renderQuickCategories();
+  grid.replaceChildren();
+  if (!filtered) {
+    browseCategories().forEach((node) => {
+      const merchants = shops.filter(
+        (shop) => shopInCategory(shop, node) && shop.posts.length,
+      );
+      if (merchants.length && grid.childElementCount < 2)
+        grid.append(discoveryCollection(node, merchants));
+    });
+  }
+  section.hidden = !grid.childElementCount;
+}
+
+function resetFilters() {
+  selectedCategory = null;
+  selectedLabel = "";
+  query = "";
+  searchInput.value = "";
+  clearTimeout(searchTimer);
+  clearTimeout(suggestionTimer);
+  suggestionRequest += 1;
+  suggestionItems = [];
+  closeSuggestions();
+  renderTree();
+  closeCategoryMenu();
+  loadShops();
+}
+
+document
+  .querySelector("#clear-filters")
+  .addEventListener("click", resetFilters);
 
 const REEL_VISIBLE_POSTS = 3;
 const REEL_ANIMATION_MS = 900;
@@ -273,6 +475,10 @@ class PostReel {
   constructor(posts, shop, index) {
     this.posts = posts;
     this.length = shop.posts.length;
+    posts.style.setProperty(
+      "--reel-visible",
+      Math.min(REEL_VISIBLE_POSTS, this.length),
+    );
     this.interval = REEL_INTERVAL_MS + index * REEL_STAGGER_MS;
     this.position = 0;
     this.timer = null;
@@ -362,6 +568,12 @@ class PostReel {
 }
 
 function createPostReel(posts, shop, index) {
+  if (!shop.posts.length) {
+    posts.classList.add("no-posts");
+    posts.innerHTML =
+      "<span>تصویری از پست‌ها در دسترس نیست</span><small>دیدن اطلاعات فروشگاه</small>";
+    return () => {};
+  }
   return new PostReel(posts, shop, index).mount();
 }
 
@@ -377,30 +589,46 @@ function paintSave(button, saved, compact = false) {
     button.title = label;
     return;
   }
-  button.textContent = compact
-    ? saved
-      ? "♥"
-      : "♡"
-    : saved
-      ? "ذخیره شده"
-      : "ذخیره";
+  if (compact) {
+    button.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>';
+  } else {
+    button.textContent = saved ? "ذخیره شده" : "ذخیره";
+  }
 }
-function toggleSaved(key, item, button, compact = false) {
-  const items = storedItems(key),
-    index = items.findIndex((saved) => saved.key === item.key);
-  if (index >= 0) items.splice(index, 1);
-  else items.unshift(item);
-  saveItems(key, items);
-  paintSave(button, index < 0, compact);
+function saveStatus(message) {
+  let status = document.querySelector("#save-status");
+  if (!status) {
+    status = document.createElement("p");
+    status.id = "save-status";
+    status.setAttribute("role", "status");
+    document.querySelector("#detail-posts").before(status);
+  }
+  status.textContent = message;
+}
+async function toggleSaved(kind, item, button, compact = false) {
+  button.disabled = true;
+  saveStatus("");
+  try {
+    await initializeSession();
+    await setSaved(kind, item, !isSaved(kind, item));
+    paintSave(button, isSaved(kind, item), compact);
+  } catch {
+    saveStatus("ذخیره‌ها به‌روز نشدند. دوباره تلاش کن.");
+  } finally {
+    button.disabled = false;
+  }
 }
 function merchantCategorySummary(merchant) {
-  const categoryLabels = merchant.categories.map((category) => category.label),
+  const categoryLabels = (merchant.categories || []).map(
+      (category) => category.label,
+    ),
     categorySummary = categoryLabels.length
       ? categoryLabels.slice(0, 3).join("، ") +
         (categoryLabels.length > 3
           ? ` +${faNumber(categoryLabels.length - 3)} دسته`
           : "")
-      : merchant.category_label;
+      : merchant.category_label || categoryLabel(merchant.category_code);
   return categorySummary;
 }
 
@@ -421,8 +649,12 @@ function renderMerchantAvatar(merchant) {
 function renderMerchantDetails(merchant) {
   document.querySelector("#detail-name").textContent = merchant.name;
   document.querySelector("#detail-handle").textContent = merchant.handle;
-  document.querySelector("#detail-meta").textContent =
-    `${merchantCategorySummary(merchant)} · ${merchant.city}`;
+  document.querySelector("#detail-meta").textContent = [
+    merchantCategorySummary(merchant),
+    merchant.city,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   document.querySelector("#detail-bio").textContent =
     merchant.biography || "بیوی اینستاگرام در دسترس نیست";
   const instagram = document.querySelector("#detail-instagram");
@@ -433,6 +665,25 @@ function renderMerchantDetails(merchant) {
     merchant.metrics_updated_at
       ? `به‌روزرسانی ${new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" }).format(new Date(merchant.metrics_updated_at))}`
       : "اطلاعات محدود";
+}
+
+function renderMerchantFacts(merchant) {
+  const fields = [
+    ["followers", merchant.followers_count],
+    ["following", merchant.following_count],
+    ["former-names", merchant.former_username_count],
+  ];
+  fields.forEach(([name, value]) => {
+    document.querySelector(`#detail-${name}`).textContent =
+      value == null ? "در دسترس نیست" : faNumber(value);
+  });
+  document.querySelector("#detail-created").textContent =
+    merchant.account_created_at
+      ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" }).format(
+          new Date(merchant.account_created_at),
+        )
+      : "در دسترس نیست";
+  document.querySelector(".merchant-facts").open = false;
 }
 
 function configureMerchantSave(merchant) {
@@ -447,14 +698,9 @@ function configureMerchantSave(merchant) {
       instagram_url: merchant.instagram_url,
       city: merchant.city,
     };
-  paintSave(
-    merchantSave,
-    storedItems(STORAGE_KEYS.merchants).some(
-      (item) => item.key === merchantItem.key,
-    ),
-  );
+  paintSave(merchantSave, isSaved("merchants", merchantItem));
   merchantSave.onclick = () =>
-    toggleSaved(STORAGE_KEYS.merchants, merchantItem, merchantSave);
+    toggleSaved("merchants", merchantItem, merchantSave);
 }
 
 function postImages(merchant, media, index) {
@@ -525,14 +771,8 @@ function postSaveButton(merchant, post) {
   save.type = "button";
   save.className = "post-save";
   save.setAttribute("aria-label", "ذخیره پست");
-  paintSave(
-    save,
-    storedItems(STORAGE_KEYS.posts).some((saved) => saved.key === item.key),
-    true,
-  );
-  save.addEventListener("click", () =>
-    toggleSaved(STORAGE_KEYS.posts, item, save, true),
-  );
+  paintSave(save, isSaved("posts", item), true);
+  save.addEventListener("click", () => toggleSaved("posts", item, save, true));
   return save;
 }
 
@@ -548,6 +788,13 @@ function renderMerchantPosts(merchant) {
   posts.replaceChildren(
     ...merchant.posts.map((post, index) => postTile(merchant, post, index)),
   );
+  if (!merchant.posts.length) {
+    const message = document.createElement("p");
+    message.className = "profile-empty";
+    message.textContent =
+      "پستی در دسترس نیست. پست‌های فروشگاه را در اینستاگرام ببین.";
+    posts.append(message);
+  }
 }
 
 async function openMerchantProfile(merchantId) {
@@ -556,9 +803,14 @@ async function openMerchantProfile(merchantId) {
   merchantDialogContent.hidden = true;
   merchantDialog.showModal();
   try {
-    const merchant = await api(`/api/merchants/${merchantId}`);
+    const [merchant] = await Promise.all([
+      api(`/api/merchants/${merchantId}`),
+      initializeSession().catch(() => null),
+    ]);
+    saveStatus("");
     renderMerchantAvatar(merchant);
     renderMerchantDetails(merchant);
+    renderMerchantFacts(merchant);
     configureMerchantSave(merchant);
     renderMerchantPosts(merchant);
     merchantDialogLoading.hidden = true;
@@ -599,6 +851,9 @@ async function loadShops() {
   if (selectedCategory) params.set("category", selectedCategory);
   if (query) params.set("q", query);
   emptyState.hidden = true;
+  emptyState.querySelector("h3").textContent = "فروشگاهی پیدا نشد";
+  emptyState.querySelector("p").textContent =
+    "نام محصول یا عبارت دیگری را امتحان کن.";
   const loadingTimer = setTimeout(() => {
     if (request === shopRequest)
       shopGrid.innerHTML = loaderMarkup("در حال دریافت فروشگاه‌ها");
@@ -609,18 +864,38 @@ async function loadShops() {
     shops = nextShops;
     renderShops();
     if (!shops.length) loadEmptySuggestions();
+  } catch (error) {
+    if (request === shopRequest) showCatalogError(error);
   } finally {
     clearTimeout(loadingTimer);
   }
 }
+function showCatalogError(error) {
+  reelStops.forEach((stop) => stop());
+  reelStops = [];
+  shopGrid.replaceChildren();
+  document.querySelector("#discovery").hidden = true;
+  document.querySelector("#result-count").textContent = "";
+  resultTitle.textContent = "فروشگاه‌ها دریافت نشد";
+  emptyState.hidden = false;
+  emptyState.querySelector("h3").textContent = "اتصال برقرار نشد";
+  emptyState.querySelector("p").textContent = "دوباره تلاش کن.";
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.id = "retry-shops";
+  retry.textContent = "تلاش دوباره";
+  retry.addEventListener("click", bootstrap);
+  emptySuggestions.replaceChildren(retry);
+  console.error(error);
+}
+
 async function bootstrap() {
   try {
     categoryTree = await api("/api/categories");
     renderTree();
     await loadShops();
   } catch (error) {
-    resultTitle.textContent = "اتصال به پایگاه داده برقرار نشد";
-    console.error(error);
+    showCatalogError(error);
   }
 }
 
@@ -733,12 +1008,18 @@ function showConnectState(name) {
     state.hidden = state.dataset.connectState !== name;
   });
 }
-document.querySelectorAll("[data-open-connect]").forEach((button) =>
-  button.addEventListener("click", () => {
-    showConnectState(imported ? "done" : "start");
-    connectDialog.showModal();
-  }),
-);
+function openConnectDialog() {
+  showConnectState(imported ? "done" : "start");
+  if (!connectDialog.open) connectDialog.showModal();
+}
+document
+  .querySelectorAll("[data-open-connect]")
+  .forEach((button) => button.addEventListener("click", openConnectDialog));
+function followListingLink() {
+  if (location.hash === "#connect") openConnectDialog();
+}
+window.addEventListener("hashchange", followListingLink);
+followListingLink();
 document
   .querySelector("#connect-dialog .dialog-close")
   .addEventListener("click", () => connectDialog.close());
@@ -789,10 +1070,13 @@ let loginPhone = "",
   challengeId = "";
 const latinDigits = (value) =>
   value.replace(/[۰-۹]/g, (digit) => "۰۱۲۳۴۵۶۷۸۹".indexOf(digit));
-if (localStorage.getItem(STORAGE_KEYS.user)) {
-  loginTrigger.textContent = "حساب من";
-  loginTrigger.classList.add("logged-in");
-}
+initializeSession()
+  .then(({ user }) => {
+    if (!user) return;
+    loginTrigger.textContent = "حساب من";
+    loginTrigger.classList.add("logged-in");
+  })
+  .catch(() => {});
 loginTrigger.addEventListener("click", () => {
   if (loginTrigger.classList.contains("logged-in")) {
     location.href = "/saved.html";
@@ -815,11 +1099,10 @@ phoneForm.addEventListener("submit", async (event) => {
       "شماره موبایل را درست وارد کن";
     return;
   }
-  const response = await api("/api/login/request", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone: loginPhone }),
+  const response = await submitLogin(phoneForm, "request", {
+    phone: loginPhone,
   });
+  if (!response) return;
   challengeId = response.challenge_id;
   document.querySelector("#phone-error").textContent = "";
   document.querySelector("#phone-preview").textContent =
@@ -840,22 +1123,37 @@ otpForm.addEventListener("submit", async (event) => {
     document.querySelector("#otp-error").textContent = "کد باید ۵ رقم باشد";
     return;
   }
-  const response = await api("/api/login/verify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      phone: loginPhone,
-      code,
-      challenge_id: challengeId,
-    }),
+  const response = await submitLogin(otpForm, "verify", {
+    phone: loginPhone,
+    code,
+    challenge_id: challengeId,
   });
+  if (!response) return;
   track("login_completed");
-  localStorage.setItem(
-    STORAGE_KEYS.user,
-    JSON.stringify({ display_name: response.user.display_name }),
-  );
   loginDialog.close();
   location.href = "/saved.html";
 });
+
+async function submitLogin(form, step, payload) {
+  const button = form.querySelector('[type="submit"]');
+  const error = document.querySelector(
+    step === "request" ? "#phone-error" : "#otp-error",
+  );
+  button.disabled = true;
+  error.textContent = "";
+  try {
+    await initializeSession();
+    return await api(`/api/login/${step}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Kahoo-Saved": "1" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    error.textContent = "ورود انجام نشد. کمی بعد دوباره تلاش کن.";
+    return null;
+  } finally {
+    button.disabled = false;
+  }
+}
 
 bootstrap();

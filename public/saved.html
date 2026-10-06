@@ -4,39 +4,82 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="ذخیره‌شده‌های من در کاهو" />
-    <title>حساب من | کاهو</title>
+    <title>ذخیره‌شده‌ها | کاهو</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Cpath d='M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z' fill='%232e9d62'/%3E%3Cpath d='M6 4h4v2H8v5H6zM3 7h3v2H3z' fill='%2397d565'/%3E%3C/svg%3E" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Cpath d='M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z' fill='%232e9d62'/%3E%3Cpath d='M6 4h4v2H8v5H6zM3 7h3v2H3z' fill='%23247a4b'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./assets/css/foundation.css" />
     <link rel="stylesheet" href="./assets/css/saved.css" />
   </head>
   <body>
     <header class="account-header">
       <div class="header-inner">
         <a class="brand" href="/" aria-label="صفحه اصلی کاهو">
-          <svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"/><path class="light-leaf" d="M6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg>
+          <svg
+            viewBox="0 0 16 16"
+            shape-rendering="crispEdges"
+            aria-hidden="true"
+          >
+            <path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z" />
+            <path class="light-leaf" d="M6 4h4v2H8v5H6zM3 7h3v2H3z" />
+          </svg>
           <span>کاهو</span>
         </a>
-        <a class="back-link" href="/">بازگشت به فروشگاه‌ها <span>←</span></a>
-        <span class="account-label">حساب من</span>
+        <nav class="account-nav" aria-label="ناوبری اصلی">
+          <a href="/">گشتن در فروشگاه‌ها</a>
+          <a class="current" href="/saved.html" aria-current="page"
+            >ذخیره‌شده‌ها</a
+          >
+        </nav>
+        <a class="shop-owner-link" href="/#connect"
+          >برای فروشگاه‌ها <span aria-hidden="true">←</span></a
+        >
       </div>
     </header>
     <main class="saved-main">
-      <div class="page-heading"><div><h1>ذخیره‌شده‌ها</h1><p>فروشگاه‌ها و پست‌هایی که برای بعد نگه داشته‌ای.</p></div></div>
+      <div class="page-heading">
+        <div>
+          <h1>ذخیره‌شده‌ها</h1>
+          <p>فروشگاه‌ها و پست‌هایی که نگه داشته‌ای.</p>
+        </div>
+        <a class="browse-link" href="/"
+          >ادامه گشتن <span aria-hidden="true">←</span></a
+        >
+      </div>
+      <nav class="saved-index" aria-label="بخش‌های ذخیره‌شده‌ها">
+        <a href="#merchant-heading">فروشگاه‌ها</a>
+        <a href="#post-heading">پست‌ها</a>
+        <a href="#product-heading">محصولات</a>
+      </nav>
 
       <section class="saved-section" aria-labelledby="merchant-heading">
-        <div class="section-heading"><h2 id="merchant-heading">فروشگاه‌ها</h2></div>
+        <div class="section-heading">
+          <h2 id="merchant-heading">فروشگاه‌ها</h2>
+          <span id="merchant-count"></span>
+        </div>
         <div class="merchant-grid" id="saved-merchants"></div>
       </section>
 
       <section class="saved-section" aria-labelledby="post-heading">
-        <div class="section-heading"><h2 id="post-heading">پست‌ها</h2><span id="post-count"></span></div>
+        <div class="section-heading">
+          <h2 id="post-heading">پست‌ها</h2>
+          <span id="post-count"></span>
+        </div>
         <div class="post-grid" id="saved-posts"></div>
       </section>
 
       <section class="saved-section" aria-labelledby="product-heading">
-        <div class="section-heading"><h2 id="product-heading">محصولات</h2><span>۰</span></div>
+        <div class="section-heading">
+          <h2 id="product-heading">محصولات</h2>
+          <span>۰</span>
+        </div>
         <div class="empty-state">هنوز محصولی ذخیره نکرده‌ای.</div>
       </section>
     </main>

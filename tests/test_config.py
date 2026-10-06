@@ -45,14 +45,14 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(original, settings.host)
 
     def test_secrets_are_omitted_from_configuration_repr(self):
-        from dataclasses import replace
-
-        configured = replace(
-            settings,
-            database_url="secret-db",
-            admin_token="secret-admin",
-            meta_access_token="secret-meta",
-            embedding_api_key="secret-embedding",
-        )
-        for secret in ("secret-db", "secret-admin", "secret-meta", "secret-embedding"):
+        credentials = {
+            "database_url": "secret-db",
+            "admin_token": "secret-admin",
+            "meta_access_token": "secret-meta",
+            "embedding_api_key": "secret-embedding",
+        }
+        configured = Settings.model_validate({**settings.model_dump(), **credentials})
+        for field, secret in credentials.items():
             self.assertNotIn(secret, repr(configured))
+            self.assertEqual(secret, getattr(configured, field))
+            self.assertIsInstance(getattr(configured, field), str)

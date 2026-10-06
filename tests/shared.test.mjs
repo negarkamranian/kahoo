@@ -3,8 +3,8 @@ import test from "node:test";
 import {
   api,
   escapeHtml,
-  saveItems,
   storedItems,
+  initializeSession,
 } from "../public/assets/js/shared.js";
 
 test("escapeHtml handles text and double-quoted attribute values", () => {
@@ -31,7 +31,7 @@ test("saved items distinguish missing storage from corrupt data", () => {
     assert.equal(stored, value);
   }
   const items = [{ key: "1", name: "فروشگاه" }];
-  saveItems("saved", items);
+  stored = JSON.stringify(items);
   assert.deepEqual(storedItems("saved"), items);
   delete globalThis.localStorage;
 });
@@ -39,16 +39,24 @@ test("saved items distinguish missing storage from corrupt data", () => {
 test("API requests preserve caller headers and include the current session", async (t) => {
   const headers = new Headers({ "X-Kahoo-Admin-Token": "admin" });
   t.mock.method(globalThis, "fetch", async (path, options) => {
+    if (path === "/api/session")
+      return new Response(
+        JSON.stringify({ session_id: "session123", user: null }),
+      );
+    if (path === "/api/saved")
+      return new Response(JSON.stringify({ merchants: [], posts: [] }));
     assert.equal(path, "/api/admin/merchants");
     assert.equal(options.method, "POST");
     assert.equal(options.headers.get("X-Kahoo-Admin-Token"), "admin");
     assert.equal(options.headers.get("X-Kahoo-Session"), "session123");
+    assert.equal(options.credentials, "same-origin");
     return new Response('{"created":true}', {
       headers: { "Content-Type": "application/json" },
     });
   });
-  globalThis.localStorage = { getItem: () => "session123" };
+  globalThis.localStorage = { getItem: () => null, removeItem: () => {} };
   try {
+    await initializeSession();
     assert.deepEqual(
       await api("/api/admin/merchants", { method: "POST", headers }),
       { created: true },

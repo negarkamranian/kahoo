@@ -1,6 +1,6 @@
 import hmac
-import uuid
 from typing import Annotated
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -17,13 +17,6 @@ from backend.models.analytics import (
     AnalyticsRequest,
     AnalyticsResult,
     MetricsPeriod,
-)
-from backend.models.auth import (
-    LoginChallenge,
-    LoginRequest,
-    LoginResult,
-    LoginUser,
-    LoginVerification,
 )
 from backend.models.categories import CategoryNode
 from backend.models.merchants import (
@@ -58,7 +51,7 @@ class RequestRoute(APIRoute):
         handler = super().get_route_handler()
 
         async def handle(request: Request):
-            if request.method == "POST":
+            if request.method in {"POST", "PUT"}:
                 validate_content_length(request)
             return await handler(request)
 
@@ -66,6 +59,26 @@ class RequestRoute(APIRoute):
 
 
 router = APIRouter(route_class=RequestRoute)
+
+
+def has_same_origin(request: Request) -> bool:
+    origin = request.headers.get("Origin")
+    if not origin:
+        return True
+    try:
+        parts = urlsplit(origin)
+    except ValueError:
+        return False
+    return (parts.scheme, parts.netloc) == (request.url.scheme, request.url.netloc)
+
+
+def require_private_mutation(request: Request, code: str):
+    if (
+        request.headers.get("X-Kahoo-Saved") != "1"
+        or request.headers.get("Sec-Fetch-Site") == "cross-site"
+        or not has_same_origin(request)
+    ):
+        raise HTTPException(403, detail={"error": code})
 
 
 def validate_content_length(request: Request):
@@ -93,13 +106,20 @@ async def validation_error_response(request: Request, error: RequestValidationEr
         return JSONResponse({"error": "invalid_json"}, status_code=400)
     if request.url.path == "/api/analytics/event":
         return JSONResponse({"saved": False}, status_code=400)
+    if request.url.path.startswith("/api/saved"):
+        return JSONResponse({"error": "invalid_saved_request"}, status_code=400)
+    return route_validation_error(request, error)
+
+
+def route_validation_error(request: Request, error: RequestValidationError):
+    errors = error.errors()
     if any(item["loc"][0] == "path" for item in errors):
         if request.method == "DELETE":
             return JSONResponse({"error": "invalid_merchant_id"}, status_code=400)
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     if request.method == "GET" and request.url.path == "/api/admin/merchants":
         return JSONResponse({"error": "invalid_pagination"}, status_code=400)
-    code = VALIDATION_CODES[request.url.path]
+    code = VALIDATION_CODES.get(request.url.path, "invalid_request")
     content = {"error": code}
     if code == "merchant_import_failed":
         content["message"] = str(error)
@@ -225,16 +245,6 @@ def post_analytics(
     )
     record_event(event)
     return AnalyticsResult(saved=True)
-
-
-@router.post("/api/login/request")
-def post_login_request(login: LoginRequest) -> LoginChallenge:
-    return LoginChallenge(challenge_id=str(uuid.uuid4()), phone=login.phone)
-
-
-@router.post("/api/login/verify")
-def post_login_verify(login: LoginVerification) -> LoginResult:
-    return LoginResult(user=LoginUser(phone=login.phone, display_name="حساب من"))
 
 
 def import_demo_merchant() -> DemoImportResult:

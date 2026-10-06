@@ -1,0 +1,135 @@
+/* Shared marketplace foundations. Photography supplies the colour. */
+:root {
+  --page: #faf9f6;
+  --surface: #fff;
+  --ink: #242820;
+  --muted: #6d7269;
+  --line: #dedfd8;
+  --green: #276044;
+  --green-dark: #19432e;
+  --green-soft: #edf2ec;
+  --red: var(--green);
+  --red-dark: var(--green-dark);
+  --red-soft: var(--green-soft);
+  --radius: 4px;
+  --content-width: 1320px;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 140px;
+}
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font:
+    14px/1.7 "Vazirmatn",
+    Tahoma,
+    sans-serif;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a,
+input,
+select,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  color: inherit;
+  cursor: pointer;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+img {
+  max-width: 100%;
+}
+[hidden] {
+  display: none !important;
+}
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 4px;
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+h1,
+h2,
+h3 {
+  line-height: 1.5;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green);
+  font-weight: 800;
+  white-space: nowrap;
+}
+.brand-name,
+.brand > span {
+  font-size: 29px;
+  letter-spacing: -1px;
+}
+.brand svg,
+.kahoo-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+.leaf-a,
+.brand svg path {
+  fill: var(--green);
+}
+.leaf-b,
+.brand svg .light-leaf {
+  fill: #69966e;
+}
+.eyebrow {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 8px;
+  right: 16px;
+  padding: 8px 16px;
+  background: var(--green);
+  color: #fff;
+  transform: translateY(-160%);
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

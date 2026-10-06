@@ -23,15 +23,19 @@ class SearchRuleTests(unittest.TestCase):
         ]
         for fields, lexical, reason in cases:
             with self.subTest(fields=fields, lexical=lexical):
-                evidence = SearchEvidence(TextMatch(fields=fields), lexical, 0.8)
+                evidence = SearchEvidence(
+                    text=TextMatch(fields=fields), lexical=lexical, semantic=0.8
+                )
                 self.assertEqual(reason, match_reason(evidence))
-        self.assertEqual("عبارت مشابه", match_reason(SearchEvidence(TextMatch(), None, 0)))
+        self.assertEqual(
+            "عبارت مشابه", match_reason(SearchEvidence(text=TextMatch(), lexical=None, semantic=0))
+        )
 
     def test_weak_text_requires_document_or_semantic_evidence(self):
         text = TextMatch(score=2, matched_tokens=1, fuzzy=True)
-        weak = SearchEvidence(text, None, 0)
+        weak = SearchEvidence(text=text, lexical=None, semantic=0)
         self.assertFalse(relevant_match(weak, ["کفش", "زنانه", "چرمی"]))
-        strong = SearchEvidence(text, None, 0.8)
+        strong = SearchEvidence(text=text, lexical=None, semantic=0.8)
         self.assertTrue(relevant_match(strong, ["کفش", "زنانه", "چرمی"]))
         self.assertEqual("near", match_quality(strong))
         self.assertFalse(relevant_match(strong, []))
