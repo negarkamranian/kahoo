@@ -1,12 +1,14 @@
 import unittest
 from datetime import datetime, timezone
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
 
 from fastapi.testclient import TestClient
 
 from backend.models.analytics import AdminMetrics, AnalyticsEvent, MetricsPeriod
+from backend.models.auth import LoginChallenge, LoginResult, LoginUser, SessionContext
 from backend.models.categories import CategoryNode
 from backend.models.merchants import (
     AdminMerchantPage,
@@ -22,8 +24,15 @@ from backend.server.app import app
 
 class HttpTests(unittest.TestCase):
     def setUp(self):
-        self.client = TestClient(app)
+        self.client = TestClient(app, headers={"X-Kahoo-Saved": "1"})
         self.addCleanup(self.client.close)
+        context = SessionContext(owner_id=1, session_id="00000000-0000-4000-8000-000000000001")
+        session = patch(
+            "backend.server.account_routes.open_session",
+            return_value=SimpleNamespace(context=context, new_token=None),
+        )
+        session.start()
+        self.addCleanup(session.stop)
 
     def test_post_rejects_invalid_json_and_non_object_payloads(self):
         for path in ("/api/login/request", "/api/merchants/import-demo"):
@@ -350,22 +359,41 @@ class HttpTests(unittest.TestCase):
         merchants.assert_called_once_with(AdminMerchantQuery(query="shop", limit=100, offset=2))
         self.assertEqual({"items": [], "total": 0, "limit": 100, "offset": 2}, response.json())
 
-    def test_login_verification_requires_a_five_character_string(self):
+    @patch("backend.server.account_routes.verify_login")
+    def test_login_verification_requires_a_five_character_string(self, verify):
+        verify.return_value = LoginResult(
+            user=LoginUser(id=1, phone="09123456789", display_name="حساب من")
+        )
+        challenge = "00000000-0000-4000-8000-000000000001"
         for code in (None, 12345, "", "1234", "123456"):
             response = self.client.post(
-                "/api/login/verify", json={"phone": "09123456789", "code": code}
+                "/api/login/verify",
+                json={"phone": "09123456789", "code": code, "challenge_id": challenge},
             )
             self.assertEqual(400, response.status_code)
             self.assertEqual({"error": "invalid_code"}, response.json())
         response = self.client.post(
-            "/api/login/verify", json={"phone": "09123456789", "code": "12345"}
+            "/api/login/verify",
+            json={"phone": "09123456789", "code": "12345", "challenge_id": challenge},
         )
         self.assertEqual(200, response.status_code)
         self.assertEqual(
-            {"user": {"phone": "09123456789", "display_name": "حساب من"}}, response.json()
+            {
+                "user": {
+                    "id": 1,
+                    "phone": "09123456789",
+                    "display_name": "حساب من",
+                    "phone_verified": False,
+                }
+            },
+            response.json(),
         )
 
-    def test_login_request_returns_a_challenge_model(self):
+    @patch("backend.server.account_routes.request_login")
+    def test_login_request_returns_a_challenge_model(self, request_login):
+        request_login.return_value = LoginChallenge(
+            phone="09123456789", challenge_id="00000000-0000-4000-8000-000000000001"
+        )
         response = self.client.post("/api/login/request", json={"phone": "09123456789"})
         self.assertEqual(200, response.status_code)
         payload = response.json()

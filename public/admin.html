@@ -7,85 +7,233 @@
     <title>مدیریت کاهو</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./assets/css/foundation.css" />
     <link rel="stylesheet" href="./assets/css/admin.css" />
   </head>
   <body>
     <aside class="admin-sidebar">
-      <a class="admin-brand" href="/"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"/><path class="light" d="M6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><span>کاهو</span><small>مدیریت</small></a>
+      <a class="admin-brand" href="/"
+        ><svg
+          viewBox="0 0 16 16"
+          shape-rendering="crispEdges"
+          aria-hidden="true"
+        >
+          <path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z" />
+          <path class="light" d="M6 4h4v2H8v5H6zM3 7h3v2H3z" /></svg
+        ><span>کاهو</span><small>مدیریت</small></a
+      >
       <nav aria-label="بخش‌های پنل">
-        <a class="active" href="#overview"><i>▦</i> نمای کلی</a>
-        <a href="#queries"><i>⌕</i> جستجوها</a>
-        <a href="#merchant-management"><i>◇</i> مدیریت فروشگاه‌ها</a>
-        <a href="#catalog"><i>≡</i> سلامت داده</a>
+        <a class="active" href="#overview">نمای کلی</a>
+        <a href="#queries">جستجوها</a>
+        <a href="#merchant-management">مدیریت فروشگاه‌ها</a>
+        <a href="#catalog">سلامت داده</a>
       </nav>
       <a class="back-link" href="/">بازگشت به کاهو <span>←</span></a>
     </aside>
 
     <main class="admin-main">
       <header class="admin-header">
-        <div><p>امروز، <span id="today-label"></span></p><h1>نمای کلی</h1></div>
-        <label class="period-control">بازه <select id="period-select"><option value="7">۷ روز اخیر</option><option value="30" selected>۳۰ روز اخیر</option><option value="90">۹۰ روز اخیر</option></select></label>
+        <div>
+          <p>امروز، <span id="today-label"></span></p>
+          <h1>نمای کلی</h1>
+        </div>
+        <label class="period-control"
+          >بازه
+          <select id="period-select">
+            <option value="7">۷ روز اخیر</option>
+            <option value="30" selected>۳۰ روز اخیر</option>
+            <option value="90">۹۰ روز اخیر</option>
+          </select></label
+        >
       </header>
 
       <div class="admin-loading" id="loading">در حال دریافت آمار…</div>
       <div id="dashboard" hidden>
         <section class="kpi-grid" id="overview" aria-label="شاخص‌های اصلی">
-          <article><span class="kpi-icon green">⌕</span><div><small>جستجو</small><strong id="kpi-searches">۰</strong></div></article>
-          <article><span class="kpi-icon violet">◎</span><div><small>بازدیدکننده</small><strong id="kpi-visitors">۰</strong></div></article>
-          <article><span class="kpi-icon amber">←</span><div><small>ورود به فروشگاه</small><strong id="kpi-clicks">۰</strong></div></article>
-          <article><span class="kpi-icon red">!</span><div><small>جستجوی بی‌نتیجه</small><strong id="kpi-zero">۰٪</strong></div></article>
-          <article><span class="kpi-icon blue">↗</span><div><small>جستجو تا کلیک</small><strong id="kpi-conversion">۰٪</strong></div></article>
+          <article>
+            <div><small>جستجو</small><strong id="kpi-searches">۰</strong></div>
+          </article>
+          <article>
+            <div>
+              <small>بازدیدکننده</small><strong id="kpi-visitors">۰</strong>
+            </div>
+          </article>
+          <article>
+            <div>
+              <small>ورود به فروشگاه</small><strong id="kpi-clicks">۰</strong>
+            </div>
+          </article>
+          <article>
+            <div>
+              <small>جستجوی بی‌نتیجه</small><strong id="kpi-zero">۰٪</strong>
+            </div>
+          </article>
+          <article>
+            <div>
+              <small>جستجو تا کلیک</small
+              ><strong id="kpi-conversion">۰٪</strong>
+            </div>
+          </article>
         </section>
 
         <section class="panel trend-panel">
-          <div class="panel-head"><div><h2>روند استفاده</h2><p>جستجو و ورود به فروشگاه در طول زمان</p></div><div class="legend"><span><i class="search-dot"></i> جستجو</span><span><i class="click-dot"></i> ورود به فروشگاه</span></div></div>
-          <div class="chart-wrap" id="trend-chart" role="img" aria-label="نمودار روند استفاده"></div>
+          <div class="panel-head">
+            <div>
+              <h2>روند استفاده</h2>
+              <p>جستجو و ورود به فروشگاه در طول زمان</p>
+            </div>
+            <div class="legend">
+              <span><i class="search-dot"></i> جستجو</span
+              ><span><i class="click-dot"></i> ورود به فروشگاه</span>
+            </div>
+          </div>
+          <div
+            class="chart-wrap"
+            id="trend-chart"
+            role="img"
+            aria-label="نمودار روند استفاده"
+          ></div>
         </section>
 
         <div class="two-column" id="queries">
           <section class="panel query-panel">
-            <div class="panel-head"><div><h2>جستجوهای پرتکرار</h2><p>عبارت‌هایی که کاربران نوشته‌اند</p></div></div>
-            <div class="table-wrap"><table><thead><tr><th>عبارت</th><th>دفعات</th><th>میانگین نتیجه</th><th>بی‌نتیجه</th></tr></thead><tbody id="query-rows"></tbody></table></div>
+            <div class="panel-head">
+              <div>
+                <h2>جستجوهای پرتکرار</h2>
+                <p>عبارت‌هایی که کاربران نوشته‌اند</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>عبارت</th>
+                    <th>دفعات</th>
+                    <th>میانگین نتیجه</th>
+                    <th>بی‌نتیجه</th>
+                  </tr>
+                </thead>
+                <tbody id="query-rows"></tbody>
+              </table>
+            </div>
           </section>
           <section class="panel missed-panel">
-            <div class="panel-head"><div><h2>فرصت‌های بدون نتیجه</h2><p>برای این تقاضا فروشگاهی پیدا نشده</p></div></div>
+            <div class="panel-head">
+              <div>
+                <h2>جستجوهای بی‌نتیجه</h2>
+                <p>عبارت‌هایی که فروشگاهی برای آن‌ها پیدا نشده</p>
+              </div>
+            </div>
             <div class="missed-list" id="missed-list"></div>
           </section>
         </div>
 
         <div class="two-column" id="merchants">
           <section class="panel">
-            <div class="panel-head"><div><h2>فروشگاه‌های پربازدید</h2><p>بر پایه کلیک خروجی به اینستاگرام</p></div></div>
+            <div class="panel-head">
+              <div>
+                <h2>فروشگاه‌های پربازدید</h2>
+                <p>بر پایه کلیک خروجی به اینستاگرام</p>
+              </div>
+            </div>
             <div class="rank-list" id="merchant-list"></div>
           </section>
           <section class="panel">
-            <div class="panel-head"><div><h2>مسیر کاربر</h2><p>تعداد نشست‌ها در هر مرحله</p></div></div>
+            <div class="panel-head">
+              <div>
+                <h2>مسیر کاربر</h2>
+                <p>تعداد نشست‌ها در هر مرحله</p>
+              </div>
+            </div>
             <div class="funnel" id="funnel"></div>
           </section>
         </div>
 
         <section class="panel merchant-management" id="merchant-management">
-          <div class="panel-head"><div><h2>مدیریت فروشگاه‌ها</h2><p>افزودن از اینستاگرام یا حذف دائمی از فهرست کاهو</p></div><span id="managed-merchant-count"></span></div>
+          <div class="panel-head">
+            <div>
+              <h2>مدیریت فروشگاه‌ها</h2>
+              <p>افزودن از اینستاگرام یا حذف دائمی از فهرست کاهو</p>
+            </div>
+            <span id="managed-merchant-count"></span>
+          </div>
           <form id="merchant-add-form" class="merchant-form">
-            <label class="wide"><span>شناسه اینستاگرام با حروف کوچک</span><input id="merchant-identifier" required dir="ltr" placeholder="@username" /></label>
-            <label><span>دسته‌بندی</span><select id="merchant-category"><option value="">انتخاب دسته‌بندی برای فروشگاه جدید</option></select></label>
-            <label><span>شهر</span><input id="merchant-city" required value="ایران" /></label>
-            <label><span>کلید مدیریت (در صورت تنظیم)</span><input id="admin-token" type="password" dir="ltr" autocomplete="current-password" /></label>
-            <button id="merchant-submit" class="primary-button" type="submit">افزودن و دریافت اطلاعات</button>
+            <label class="wide"
+              ><span>شناسه اینستاگرام با حروف کوچک</span
+              ><input
+                id="merchant-identifier"
+                required
+                dir="ltr"
+                placeholder="@username"
+            /></label>
+            <label
+              ><span>دسته‌بندی</span
+              ><select id="merchant-category">
+                <option value="">انتخاب دسته‌بندی برای فروشگاه جدید</option>
+              </select></label
+            >
+            <label
+              ><span>شهر</span><input id="merchant-city" required value="ایران"
+            /></label>
+            <label
+              ><span>کلید مدیریت (در صورت تنظیم)</span
+              ><input
+                id="admin-token"
+                type="password"
+                dir="ltr"
+                autocomplete="current-password"
+            /></label>
+            <button id="merchant-submit" class="primary-button" type="submit">
+              افزودن و دریافت اطلاعات
+            </button>
           </form>
-          <p class="manager-status" id="manager-status" role="status" aria-live="polite"></p>
-          <div class="merchant-tools"><label><span class="sr-only">جستجوی فروشگاه</span><input id="merchant-search" placeholder="جستجو با نام یا شناسه…" /></label><button id="merchant-refresh" type="button">به‌روزرسانی</button></div>
+          <p
+            class="manager-status"
+            id="manager-status"
+            role="status"
+            aria-live="polite"
+          ></p>
+          <div class="merchant-tools">
+            <label
+              ><span class="sr-only">جستجوی فروشگاه</span
+              ><input
+                id="merchant-search"
+                placeholder="جستجو با نام یا شناسه…" /></label
+            ><button id="merchant-refresh" type="button">به‌روزرسانی</button>
+          </div>
+          <div class="managed-table-head" aria-hidden="true">
+            <span></span><span>فروشگاه</span><span>دنبال‌کننده</span
+            ><span>تصاویر</span><span></span>
+          </div>
           <div class="managed-list" id="managed-merchant-list"></div>
         </section>
 
         <section class="panel" id="catalog">
-          <div class="panel-head"><div><h2>سلامت داده</h2><p>پوشش فعلی فهرست کاهو</p></div><span class="status"><i></i> پایگاه داده فعال</span></div>
+          <div class="panel-head">
+            <div>
+              <h2>سلامت داده</h2>
+              <p>پوشش فعلی فهرست کاهو</p>
+            </div>
+          </div>
           <div class="catalog-stats">
-            <article><strong id="catalog-merchants">۰</strong><span>فروشگاه</span></article>
-            <article><strong id="catalog-categories">۰</strong><span>دسته‌ی دارای فروشگاه</span></article>
-            <article><strong id="catalog-posts">۰</strong><span>تصویر پست ذخیره‌شده</span></article>
-            <article><strong id="catalog-profiles">۰٪</strong><span>پروفایل کامل</span></article>
+            <article>
+              <strong id="catalog-merchants">۰</strong><span>فروشگاه</span>
+            </article>
+            <article>
+              <strong id="catalog-categories">۰</strong
+              ><span>دسته‌ی دارای فروشگاه</span>
+            </article>
+            <article>
+              <strong id="catalog-posts">۰</strong
+              ><span>تصویر پست ذخیره‌شده</span>
+            </article>
+            <article>
+              <strong id="catalog-profiles">۰٪</strong><span>پروفایل کامل</span>
+            </article>
           </div>
         </section>
         <p class="updated-at" id="updated-at"></p>

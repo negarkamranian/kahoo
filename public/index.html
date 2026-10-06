@@ -7,97 +7,424 @@
     <title>کاهو | فروشگاه‌های اینستاگرامی</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Cpath d='M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z' fill='%232e9d62'/%3E%3Cpath d='M6 4h4v2H8v5H6zM3 7h3v2H3z' fill='%2397d565'/%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="./assets/css/catalog.css" />
-    <link rel="stylesheet" href="./assets/css/marketplace-theme.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Cpath d='M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z' fill='%232e9d62'/%3E%3Cpath d='M6 4h4v2H8v5H6zM3 7h3v2H3z' fill='%23247a4b'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./assets/css/foundation.css?v=4a685e7e12f4" />
+    <link rel="stylesheet" href="./assets/css/catalog.css?v=a63cbd08e905" />
+    <link rel="stylesheet" href="./assets/css/marketplace-theme.css?v=eac665afacf5" />
   </head>
   <body>
+    <a class="skip-link" href="#shops">رفتن به فروشگاه‌ها</a>
     <header class="site-header">
       <div class="header-main">
-        <a class="brand" href="#" aria-label="صفحه اصلی کاهو">
-          <svg class="kahoo-icon" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="leaf leaf-a" d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"/><path class="leaf leaf-b" d="M6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg>
+        <a class="brand" href="/" aria-label="صفحه اصلی کاهو">
+          <svg
+            class="kahoo-icon"
+            viewBox="0 0 16 16"
+            shape-rendering="crispEdges"
+            aria-hidden="true"
+          >
+            <path
+              class="leaf leaf-a"
+              d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"
+            />
+            <path class="leaf leaf-b" d="M6 4h4v2H8v5H6zM3 7h3v2H3z" />
+          </svg>
           <span class="brand-name">کاهو</span>
         </a>
-        <div class="header-discovery">
-          <div class="category-dropdown" id="categories">
-            <button class="category-menu-trigger" id="category-menu-trigger" type="button" aria-expanded="false" aria-controls="category-popover"><span id="category-menu-label">دسته‌بندی‌ها</span><i class="menu-chevron" aria-hidden="true"></i></button>
-            <aside class="category-panel category-popover" id="category-popover" hidden>
-              <div class="tree-heading"><h2>دسته‌بندی‌ها</h2><button id="reset-category" type="button">همه</button></div>
-              <div class="category-tree" id="category-tree" role="tree" aria-label="دسته‌بندی محصولات"></div>
-              <a class="gs1-source" href="https://gpc-browser.gs1.org/" target="_blank" rel="noreferrer">ساختار GS1 GPC ↗</a>
-            </aside>
-          </div>
-          <form class="search" id="search-form" role="search">
-            <button type="submit" aria-label="جستجو"></button>
-            <input id="search-input" type="search" placeholder="دنبال چه محصولی هستی؟" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="search-suggestions" aria-expanded="false" />
-            <div class="search-suggestions" id="search-suggestions" role="listbox" hidden></div>
-          </form>
-        </div>
+        <form class="search" id="search-form" role="search">
+          <button type="submit" aria-label="جستجو">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="m16 16 5 5" />
+            </svg>
+          </button>
+          <input
+            id="search-input"
+            type="search"
+            aria-label="جستجوی محصول یا فروشگاه"
+            placeholder="جستجوی محصول، فروشگاه یا نام کاربری"
+            autocomplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="search-suggestions"
+            aria-expanded="false"
+          />
+          <span class="search-hint" aria-hidden="true">در اینستاگرام</span>
+          <div
+            class="search-suggestions"
+            id="search-suggestions"
+            role="listbox"
+            hidden
+          ></div>
+        </form>
         <div class="header-actions">
-          <button class="merchant-trigger" type="button" data-open-connect>افزودن فروشگاه</button><button class="login-button" id="login-trigger" type="button">ورود</button>
+          <a class="saved-link" href="/saved.html" aria-label="ذخیره‌شده‌ها"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 3h12v18l-6-4-6 4z" /></svg
+            ><span>ذخیره‌ها</span></a
+          >
+          <button class="login-button" id="login-trigger" type="button">
+            ورود
+          </button>
         </div>
       </div>
+      <nav class="browse-nav" aria-label="راهبری اصلی">
+        <a class="nav-explore active" href="/" aria-current="page"
+          >گشتن در فروشگاه‌ها</a
+        >
+        <div class="category-dropdown" id="categories">
+          <button
+            class="category-menu-trigger"
+            id="category-menu-trigger"
+            type="button"
+            aria-expanded="false"
+            aria-controls="category-popover"
+          >
+            <span id="category-menu-label">دسته‌بندی‌ها</span
+            ><i class="menu-chevron" aria-hidden="true"></i>
+          </button>
+          <aside
+            class="category-panel category-popover"
+            id="category-popover"
+            hidden
+          >
+            <div class="tree-heading">
+              <h2>دسته‌بندی‌ها</h2>
+              <button id="reset-category" type="button">همه فروشگاه‌ها</button>
+            </div>
+            <div
+              class="category-tree"
+              id="category-tree"
+              role="tree"
+              aria-label="دسته‌بندی محصولات"
+            ></div>
+          </aside>
+        </div>
+        <button class="merchant-trigger" type="button" data-open-connect>
+          برای فروشگاه‌ها
+        </button>
+        <span class="nav-note">خرید و گفتگو در اینستاگرام</span>
+      </nav>
     </header>
-    <main>
-      <section class="catalog" id="shops">
+    <main class="catalog">
+      <section
+        class="browse-intro"
+        id="browse-intro"
+        aria-labelledby="browse-heading"
+      >
+        <div>
+          <p class="eyebrow">جستجو و گشت‌وگذار</p>
+          <h1 id="browse-heading">فروشگاه‌های اینستاگرام</h1>
+        </div>
+        <p>نام محصول یا فروشگاه را جستجو کن.<br />یا در دسته‌بندی‌ها بگرد.</p>
+      </section>
+      <nav
+        class="quick-categories"
+        id="quick-categories"
+        aria-label="دسته‌بندی فروشگاه‌ها"
+        hidden
+      ></nav>
+      <section
+        class="discovery"
+        id="discovery"
+        aria-labelledby="discovery-heading"
+        hidden
+      >
+        <div class="section-heading">
+          <h2 id="discovery-heading">چند مسیر برای گشتن</h2>
+          <span>از میان فروشگاه‌های کاهو</span>
+        </div>
+        <div class="discovery-grid" id="discovery-grid"></div>
+      </section>
+      <section id="shops" aria-labelledby="result-title">
         <div class="market-layout">
           <div class="result-status" aria-live="polite">
             <div>
-              <h1 id="result-title">فروشگاه‌ها</h1>
+              <p class="eyebrow" id="result-context">
+                فروشگاه‌ها و آخرین پست‌ها
+              </p>
+              <h2 id="result-title">همه فروشگاه‌ها</h2>
+            </div>
+            <div class="result-actions">
+              <span id="result-count"></span
+              ><button type="button" id="clear-filters" hidden>
+                پاک کردن فیلترها <span aria-hidden="true">×</span>
+              </button>
             </div>
           </div>
-          <div class="results-panel"><div class="shop-grid" id="shop-grid"><div class="kahoo-loader catalog-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg></div><span>در حال دریافت فروشگاه‌ها</span></div></div><div class="empty-state" id="empty-state" hidden><span>⌕</span><h3>فروشگاهی پیدا نشد</h3><p>عبارت دیگری را امتحان کن.</p><div class="empty-suggestions" id="empty-suggestions"></div></div></div>
+          <div class="results-panel">
+            <div class="shop-grid" id="shop-grid">
+              <div class="kahoo-loader catalog-loader" role="status">
+                <span class="loading-line" aria-hidden="true"></span
+                ><span>در حال دریافت فروشگاه‌ها</span>
+              </div>
+            </div>
+            <div class="empty-state" id="empty-state" hidden>
+              <h3>فروشگاهی پیدا نشد</h3>
+              <p>نام محصول یا عبارت دیگری را امتحان کن.</p>
+              <div class="empty-suggestions" id="empty-suggestions"></div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
-    <footer><a class="brand footer-brand" href="#"><svg class="kahoo-icon" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="leaf leaf-a" d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"/><path class="leaf leaf-b" d="M6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><span class="brand-name">کاهو</span></a><button type="button" data-open-connect>افزودن فروشگاه</button></footer>
+    <footer class="site-footer">
+      <a class="brand footer-brand" href="/"
+        ><svg
+          class="kahoo-icon"
+          viewBox="0 0 16 16"
+          shape-rendering="crispEdges"
+          aria-hidden="true"
+        >
+          <path
+            class="leaf leaf-a"
+            d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"
+          />
+          <path class="leaf leaf-b" d="M6 4h4v2H8v5H6zM3 7h3v2H3z" /></svg
+        ><span class="brand-name">کاهو</span></a
+      >
+      <p>پیدا کردن فروشگاه در کاهو؛ خرید در اینستاگرام.</p>
+      <a href="/saved.html">ذخیره‌شده‌ها</a
+      ><button type="button" data-open-connect>افزودن فروشگاه</button>
+    </footer>
 
-    <dialog class="merchant-dialog" id="merchant-dialog">
-      <button class="dialog-close merchant-dialog-close" type="button" aria-label="بستن">×</button>
-      <div class="merchant-dialog-loading" id="merchant-dialog-loading"><div class="kahoo-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg></div><span>در حال دریافت فروشگاه</span></div></div>
+    <dialog
+      class="merchant-dialog"
+      id="merchant-dialog"
+      aria-labelledby="detail-name"
+    >
+      <button
+        class="dialog-close merchant-dialog-close"
+        type="button"
+        aria-label="بستن"
+      >
+        ×
+      </button>
+      <div class="merchant-dialog-loading" id="merchant-dialog-loading">
+        <div class="kahoo-loader" role="status">
+          <div class="kahoo-loader-icons" aria-hidden="true">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+              <path
+                d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"
+              /></svg
+            ><svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+              <path
+                d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"
+              /></svg
+            ><svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+              <path
+                d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"
+              />
+            </svg>
+          </div>
+          <span>در حال دریافت فروشگاه</span>
+        </div>
+      </div>
       <div class="merchant-dialog-content" id="merchant-dialog-content" hidden>
         <div class="merchant-dialog-head">
           <img id="detail-avatar" alt="" />
-          <div><div class="merchant-dialog-name"><h2 id="detail-name"></h2></div><p id="detail-handle"></p><small id="detail-meta"></small></div>
-          <div class="merchant-dialog-actions"><button class="merchant-save" id="detail-save" type="button" aria-label="ذخیره فروشگاه" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button><a class="merchant-instagram" id="detail-instagram" target="_blank" rel="noreferrer">دیدن در اینستاگرام <span>←</span></a></div>
+          <div>
+            <div class="merchant-dialog-name"><h2 id="detail-name"></h2></div>
+            <p id="detail-handle"></p>
+            <small id="detail-meta"></small>
+          </div>
+          <div class="merchant-dialog-actions">
+            <button
+              class="merchant-save"
+              id="detail-save"
+              type="button"
+              aria-label="ذخیره فروشگاه"
+              aria-pressed="false"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 3h12v18l-6-4-6 4z" />
+              </svg></button
+            ><a
+              class="merchant-instagram"
+              id="detail-instagram"
+              target="_blank"
+              rel="noreferrer"
+              >دیدن در اینستاگرام <span>←</span></a
+            >
+          </div>
         </div>
-        <div class="merchant-dialog-bio"><b>بیو</b><p id="detail-bio"></p></div>
-        <div class="merchant-trust-grid">
-          <div><span>تعداد دنبال‌کننده</span><strong id="detail-followers">—</strong><small id="detail-followers-note"></small></div>
-          <div><span>تعداد دنبال‌شونده</span><strong id="detail-following">—</strong><small id="detail-following-note"></small></div>
-          <div><span>نام کاربری قبلی</span><strong id="detail-former-names">—</strong><small id="detail-former-note"></small></div>
-          <div><span>زمان ساخت حساب</span><strong class="detail-date" id="detail-created">—</strong><small id="detail-created-note"></small></div>
+        <div class="merchant-dialog-bio">
+          <b>درباره فروشگاه</b>
+          <p id="detail-bio"></p>
         </div>
-        <div class="merchant-dialog-posts-head"><b>آخرین پست‌ها</b><small id="detail-sync"></small></div>
+        <div class="merchant-dialog-posts-head">
+          <b>آخرین پست‌ها</b><small id="detail-sync"></small>
+        </div>
         <div class="merchant-dialog-posts" id="detail-posts"></div>
+        <details class="merchant-facts">
+          <summary>اطلاعات حساب اینستاگرام</summary>
+          <div class="merchant-trust-grid">
+            <div>
+              <span>تعداد دنبال‌کننده</span
+              ><strong id="detail-followers">—</strong
+              ><small id="detail-followers-note"></small>
+            </div>
+            <div>
+              <span>تعداد دنبال‌شونده</span
+              ><strong id="detail-following">—</strong
+              ><small id="detail-following-note"></small>
+            </div>
+            <div>
+              <span>نام کاربری قبلی</span
+              ><strong id="detail-former-names">—</strong
+              ><small id="detail-former-note"></small>
+            </div>
+            <div>
+              <span>زمان ساخت حساب</span
+              ><strong class="detail-date" id="detail-created">—</strong
+              ><small id="detail-created-note"></small>
+            </div>
+          </div>
+        </details>
       </div>
     </dialog>
 
-    <dialog class="connect-dialog" id="connect-dialog">
+    <dialog
+      class="connect-dialog"
+      id="connect-dialog"
+      aria-labelledby="connect-title"
+    >
       <button class="dialog-close" type="button" aria-label="بستن">×</button>
       <div class="connect-state" data-connect-state="start">
-        <svg class="kahoo-icon connect-icon" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="leaf leaf-a" d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"/><path class="leaf leaf-b" d="M6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg>
-        <h2>فروشگاهت را اضافه کن</h2>
-        <p>با اینستاگرام وارد شو. نام، عکس پروفایل و پست‌های فروشگاهت خودکار دریافت می‌شوند.</p>
-        <button class="instagram-button" id="instagram-connect" type="button"><span class="instagram-glyph">◎</span> ادامه با Instagram</button>
-        <small>فقط برای حساب‌های Professional</small>
+        <svg
+          class="kahoo-icon connect-icon"
+          viewBox="0 0 16 16"
+          shape-rendering="crispEdges"
+          aria-hidden="true"
+        >
+          <path
+            class="leaf leaf-a"
+            d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"
+          />
+          <path class="leaf leaf-b" d="M6 4h4v2H8v5H6zM3 7h3v2H3z" />
+        </svg>
+        <h2 id="connect-title">فروشگاهت را اضافه کن</h2>
+        <p>
+          نام، پروفایل و پست‌های فروشگاه از اینستاگرام دریافت می‌شوند. اتصال
+          حساب در این نسخه نمایشی است.
+        </p>
+        <button class="instagram-button" id="instagram-connect" type="button">
+          <span class="instagram-glyph">◎</span> ادامه با Instagram
+        </button>
+        <small>برای حساب‌های حرفه‌ای اینستاگرام</small>
       </div>
-      <div class="connect-state" data-connect-state="loading" hidden><div class="kahoo-loader" role="status"><div class="kahoo-loader-icons" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg></div></div><h2>در حال ساخت فروشگاه…</h2><p id="import-status">دریافت پروفایل</p></div>
-      <div class="connect-state" data-connect-state="done" hidden><div class="success-check">✓</div><h2>فروشگاه اضافه شد</h2><div class="imported-shop"><span>ن</span><div><b>ناردونه استودیو</b><small>@nardoone.studio · ۳ پست دریافت شد</small></div></div><button class="done-button" type="button">دیدن فروشگاه</button></div>
+      <div class="connect-state" data-connect-state="loading" hidden>
+        <div class="kahoo-loader" role="status">
+          <div class="kahoo-loader-icons" aria-hidden="true">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+              <path
+                d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"
+              /></svg
+            ><svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+              <path
+                d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"
+              /></svg
+            ><svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+              <path
+                d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2zM6 4h4v2H8v5H6zM3 7h3v2H3z"
+              />
+            </svg>
+          </div>
+        </div>
+        <h2>در حال ساخت فروشگاه…</h2>
+        <p id="import-status">دریافت پروفایل</p>
+      </div>
+      <div class="connect-state" data-connect-state="done" hidden>
+        <div class="success-check">✓</div>
+        <h2>اتصال نمایشی انجام شد</h2>
+        <p>این مرحله برای نمایش مسیر افزودن فروشگاه است.</p>
+        <button class="done-button" type="button">دیدن فروشگاه</button>
+      </div>
     </dialog>
 
-    <dialog class="login-dialog" id="login-dialog">
-      <button class="dialog-close login-close" type="button" aria-label="بستن">×</button>
+    <dialog
+      class="login-dialog"
+      id="login-dialog"
+      aria-labelledby="login-title"
+    >
+      <button class="dialog-close login-close" type="button" aria-label="بستن">
+        ×
+      </button>
       <form class="login-state" id="phone-form">
-        <svg class="kahoo-icon login-icon" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="leaf leaf-a" d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"/><path class="leaf leaf-b" d="M6 4h4v2H8v5H6zM3 7h3v2H3z"/></svg>
-        <h2>ورود به کاهو</h2><label for="phone-input">شماره موبایل</label><input id="phone-input" inputmode="numeric" autocomplete="tel" placeholder="۰۹۱۲۱۲۳۴۵۶۷" maxlength="11" /><p class="form-error" id="phone-error"></p><button type="submit">ادامه</button>
+        <svg
+          class="kahoo-icon login-icon"
+          viewBox="0 0 16 16"
+          shape-rendering="crispEdges"
+          aria-hidden="true"
+        >
+          <path
+            class="leaf leaf-a"
+            d="M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z"
+          />
+          <path class="leaf leaf-b" d="M6 4h4v2H8v5H6zM3 7h3v2H3z" />
+        </svg>
+        <h2 id="login-title">ورود به کاهو</h2>
+        <label for="phone-input">شماره موبایل</label
+        ><input
+          id="phone-input"
+          inputmode="numeric"
+          autocomplete="tel"
+          placeholder="۰۹۱۲۱۲۳۴۵۶۷"
+          maxlength="11"
+        />
+        <p class="form-error" id="phone-error"></p>
+        <button type="submit">ادامه</button>
       </form>
       <form class="login-state" id="otp-form" hidden>
-        <button class="back-button" type="button">→</button><h2>کد تأیید</h2><p>کد ارسال‌شده به <b id="phone-preview"></b></p><input id="otp-input" class="otp-input" inputmode="numeric" autocomplete="one-time-code" placeholder="− − − − −" maxlength="5" /><p class="form-error" id="otp-error"></p><button type="submit">ورود</button><small>در این نمونه هر کد ۵ رقمی پذیرفته می‌شود.</small>
+        <button class="back-button" type="button">→</button>
+        <h2>ورود نمایشی</h2>
+        <p>ورود برای شماره <b id="phone-preview"></b>؛ پیامکی ارسال نمی‌شود.</p>
+        <input
+          id="otp-input"
+          class="otp-input"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          placeholder="− − − − −"
+          maxlength="5"
+        />
+        <p class="form-error" id="otp-error"></p>
+        <button type="submit">ورود</button
+        ><small>در این نمونه هر کد ۵ رقمی پذیرفته می‌شود.</small>
       </form>
     </dialog>
-    <template id="shop-card-template"><article class="shop-card"><div class="shop-info"><div class="shop-avatar"></div><div class="shop-copy"><div class="shop-title-line"><h3></h3></div><div class="shop-copy-meta"><p></p><span class="location"></span></div></div><a class="visit-link" target="_blank" rel="noreferrer" aria-label="دیدن فروشگاه در اینستاگرام">اینستاگرام <span>↗</span></a></div><span class="match-reason" hidden></span><p class="shop-description"></p><div class="post-grid"></div></article></template>
+    <template id="shop-card-template">
+      <article class="shop-card">
+        <div class="post-grid"></div>
+        <div class="shop-info">
+          <div class="shop-avatar"></div>
+          <div class="shop-copy">
+            <div class="shop-title-line"><h3></h3></div>
+            <p></p>
+          </div>
+          <a
+            class="visit-link"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="دیدن فروشگاه در اینستاگرام"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 17 17 7M7 7h10v10" /></svg
+          ></a>
+        </div>
+        <div class="shop-category-line">
+          <span class="shop-category"></span><span class="location"></span>
+        </div>
+        <span class="match-reason" hidden></span>
+        <p class="shop-description"></p>
+        <span class="shop-activity" hidden></span>
+      </article>
+    </template>
     <script type="module" src="./assets/js/catalog.js"></script>
   </body>
 </html>

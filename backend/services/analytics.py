@@ -24,8 +24,8 @@ def record_event(event: AnalyticsEvent) -> bool:
                 event.event_type,
                 event.session_id,
                 event.query,
-                event.category_code,
-                event.merchant_id,
+                event.category_code or None,
+                event.merchant_id or None,
                 event.result_count,
             ),
         )

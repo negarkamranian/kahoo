@@ -56,6 +56,7 @@ class CliTests(unittest.TestCase):
             ["search", "reindex"],
             ["search", "evaluate"],
             ["search", "enrich"],
+            ["search", "enrich-file"],
         ]
         with patch("backend.cli.initialize_database") as migrate:
             for action in actions:
@@ -65,14 +66,35 @@ class CliTests(unittest.TestCase):
                     self.assertEqual(0, error.exception.code)
             migrate.assert_not_called()
 
-    def test_cli_preserves_untyped_numeric_options_as_strings(self):
+    def test_cli_parses_numeric_options_as_integers(self):
         for argv, field, value in (
-            (["search", "reindex", "--batch-size", "0"], "batch_size", "0"),
-            (["media", "sync", "--limit", "-1"], "limit", "-1"),
-            (["merchants", "list", "--offset", "-1"], "offset", "-1"),
+            (["search", "reindex", "--batch-size", "1"], "batch_size", 1),
+            (["media", "sync", "--limit", "0"], "limit", 0),
+            (["merchants", "list", "--offset", "0"], "offset", 0),
+            (["media", "status", "--minimum-post-images", "1"], "minimum_post_images", 1),
+            (["media", "sync", "--minimum-post-images", "4"], "minimum_post_images", 4),
+            (["search", "enrich", "7", "research.json"], "merchant_id", 7),
         ):
             with self.subTest(argv=argv):
-                self.assertEqual(value, getattr(parser().parse_args(argv), field))
+                parsed = getattr(parser().parse_args(argv), field)
+                self.assertEqual(value, parsed)
+                self.assertIsInstance(parsed, int)
+
+    def test_cli_rejects_invalid_maintenance_numbers(self):
+        options = (
+            (["search", "reindex"], "--batch-size", ("0", "-1", "invalid")),
+            (["media", "sync"], "--limit", ("-1", "invalid")),
+            (["merchants", "list"], "--offset", ("-1", "invalid")),
+            (["media", "status"], "--minimum-post-images", ("0", "-1", "invalid")),
+            (["media", "sync"], "--minimum-post-images", ("0", "-1", "invalid")),
+        )
+        for action, option, values in options:
+            for value in values:
+                argv = [*action, option, value]
+                with self.subTest(argv=argv), redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as error:
+                        parser().parse_args(argv)
+                    self.assertEqual(2, error.exception.code)
 
     def test_cli_rejects_invalid_page_sizes_and_import_overrides(self):
         for argv in (
@@ -107,7 +129,7 @@ class CliTests(unittest.TestCase):
                         "4",
                     ]
                 )
-        refresh.assert_called_once_with(["@shop"], only_missing=True, minimum_images="4", limit="5")
+        refresh.assert_called_once_with(["@shop"], only_missing=True, minimum_images=4, limit=5)
 
     @patch("backend.cli.initialize_database")
     @patch("backend.cli.media.refresh_instagram_avatars", return_value=[])
@@ -116,5 +138,5 @@ class CliTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             status = main(["media", "sync", "--avatars-only", "--only-missing", "--limit", "2"])
         self.assertEqual(0, status)
-        avatars.assert_called_once_with([], only_missing=True, limit="2")
+        avatars.assert_called_once_with([], only_missing=True, limit=2)
         profiles.assert_not_called()

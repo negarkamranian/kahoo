@@ -97,7 +97,9 @@ def merchant_evidence(merchant, context):
         context.tokens,
     )
     return SearchEvidence(
-        text, context.lexical.get(merchant.id), context.semantic.get(merchant.id, 0)
+        text=text,
+        lexical=context.lexical.get(merchant.id),
+        semantic=context.semantic.get(merchant.id, 0),
     )
 
 

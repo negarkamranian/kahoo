@@ -1,0 +1,401 @@
+[
+  {
+    "name": "شیرینی بی‌بی",
+    "handle": "@bibi_confectionery",
+    "description": "کیک تولد، شیرینی تر و خشک، شکلاتی، دسر و سفارش شیرینی",
+    "category_code": "50182000",
+    "city": "تهران",
+    "source_url": "https://gzlocation.com/the-best-sweet-shop-in-tehran/",
+    "category_codes": []
+  },
+  {
+    "name": "پوشاک ایران",
+    "handle": "@iranclothings",
+    "description": "تیشرت، پولوشرت، لباس کار، لباس فرم، پوشاک زنانه و مردانه، چاپ و گلدوزی",
+    "category_code": "67010800",
+    "city": "تهران",
+    "source_url": "https://t.me/s/iranclothing",
+    "category_codes": [
+      "67010300"
+    ]
+  },
+  {
+    "name": "ست‌سیتی",
+    "handle": "@set.city.store",
+    "description": "لوازم آرایشی و بهداشتی، مراقبت پوست، رنگ مو، عطر و ادکلن",
+    "category_code": "53131100",
+    "city": "تهران",
+    "source_url": "https://setcitystore.com/",
+    "category_codes": [
+      "53131100",
+      "53141100",
+      "53161300"
+    ]
+  },
+  {
+    "name": "دکوطرح",
+    "handle": "@decotarhco",
+    "description": "طراحی داخلی، دکوراسیون منزل، بازسازی، کناف و چیدمان",
+    "category_code": "75030100",
+    "city": "تهران",
+    "source_url": "https://decotarhco.com/",
+    "category_codes": []
+  },
+  {
+    "name": "فروغ هوم",
+    "handle": "@forough_homegallery",
+    "description": "لوازم خانه و آشپزخانه، ظروف پذیرایی، لیوان، پارچ، بانکه و محصولات چوبی",
+    "category_code": "73040400",
+    "city": "گرگان",
+    "source_url": "https://pelazaa.ir/business/forough-home/",
+    "category_codes": [
+      "73040100",
+      "73050000",
+      "75030100"
+    ],
+    "biography": "✨اگه کیفیت برات مهمه،با من همراه باش😊✨\nبا ضمانت سالم رسیدن کالا🛍️\nثبت سفارش: سایت\n۰۹۳۵۳۷۸۴۵۹۹📌\nبا اعتبار ترب پی قسطی خرید کن💸",
+    "biography_source": "https://pelazaa.ir/business/forough-home/"
+  },
+  {
+    "name": "صنایع دستی ایران‌زمین",
+    "handle": "@sanayedastiiranzamin",
+    "description": "صنایع دستی ایرانی، آثار هنری، هدیه و محصولات دست‌ساز",
+    "category_code": "70011400",
+    "city": "ایران",
+    "source_url": "https://imginn.com/sanayedastiiranzamin/",
+    "category_codes": [],
+    "biography": "محصولات دستساز و با کیفیت هنرمندان ایرانی❤️\nبیش از ۱۰ سال سابقه فروش\nفروش حضوری و آنلاین\nثبت سفارش واتساپ/دایرکت\n📞۰۲۱۸۸۳۷۲۶۱۴",
+    "biography_source": "https://imginn.com/sanayedastiiranzamin/"
+  },
+  {
+    "name": "هایپرتوی",
+    "handle": "@hyper.toy",
+    "description": "اسباب‌بازی، بازی فکری، پازل، لگو و عروسک",
+    "category_code": "86010400",
+    "city": "تهران",
+    "source_url": "https://www.hypertoy.ir/contactus",
+    "category_codes": [
+      "86010100",
+      "86010200"
+    ]
+  },
+  {
+    "name": "نقره رُز",
+    "handle": "@noghre_rose",
+    "description": "نقره، انگشتر، دستبند، گوشواره، گردنبند و زیورآلات",
+    "category_code": "64010100",
+    "city": "ایران",
+    "source_url": "https://www.instagram.com/noghre_rose/",
+    "category_codes": []
+  },
+  {
+    "name": "پاندورا چالوس",
+    "handle": "@pandora_chalus",
+    "description": "کفش اسپرت و چرمی، بوت، صندل، کیف، کمربند و کیف پول",
+    "category_code": "63010300",
+    "city": "چالوس",
+    "source_url": "https://socialauditor.io/profile/pandora_chalus",
+    "category_codes": [
+      "64010200"
+    ]
+  },
+  {
+    "name": "ویداس",
+    "handle": "@vidasco.ir",
+    "description": "لوازم خانگی، خردکن، ساندویچ‌ساز و لوازم برقی آشپزخانه",
+    "category_code": "72020100",
+    "city": "تهران",
+    "source_url": "https://www.t.me/s/VIDASOFFICIAL",
+    "category_codes": [
+      "72020200"
+    ]
+  },
+  {
+    "name": "کوچه تحریر",
+    "handle": "@koocheh_tahrir",
+    "description": "لوازم‌التحریر، نوشت‌افزار، دفتر، خودکار و وسایل طراحی",
+    "category_code": "62060100",
+    "city": "گرگان",
+    "source_url": "https://pelazaa.ir/business/koochehtahrir/",
+    "category_codes": [
+      "62060400",
+      "62061100"
+    ]
+  },
+  {
+    "name": "سارینالند",
+    "handle": "@sarinaland_com",
+    "description": "گل و گیاه آپارتمانی، گلدان، خاک و لوازم نگهداری گیاه",
+    "category_code": "93037400",
+    "city": "تهران",
+    "source_url": "https://socialveins.com/influencer/instagram/sarinaland_com",
+    "category_codes": [],
+    "biography": "ارسال گیاهان آپارتمانی ارزان از محلات به سراسر ایران 🪴 انتخاب از بین بیش از ۶۰ گیاه آپارتمانی مقاوم 📌 بسته‌بندی ویژه و تحویل درب منزل شما 📦🛒",
+    "biography_source": "https://socialveins.com/influencer/instagram/sarinaland_com"
+  },
+  {
+    "name": "دیجی‌استایل",
+    "handle": "@digistylecom",
+    "description": "پوشاک زنانه و مردانه، لباس راحتی و خواب، شلوار و جین، کیف، کفش و اکسسوری",
+    "category_code": "67010000",
+    "city": "تهران",
+    "source_url": "https://basaliro.com/shop/digistylecom",
+    "category_codes": [
+      "67010200",
+      "67010300",
+      "67010800",
+      "67020100",
+      "67040100",
+      "63010300",
+      "64010200"
+    ]
+  },
+  {
+    "name": "خانومی",
+    "handle": "@khanoumi_shop",
+    "description": "لوازم آرایشی و بهداشتی، مراقبت پوست و مو، عطر، ضدآفتاب و لوازم برقی شخصی",
+    "category_code": "53161000",
+    "city": "تهران",
+    "source_url": "https://basaliro.com/shop/khanoumi_shop",
+    "category_codes": [
+      "53131100",
+      "53141100",
+      "53161300",
+      "53181100"
+    ]
+  },
+  {
+    "name": "روژا",
+    "handle": "@rojashop",
+    "description": "عطر و ادکلن، آرایش، مراقبت پوست و مو، شامپو، رنگ مو و محصولات بهداشتی",
+    "category_code": "53161000",
+    "city": "تهران",
+    "source_url": "https://basaliro.com/shop/rojashop",
+    "category_codes": [
+      "53131100",
+      "53141100",
+      "53161300",
+      "53181100"
+    ]
+  },
+  {
+    "name": "مو تن رو",
+    "handle": "@mootanroo",
+    "description": "محصولات آرایشی و بهداشتی، مراقبت پوست و مو، عطر و ابزار زیبایی",
+    "category_code": "53161000",
+    "city": "تهران",
+    "source_url": "https://basaliro.com/shop/mootanroo",
+    "category_codes": [
+      "53131100",
+      "53141100",
+      "53161300",
+      "53181100"
+    ]
+  },
+  {
+    "name": "آسن ویر",
+    "handle": "@asenwear",
+    "description": "پوشاک زنانه روزمره، شومیز، تیشرت، تاپ، شلوار و ست‌های هماهنگ",
+    "category_code": "67010000",
+    "city": "اندیشه",
+    "source_url": "https://basaliro.com/shop/asenwear",
+    "category_codes": [
+      "67010300",
+      "67010800"
+    ]
+  },
+  {
+    "name": "گالری بلنتین",
+    "handle": "@ballentine_gallery",
+    "description": "پوشاک زنانه، مانتو، کت، شومیز، پیراهن، کفتان، شال و روسری",
+    "category_code": "67010000",
+    "city": "تهران",
+    "source_url": "https://basaliro.com/shop/ballentine_gallery",
+    "category_codes": [
+      "67010200",
+      "67010800",
+      "64010100"
+    ]
+  },
+  {
+    "name": "کیف و کفش آنلاین",
+    "handle": "@kif_kafsh_onlinee",
+    "description": "کیف و کفش زنانه، بوت، نیم‌بوت، صندل، کفش مجلسی و روزمره",
+    "category_code": "63010300",
+    "city": "ایران",
+    "source_url": "https://basaliro.com/shop/kif_kafsh_onlinee",
+    "category_codes": [
+      "64010200"
+    ]
+  },
+  {
+    "name": "کیف و کفش کاج",
+    "handle": "@kajjshoe",
+    "description": "کفش، کیف و صندل زنانه برای استفاده روزمره و استایل مجلسی",
+    "category_code": "63010300",
+    "city": "بوشهر",
+    "source_url": "https://basaliro.com/shop/kajjshoe",
+    "category_codes": [
+      "64010200"
+    ]
+  },
+  {
+    "name": "ترافیک",
+    "handle": "@kif.kafsh.traffic",
+    "description": "کیف، کفش راحتی و رسمی، کوله‌پشتی مدرسه، سفر و دانشگاه",
+    "category_code": "63010300",
+    "city": "گنبدکاووس",
+    "source_url": "https://basaliro.com/shop/kif.kafsh.traffic",
+    "category_codes": [
+      "64010200"
+    ]
+  },
+  {
+    "name": "تهران استیلتو",
+    "handle": "@tehran_stiletto",
+    "description": "کفش زنانه، کفش مجلسی، پاشنه‌بلند و استیلتو",
+    "category_code": "63010300",
+    "city": "تهران",
+    "source_url": "https://basaliro.com/shop/tehran_stiletto",
+    "category_codes": []
+  },
+  {
+    "name": "گالری ورتان",
+    "handle": "@vartan_gallery",
+    "description": "زیورآلات دست‌ساز و هنری، قطعات تک‌نسخه با الهام از فرهنگ ایرانی",
+    "category_code": "64010100",
+    "city": "اصفهان",
+    "source_url": "https://basaliro.com/shop/vartan_gallery",
+    "category_codes": [
+      "70011400"
+    ]
+  },
+  {
+    "name": "نظم آرا",
+    "handle": "@luxe_organizer",
+    "description": "نظم‌دهنده، لوازم کاربردی خانه و آشپزخانه و محصولات سازمان‌دهی منزل",
+    "category_code": "73040100",
+    "city": "ایران",
+    "source_url": "https://basaliro.com/shop/luxe_organizer",
+    "category_codes": [
+      "75030100"
+    ]
+  },
+  {
+    "name": "خانه آریایی",
+    "handle": "@khaneariaee",
+    "description": "لوازم آشپزخانه، وسایل دکوری، گل مصنوعی، جهیزیه و محصولات خانه",
+    "category_code": "75030100",
+    "city": "ایران",
+    "source_url": "https://basaliro.com/shop/khaneariaee",
+    "category_codes": [
+      "73040000"
+    ]
+  },
+  {
+    "name": "های هوم",
+    "handle": "@hihome_opal",
+    "description": "لوازم خانه و آشپزخانه، محصولات لوکس، دکوراسیون و لوازم نظافت منزل",
+    "category_code": "73040000",
+    "city": "تهران",
+    "source_url": "https://basaliro.com/shop/hihome_opal",
+    "category_codes": [
+      "72020400",
+      "75030100"
+    ]
+  },
+  {
+    "name": "گالری نیلوفر آبی",
+    "handle": "@gallery.niloofarabi",
+    "description": "لوازم آشپزخانه، وسایل دکوری، ظروف و هدایای خانه",
+    "category_code": "75030100",
+    "city": "امیرکلا",
+    "source_url": "https://basaliro.com/shop/gallery.niloofarabi",
+    "category_codes": [
+      "73040000",
+      "73050000"
+    ]
+  },
+  {
+    "name": "گالری حق‌گو",
+    "handle": "@haghgoo_galleri",
+    "description": "دکوریجات، ظروف چوبی، لوازم خانه و وسایل کاربردی آشپزخانه",
+    "category_code": "73040400",
+    "city": "مشهد",
+    "source_url": "https://basaliro.com/shop/haghgoo_galleri",
+    "category_codes": [
+      "75030100"
+    ]
+  },
+  {
+    "name": "فیواستور",
+    "handle": "@favstor",
+    "description": "لوازم تحریر فانتزی، خودکار، مداد، پاک‌کن، دفتر، کاغذ و ماژیک",
+    "category_code": "62060100",
+    "city": "ایران",
+    "source_url": "https://basaliro.com/shop/favstor",
+    "category_codes": [
+      "62060400",
+      "62061100"
+    ]
+  },
+  {
+    "name": "تحریر شاپ",
+    "handle": "@tahrir._shopp",
+    "description": "لوازم تحریر فانتزی، پلنر، دفتر، روان‌نویس و ابزار برنامه‌ریزی",
+    "category_code": "62060400",
+    "city": "تهران",
+    "source_url": "https://basaliro.com/shop/tahrir._shopp",
+    "category_codes": [
+      "62060100",
+      "62061100"
+    ]
+  },
+  {
+    "name": "فانتزی مارکت",
+    "handle": "@fantasy_markett",
+    "description": "لوازم تحریر رنگی و فانتزی، اکسسوری و محصولات خلاقانه کودک و بزرگسال",
+    "category_code": "62060100",
+    "city": "قزوین",
+    "source_url": "https://basaliro.com/shop/fantasy_markett",
+    "category_codes": [
+      "62060400",
+      "62061100"
+    ]
+  },
+  {
+    "name": "خانه بازی",
+    "handle": "@home.bazi",
+    "description": "اسباب‌بازی چوبی، آشپزخانه کودک، پارکینگ طبقاتی و بازی‌های کودک",
+    "category_code": "86010400",
+    "city": "ایران",
+    "source_url": "https://basaliro.com/shop/home.bazi",
+    "category_codes": [
+      "86010700",
+      "86011100",
+      "86011200"
+    ]
+  },
+  {
+    "name": "کادوپیچ",
+    "handle": "@kadopich.shops",
+    "description": "ماگ، قمقمه، فلاسک، نوشیدنی‌افزار و لوازم کاربردی خانه و آشپزخانه",
+    "category_code": "73050000",
+    "city": "ایران",
+    "source_url": "https://basaliro.com/shop/kadopich.shops",
+    "category_codes": [
+      "73050300"
+    ]
+  },
+  {
+    "name": "هوم‌کالا",
+    "handle": "@homekala_20",
+    "description": "لوازم خانه و آشپزخانه، وسایل دکوراسیون و محصولات کاربردی منزل",
+    "category_code": "73040000",
+    "city": "ایران",
+    "source_url": "https://basaliro.com/shop/homekala_20",
+    "category_codes": [
+      "75030100"
+    ]
+  }
+]

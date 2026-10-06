@@ -1,4 +1,4 @@
-import { api, escapeHtml, faNumber as fa, STORAGE_KEYS } from "./shared.js";
+import { api, escapeHtml, faNumber as fa } from "./shared.js";
 
 const dateFa = (value) =>
   new Intl.DateTimeFormat("fa-IR", { month: "short", day: "numeric" }).format(
@@ -224,10 +224,6 @@ el("merchant-search").addEventListener("input", () => {
   merchantSearchTimer = setTimeout(loadManagedMerchants, 250);
 });
 el("merchant-refresh").addEventListener("click", loadManagedMerchants);
-el("admin-token").value = sessionStorage.getItem(STORAGE_KEYS.adminToken) || "";
-el("admin-token").addEventListener("input", () =>
-  sessionStorage.setItem(STORAGE_KEYS.adminToken, el("admin-token").value),
-);
 el("period-select").addEventListener("change", load);
 load();
 loadManagedMerchants();

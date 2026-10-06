@@ -37,6 +37,8 @@ def embed_query(query):
 
 
 def embed_pending_documents(database, limit=100):
+    if not settings.embedding_api_url:
+        return 0
     model = settings.embedding_model
     rows = database.execute(
         """SELECT id,content FROM search_documents
@@ -44,6 +46,8 @@ def embed_pending_documents(database, limit=100):
            ORDER BY updated_at LIMIT %s""",
         (model, limit),
     ).fetchall()
+    if not rows:
+        return 0
     vectors = embed_texts([row["content"] for row in rows])
     for row, vector in zip(rows, vectors, strict=True):
         database.execute(
@@ -57,6 +61,8 @@ def embed_pending_documents(database, limit=100):
 
 
 def semantic_merchant_scores(database, query, limit=50):
+    if not settings.embedding_api_url:
+        return {}
     vector = vector_literal(embed_query(query))
     return {
         row["merchant_id"]: float(row["score"])

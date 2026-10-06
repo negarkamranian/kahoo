@@ -98,15 +98,27 @@ def fuzzy_term_strength(term, words):
 def searchable_fields(merchant, category_labels):
     fields = [
         SearchField(
-            "name", f"{merchant.name} {merchant.handle}", token_weight=14, phrase_weight=20
+            name="name",
+            text=f"{merchant.name} {merchant.handle}",
+            token_weight=14,
+            phrase_weight=20,
         ),
-        SearchField("description", merchant.description, token_weight=7, phrase_weight=13),
-        SearchField("biography", merchant.biography, token_weight=5, phrase_weight=9),
-        SearchField("category", " ".join(category_labels), token_weight=9, phrase_weight=14),
-        SearchField("city", merchant.city, token_weight=3, phrase_weight=0),
+        SearchField(
+            name="description", text=merchant.description, token_weight=7, phrase_weight=13
+        ),
+        SearchField(name="biography", text=merchant.biography, token_weight=5, phrase_weight=9),
+        SearchField(
+            name="category", text=" ".join(category_labels), token_weight=9, phrase_weight=14
+        ),
+        SearchField(name="city", text=merchant.city, token_weight=3, phrase_weight=0),
     ]
     return [
-        SearchField(item.name, normalize_search(item.text), item.token_weight, item.phrase_weight)
+        SearchField(
+            name=item.name,
+            text=normalize_search(item.text),
+            token_weight=item.token_weight,
+            phrase_weight=item.phrase_weight,
+        )
         for item in fields
     ]
 

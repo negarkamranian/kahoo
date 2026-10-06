@@ -6,6 +6,7 @@ import time
 
 from backend.database import connect
 from backend.models.search import (
+    BatchEnrichment,
     Enrichment,
     EnrichmentResult,
     LatencyMetrics,
@@ -15,7 +16,7 @@ from backend.models.search import (
     SearchEvaluation,
 )
 from backend.search.embeddings import embed_pending_documents
-from backend.search.enrichment import save_llm_enrichment
+from backend.search.enrichment import save_batch_enrichment, save_llm_enrichment
 from backend.search.indexing import sync_search_index
 from backend.search.ranking import ndcg_at_k
 from backend.search.service import merchants
@@ -80,5 +81,10 @@ def reindex(args):
 
 def enrich(args):
     enrichment = Enrichment.model_validate_json(args.source.read_bytes())
-    save_llm_enrichment(args.merchant_id, enrichment)
-    return EnrichmentResult(merchant_id=args.merchant_id, updated=True)
+    updated = save_llm_enrichment(args.merchant_id, enrichment)
+    return EnrichmentResult(merchant_id=args.merchant_id, updated=updated)
+
+
+def enrich_file(args):
+    batch = BatchEnrichment.model_validate_json(args.source.read_bytes())
+    return save_batch_enrichment(batch)

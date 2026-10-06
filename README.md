@@ -1,7 +1,7 @@
 # Kahoo
 
 Kahoo (کاهو) is a Persian RTL discovery app for Iranian Instagram shops.
-Shoppers search stored profiles and posts, save items locally, and continue to Instagram.
+Shoppers search stored profiles and posts, save items in PostgreSQL, and continue to Instagram.
 
 ## Start the app
 
@@ -26,6 +26,65 @@ docker compose --env-file .env.example --env-file .env run --rm app python3 -m b
 
 Catalog import is explicit; normal startup does not import snapshots or contact Instagram.
 
+## Database ownership and upgrades
+
+PostgreSQL holds the catalog, cached images, search documents, analytics, users,
+sessions, login challenges, and saved shops/posts. Legacy browser storage is used
+only to import old saved collections; a successful server acknowledgement removes
+the corresponding browser records. Failed, invalid, or missing references remain
+in the browser and the saved page offers a retry. Open the updated app on its
+original URL so it can read that browser origin's existing saves.
+Session bootstrap and imports coordinate across tabs with Web Locks. Browsers
+without that API retain the old browser copies even after importing them, so
+concurrent first visits cannot discard the only accessible copy.
+
+Migrations 014 and 015 add accounts and saved collections to the existing database.
+They retain catalog and analytics rows. Session cookies identify ownership; the
+database stores a hash of the private cookie token. The public analytics session
+ID grants no access to saved items. Saved posts use stable collection keys and a
+canonical image snapshot so gallery refreshes do not erase them.
+
+Back up before applying the update, then rebuild the app:
+
+```bash
+make db-backup
+docker compose --env-file .env.example --env-file .env up --build -d app
+```
+
+Startup applies outstanding numbered migrations and the category seed in one
+transaction, with an advisory lock to serialize concurrent startup/CLI work.
+Keep applied migration files unchanged; add a new numbered SQL file for each
+schema change. Inspect applied versions with:
+
+```bash
+docker compose --env-file .env.example --env-file .env exec -T db \
+  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT version, applied_at FROM schema_migrations ORDER BY version"'
+```
+
+Use admin/CLI operations for catalog edits and run snapshot imports deliberately.
+Do not run `docker compose down -v` against data you want to retain.
+
+Run `make db-backup` daily and before migrations or bulk imports. It creates a
+private, validated custom-format archive under `backups/`, ignored by Git.
+Copy completed archives to a separate storage location. Regularly verify a
+restore into a fresh database:
+
+```bash
+make db-restore RESTORE_DB=kahoo_restore_check BACKUP_FILE=backups/ARCHIVE.dump
+```
+
+Restore refuses the active database and existing names; it does not change the
+app's connection. Check the restored data before any intentional cutover.
+
+Phone login remains an explicitly unverified demo: any five digits complete a
+short-lived challenge bound to the current cookie session. It updates that
+guest's persisted user row, never looks up another owner by phone, and keeps
+`phone_verified=false`. Old browser login labels are discarded because they
+were not verified identities. Access persists through the cookie on this browser;
+cross-device sign-in requires an actual SMS verification provider. The admin
+token stays in environment configuration and the current input, rather than
+being stored by the browser.
+
 ## Project structure
 
 ```text
@@ -45,6 +104,8 @@ backend/
     media.py           Image downloads, caching, and persistence
     categories.py      Category tree
     analytics.py       Events and admin metrics
+    accounts.py        Cookie sessions and persistent demo login challenges
+    saved.py           Private saved collections, imports, and media snapshots
   search/              Normalization, indexing, retrieval, ranking, enrichment
   database.py          PostgreSQL connections and shared database setup
   models/              Typed contracts, grouped by domain
@@ -54,7 +115,8 @@ backend/
     categories.py      Category tree, GS1 publications, and generation policy
     catalog.py         Catalog snapshots and import reports
     analytics.py       Events and admin metrics
-    auth.py            Login requests
+    auth.py            Accounts, sessions, and login requests
+    saved.py           Saved collection views and import references
     search.py          Search, enrichment, benchmarks, and command reports
     instagram/         Instagram wire schemas: common, embed, and Meta
   config.py            Environment loading and shared typed settings
@@ -125,6 +187,7 @@ must already be in lowercase `@username` format.
 | `search reindex [--batch-size N] [--all]` | Refresh metadata, search documents, and optional embeddings. |
 | `search evaluate [--benchmark PATH]` | Run the reviewed relevance benchmark. |
 | `search enrich ID PATH` | Import a sourced JSON description and search terms. |
+| `search enrich-file PATH` | Atomically import a researched batch matched by Instagram handle. |
 
 Instagram imports use the fetched profile name and biography as the merchant name
 and description. Manual name/description overrides are not supported. Missing or
@@ -177,6 +240,40 @@ Search adds lowercase matching, ASCII digits, and punctuation/half-space separat
 to Hazm's output. After upgrading from the handwritten normalizer, rebuild stored
 search metadata and documents with `python3 -m backend search reindex`.
 See [the search flow](docs/search-core-flow.md) for indexing and ranking details.
+
+### Shop research and enrichment
+
+`data/merchant_enrichment.json` contains researched Persian text for the 34 shops
+in the active catalog. Each record includes natural search terms, SEO title and
+meta description, evidence URLs, access status, confidence, and explicit research
+limitations. The text combines observed cached post imagery, available profile
+information, official sites, and indexed public pages. Unavailable biographies
+and captions are marked as gaps; prices, stock, authenticity, and delivery claims
+are not inferred from images or directory scores.
+
+After backing up and rebuilding the app, apply the reviewed batch:
+
+```bash
+docker compose --env-file .env.example --env-file .env run --rm app \
+  python3 -m backend search enrich-file data/merchant_enrichment.json
+```
+
+`make shop-enrich` performs the backup, rebuild, and import in that order,
+stopping if any step fails.
+
+The command resolves canonical handles against existing merchants. Unknown or
+duplicate handles stop the import. It commits descriptions, generated terms,
+source provenance, and search indexing in one transaction, leaving names and
+biographies intact. Migration 016 retains the previous description and provenance
+plus the complete research payload in `merchant_enrichment_history`. Reapplying
+the same batch reports unchanged shops without duplicating history.
+Research older than an existing enrichment is rejected before any shop changes.
+
+Descriptions and terms feed the existing search documents and suggestions.
+Changed document content invalidates old embeddings; run `search reindex --all`
+when an embedding provider is configured. SEO fields are retained in the research
+payload for future page metadata. New research should have a fresh UTC
+`researched_at` timestamp and cite only evidence actually checked.
 
 ## Development and checks
 
