@@ -38,7 +38,7 @@ retrieval and ranking:
 
 1. **Query understanding:** Unicode NFKC, Persian/Arabic character unification,
    digit conversion, half-space removal, stopword filtering, light plural
-   variants. Product vocabulary comes from stored text and category assignments; there is no seeded synonym table.
+   variants, and curated commerce aliases.
 2. **Candidate generation:** weighted-field prefix full-text retrieval,
    word-level trigram similarity, explicit post evidence, and optional
    multilingual BGE-M3 vectors.
@@ -48,17 +48,17 @@ retrieval and ranking:
 4. **Re-ranking:** a bounded quality tie-breaker considers audience, catalog
    activity, profile completeness, verification, and recent clicks. It cannot
    override a clearly more relevant result.
-5. **Experience:** suggestions cover shops, categories, extracted merchant terms, and successful
+5. **Experience:** suggestions cover shops, categories, aliases, and popular
    queries. Results explain why they matched, and empty results offer recovery.
 6. **Evaluation:** `data/search_benchmarks.json` is a reviewed Persian-commerce
-   query set. `python3 -m backend search evaluate` reports Success@5, MRR@5, Recall@10,
+   query set. `scripts/evaluate_search.py` reports Success@5, MRR@5, Recall@10,
    nDCG@10, zero-result rate, and latency percentiles.
 
 ## Operating loop
 
 ```bash
-docker compose run --rm app python3 -m backend search evaluate
-docker compose run --rm app python3 -m backend search reindex --batch-size 500 --all
+docker compose run --rm app python3 scripts/evaluate_search.py
+docker compose run --rm app python3 scripts/reindex_search.py --batch-size 500 --all
 ```
 
 Track zero-result rate, reformulation rate, Success@5, MRR@5,
