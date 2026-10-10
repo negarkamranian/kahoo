@@ -17,10 +17,13 @@
     />
     <link rel="stylesheet" href="./assets/css/foundation.css?v=4a685e7e12f4" />
     <link rel="stylesheet" href="./assets/css/catalog.css?v=a63cbd08e905" />
-    <link rel="stylesheet" href="./assets/css/marketplace-theme.css?v=eac665afacf5" />
+    <link
+      rel="stylesheet"
+      href="./assets/css/marketplace-theme.css?v=shop-cards-6"
+    />
   </head>
   <body>
-    <a class="skip-link" href="#shops">رفتن به فروشگاه‌ها</a>
+    <a class="skip-link" href="#shops">رفتن به نتایج</a>
     <header class="site-header">
       <div class="header-main">
         <a class="brand" href="/" aria-label="صفحه اصلی کاهو">
@@ -65,6 +68,9 @@
           ></div>
         </form>
         <div class="header-actions">
+          <button class="merchant-trigger" type="button" data-open-connect>
+            برای فروشگاه‌ها
+          </button>
           <a class="saved-link" href="/saved.html" aria-label="ذخیره‌شده‌ها"
             ><svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 3h12v18l-6-4-6 4z" /></svg
@@ -77,7 +83,7 @@
       </div>
       <nav class="browse-nav" aria-label="راهبری اصلی">
         <a class="nav-explore active" href="/" aria-current="page"
-          >گشتن در فروشگاه‌ها</a
+          >کشف محصول و فروشگاه</a
         >
         <div class="category-dropdown" id="categories">
           <button
@@ -87,8 +93,18 @@
             aria-expanded="false"
             aria-controls="category-popover"
           >
-            <span id="category-menu-label">دسته‌بندی‌ها</span
-            ><i class="menu-chevron" aria-hidden="true"></i>
+            <svg
+              class="category-menu-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="2" />
+              <rect x="14" y="3" width="7" height="7" rx="2" />
+              <rect x="3" y="14" width="7" height="7" rx="2" />
+              <rect x="14" y="14" width="7" height="7" rx="2" />
+            </svg>
+            <span id="category-menu-label">دسته‌بندی محصولات</span>
+            <i class="menu-chevron" aria-hidden="true"></i>
           </button>
           <aside
             class="category-panel category-popover"
@@ -97,19 +113,19 @@
           >
             <div class="tree-heading">
               <h2>دسته‌بندی‌ها</h2>
-              <button id="reset-category" type="button">همه فروشگاه‌ها</button>
+              <button id="reset-category" type="button">همه دسته‌ها</button>
             </div>
+            <p class="category-help">
+              یک دسته را انتخاب کن؛ با + زیرگروه‌ها را ببین.
+            </p>
             <div
               class="category-tree"
               id="category-tree"
-              role="tree"
+              role="region"
               aria-label="دسته‌بندی محصولات"
             ></div>
           </aside>
         </div>
-        <button class="merchant-trigger" type="button" data-open-connect>
-          برای فروشگاه‌ها
-        </button>
         <span class="nav-note">خرید و گفتگو در اینستاگرام</span>
       </nav>
     </header>
@@ -120,15 +136,22 @@
         aria-labelledby="browse-heading"
       >
         <div>
-          <p class="eyebrow">جستجو و گشت‌وگذار</p>
-          <h1 id="browse-heading">فروشگاه‌های اینستاگرام</h1>
+          <p class="eyebrow">یک گشت تازه، یک کشف تازه</p>
+          <h1 id="browse-heading"><span>کاهو،</span> کشف چیزهای دوست‌داشتنی</h1>
         </div>
-        <p>نام محصول یا فروشگاه را جستجو کن.<br />یا در دسته‌بندی‌ها بگرد.</p>
+        <div class="hero-note">
+          <span class="hero-spark" aria-hidden="true">✳</span>
+          <p>
+            از دست‌سازهای خاص تا حال‌وهوای تازه برای خانه.<br />بگرد، ذخیره کن و
+            در اینستاگرام بیشتر ببین.
+          </p>
+          <a href="#shops">شروع گشت‌وگذار <span aria-hidden="true">←</span></a>
+        </div>
       </section>
       <nav
         class="quick-categories"
         id="quick-categories"
-        aria-label="دسته‌بندی فروشگاه‌ها"
+        aria-label="دسته‌بندی محصولات"
         hidden
       ></nav>
       <section
@@ -147,19 +170,33 @@
         <div class="market-layout">
           <div class="result-status" aria-live="polite">
             <div>
-              <p class="eyebrow" id="result-context">
-                فروشگاه‌ها و آخرین پست‌ها
-              </p>
               <h2 id="result-title">همه فروشگاه‌ها</h2>
             </div>
             <div class="result-actions">
-              <span id="result-count"></span
+              <div class="browse-switch" role="group" aria-label="نمایش نتایج">
+                <button
+                  type="button"
+                  data-browse-mode="products"
+                  aria-pressed="false"
+                >
+                  محصولات
+                </button>
+                <button
+                  type="button"
+                  data-browse-mode="shops"
+                  aria-pressed="true"
+                >
+                  فروشگاه‌ها
+                </button>
+              </div>
+              <span id="result-count" hidden></span
               ><button type="button" id="clear-filters" hidden>
                 پاک کردن فیلترها <span aria-hidden="true">×</span>
               </button>
             </div>
           </div>
           <div class="results-panel">
+            <p id="catalog-save-status" role="status" aria-live="polite"></p>
             <div class="shop-grid" id="shop-grid">
               <div class="kahoo-loader catalog-loader" role="status">
                 <span class="loading-line" aria-hidden="true"></span
@@ -407,6 +444,10 @@
           <div class="shop-copy">
             <div class="shop-title-line"><h3></h3></div>
             <p></p>
+            <div class="shop-social-stats" hidden>
+              <span class="shop-activity" hidden></span>
+              <span class="shop-following" hidden></span>
+            </div>
           </div>
           <a
             class="visit-link"
@@ -422,9 +463,11 @@
         </div>
         <span class="match-reason" hidden></span>
         <p class="shop-description"></p>
-        <span class="shop-activity" hidden></span>
       </article>
     </template>
-    <script type="module" src="./assets/js/catalog.js"></script>
+    <script
+      type="module"
+      src="./assets/js/catalog.js?v=selected-categories-5"
+    ></script>
   </body>
 </html>

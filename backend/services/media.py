@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.request import Request, urlopen
 
 from backend.models.media import ImageCacheResult, InstagramProfile, PostImage
+from backend.services.products import enqueue_products
 
 MAX_IMAGE_BYTES = 8_000_000
 IMAGE_DOWNLOAD_WORKERS = 6
@@ -73,6 +74,8 @@ def replace_profile_posts(db, merchant_id: int, profile: InstagramProfile) -> in
     candidates = [
         PostImage(post=post, image=image) for post in profile.posts for image in post.media
     ]
+    if not candidates:
+        return 0
 
     workers = min(IMAGE_DOWNLOAD_WORKERS, len(candidates))
     with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -88,6 +91,7 @@ def replace_profile_posts(db, merchant_id: int, profile: InstagramProfile) -> in
           WHERE id=%s""",
         (profile.media_grouping_version, merchant_id),
     )
+    enqueue_products(db, merchant_id)
     return len(downloaded)
 
 

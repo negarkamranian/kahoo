@@ -93,7 +93,7 @@ def index_post(database, post, category_labels):
     title_content = normalized_content(
         post["name"], post["handle"], category_labels.get(post["merchant_id"], "")
     )
-    body_content = normalized_content(post["description"], post["caption"])
+    body_content = normalized_content(post["caption"])
     return upsert_document(
         database,
         post["merchant_id"],

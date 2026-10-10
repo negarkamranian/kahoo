@@ -11,7 +11,7 @@ from backend.search.suggestions import search_suggestions
 
 class SearchRuleTests(unittest.TestCase):
     def test_explanations_keep_priority_when_signals_overlap(self):
-        post = LexicalMatch(entity_type="post", entity_id=7, score=1)
+        post = LexicalMatch(entity_type="post", entity_id=7, score=1, coverage=1, coherent=True)
         cases = [
             ({"name", "category"}, post, "نام فروشگاه"),
             ({"category"}, post, "محصول یا پست مرتبط"),

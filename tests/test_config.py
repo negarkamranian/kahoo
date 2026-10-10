@@ -50,6 +50,7 @@ class ConfigTests(unittest.TestCase):
             "admin_token": "secret-admin",
             "meta_access_token": "secret-meta",
             "embedding_api_key": "secret-embedding",
+            "product_vision_api_key": "secret-vision",
         }
         configured = Settings.model_validate({**settings.model_dump(), **credentials})
         for field, secret in credentials.items():

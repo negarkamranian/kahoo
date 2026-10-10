@@ -91,6 +91,12 @@ class HttpTests(unittest.TestCase):
                     response.json(),
                 )
 
+    @patch("backend.server.routes.merchants", return_value=[])
+    def test_search_accepts_repeated_category_filters(self, service):
+        response = self.client.get("/api/merchants?q=کفش&category=67000000&category=73000000")
+        self.assertEqual(200, response.status_code)
+        service.assert_called_once_with(["67000000", "73000000"], "کفش")
+
     def test_list_endpoints_return_typed_arrays(self):
         category = CategoryNode(
             code="1",

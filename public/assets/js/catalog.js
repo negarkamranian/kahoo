@@ -23,12 +23,11 @@ const treeElement = document.querySelector("#category-tree"),
 let renderingTree = false,
   categoryTree = [],
   shops = [],
-  selectedCategory = null,
-  selectedLabel = "",
-  query = "";
-const expanded = new Set();
+  query = "",
+  browseMode = "shops";
+const expanded = new Set(),
+  selectedCategories = new Map();
 let reelStops = [];
-const finePointer = matchMedia("(hover: hover) and (pointer: fine)");
 const loaderMarkup = (label) =>
   `<div class="kahoo-loader catalog-loader" role="status"><span>${label}</span></div>`;
 
@@ -56,17 +55,11 @@ function collapseBranch(node) {
   expanded.delete(node.code);
   node.children.forEach(collapseBranch);
 }
-let branchOpenTimer;
 function revealBranch(node, siblings) {
   if (!node.children.length || expanded.has(node.code)) return;
   siblings.filter((sibling) => sibling !== node).forEach(collapseBranch);
   expanded.add(node.code);
   renderTree();
-}
-function queueBranch(node, siblings) {
-  clearTimeout(branchOpenTimer);
-  if (node.children.length && !expanded.has(node.code))
-    branchOpenTimer = setTimeout(() => revealBranch(node, siblings), 260);
 }
 
 function treeToggle(node, siblings) {
@@ -83,7 +76,6 @@ function treeToggle(node, siblings) {
   toggle.setAttribute("aria-label", `زیرگروه‌های ${node.label_fa}`);
   toggle.setAttribute("aria-expanded", String(expanded.has(node.code)));
   toggle.addEventListener("click", () => {
-    clearTimeout(branchOpenTimer);
     if (expanded.has(node.code)) {
       collapseBranch(node);
       renderTree();
@@ -98,36 +90,30 @@ function treeToggle(node, siblings) {
 function treeNode(node, siblings) {
   const item = document.createElement("li");
   item.className = `tree-item level-${node.level}`;
-  item.setAttribute("role", "treeitem");
-  item.setAttribute("aria-selected", node.code === selectedCategory);
-  if (node.children.length)
-    item.setAttribute("aria-expanded", String(expanded.has(node.code)));
   const row = document.createElement("div");
-  row.className = `tree-node${node.code === selectedCategory ? " selected" : ""}${expanded.has(node.code) ? " active" : ""}`;
+  row.className = `tree-node${selectedCategories.has(node.code) ? " selected" : ""}${expanded.has(node.code) ? " active" : ""}`;
   const toggle = treeToggle(node, siblings);
   const select = document.createElement("button");
   select.className = "tree-select";
   select.dataset.category = node.code;
   select.type = "button";
+  select.setAttribute(
+    "aria-pressed",
+    String(selectedCategories.has(node.code)),
+  );
   select.innerHTML = `<span>${escapeHtml(node.label_fa)}</span>`;
   select.title = `GS1 ${node.code}`;
-  select.addEventListener("click", (event) => {
-    if (
-      !finePointer.matches &&
-      node.children.length &&
-      !expanded.has(node.code)
-    ) {
-      event.preventDefault();
-      revealBranch(node, siblings);
-      return;
-    }
-    selectCategory(node);
-  });
-  row.addEventListener("pointerenter", (event) => {
-    if (event.pointerType === "mouse") queueBranch(node, siblings);
-  });
+  select.addEventListener("click", () => selectCategory(node));
   row.append(select, toggle);
   item.append(row);
+  if (expanded.has(node.code) && node.children.length) {
+    const group = document.createElement("ul");
+    group.className = "tree-children";
+    node.children.forEach((child) =>
+      group.append(treeNode(child, node.children)),
+    );
+    item.append(group);
+  }
   return item;
 }
 
@@ -137,27 +123,13 @@ function renderTree() {
     focusValue = focused.dataset[focusKey];
   renderingTree = true;
   treeElement.innerHTML = "";
-  let siblings = categoryTree,
-    depth = 0;
-  while (siblings.length) {
-    const column = document.createElement("ul");
-    column.className = "tree-column";
-    column.dataset.depth = depth;
-    column.setAttribute("role", "group");
-    siblings.forEach((node) => column.append(treeNode(node, siblings)));
-    treeElement.append(column);
-    const branch = siblings.find((node) => expanded.has(node.code));
-    if (!branch) break;
-    siblings = branch.children;
-    depth += 1;
-  }
-  categoryPopover.style.setProperty(
-    "--category-columns",
-    treeElement.childElementCount,
-  );
-  categoryMenuLabel.textContent = selectedCategory
-    ? selectedLabel
-    : "دسته‌بندی‌ها";
+  const list = document.createElement("ul");
+  list.className = "tree-column";
+  categoryTree.forEach((node) => list.append(treeNode(node, categoryTree)));
+  treeElement.append(list);
+  categoryMenuLabel.textContent = selectedCategories.size
+    ? [...selectedCategories.values()].join("، ")
+    : "دسته‌بندی محصولات";
   if (focusValue)
     [...treeElement.querySelectorAll(`[data-${focusKey}]`)]
       .find((button) => button.dataset[focusKey] === focusValue)
@@ -173,39 +145,15 @@ function openCategoryMenu() {
   categoryMenu.setAttribute("aria-expanded", "true");
 }
 function closeCategoryMenu() {
-  clearTimeout(branchOpenTimer);
   if (categoryPopover.contains(document.activeElement)) categoryMenu.focus();
   categoryPopover.hidden = true;
   categoryMenu.setAttribute("aria-expanded", "false");
 }
-let categoryOpenTimer, categoryCloseTimer;
-categoryDropdown.addEventListener("pointerenter", (event) => {
-  if (event.pointerType === "mouse") {
-    clearTimeout(categoryCloseTimer);
-    if (categoryPopover.hidden)
-      categoryOpenTimer = setTimeout(openCategoryMenu, 220);
-  }
-});
-categoryDropdown.addEventListener("pointerleave", (event) => {
-  if (event.pointerType === "mouse") {
-    clearTimeout(categoryOpenTimer);
-    categoryCloseTimer = setTimeout(closeCategoryMenu, 260);
-  }
-});
-treeElement.addEventListener("pointerleave", () =>
-  clearTimeout(branchOpenTimer),
-);
-categoryDropdown.addEventListener("focusin", (event) => {
-  clearTimeout(categoryOpenTimer);
-  clearTimeout(categoryCloseTimer);
-  if (event.target !== categoryMenu) openCategoryMenu();
-});
 categoryDropdown.addEventListener("focusout", (event) => {
   if (!renderingTree && !categoryDropdown.contains(event.relatedTarget))
     closeCategoryMenu();
 });
-categoryMenu.addEventListener("click", (event) => {
-  if (finePointer.matches && event.detail > 0) return;
+categoryMenu.addEventListener("click", () => {
   categoryPopover.hidden ? openCategoryMenu() : closeCategoryMenu();
 });
 document.addEventListener("click", (event) => {
@@ -257,11 +205,27 @@ function populateShopCard(card, shop) {
   card.querySelector(".location").textContent = shop.city;
   card.querySelector(".shop-category").textContent =
     shop.category_label || categoryLabel(shop.category_code);
-  const activity = card.querySelector(".shop-activity");
-  if (shop.followers_count != null) {
-    activity.textContent = `${faNumber(shop.followers_count)} دنبال‌کننده در اینستاگرام`;
-    activity.hidden = false;
-  }
+  populateShopStats(card, shop);
+}
+
+const compactNumber = new Intl.NumberFormat("fa-IR", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+function populateShopStats(card, shop) {
+  const stats = card.querySelector(".shop-social-stats");
+  stats.hidden = shop.followers_count == null && shop.following_count == null;
+  [
+    [".shop-activity", shop.followers_count, "دنبال‌کننده"],
+    [".shop-following", shop.following_count, "دنبال‌شونده"],
+  ].forEach(([selector, count, label]) => {
+    if (count == null) return;
+    const badge = card.querySelector(selector);
+    badge.textContent = `${compactNumber.format(count)} ${label}`;
+    badge.title = `${faNumber(count)} ${label}`;
+    badge.setAttribute("aria-label", badge.title);
+    badge.hidden = false;
+  });
 }
 
 function configureShopVisit(card, shop) {
@@ -272,7 +236,7 @@ function configureShopVisit(card, shop) {
     track("merchant_click", {
       merchant_id: shop.id,
       query,
-      category_code: selectedCategory,
+      category_code: [...selectedCategories.keys()][0] || "",
     }),
   );
 }
@@ -287,32 +251,111 @@ function shopCard(shop, index) {
   return card;
 }
 
+function productEntries() {
+  const entries = shops.flatMap((shop) =>
+    shop.posts.map((post, index) => ({ shop, post, index })),
+  );
+  // Alternate shops by post position so browsing does not form shop blocks.
+  return entries.sort((a, b) => a.index - b.index);
+}
+
+function productLink(shop, post, index) {
+  const link = document.createElement("a");
+  link.href = post.permalink;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.setAttribute(
+    "aria-label",
+    `دیدن پست محصول ${index + 1} از ${shop.name} در اینستاگرام`,
+  );
+  const image = document.createElement("img");
+  image.src = post.media_url;
+  image.alt = `پست ${index + 1} · ${shop.category_label || shop.name}`;
+  image.loading = "lazy";
+  link.append(image);
+  if (post.media.length > 1) {
+    const badge = document.createElement("span");
+    badge.className = "collection-count";
+    badge.textContent = `▣ ${faNumber(post.media.length)}`;
+    link.append(badge);
+  }
+  return link;
+}
+
+function productCard({ shop, post, index }) {
+  const card = document.createElement("article");
+  card.className = "product-card";
+  card.dataset.merchant = shop.id;
+  card.dataset.post = post.key;
+  const image = productLink(shop, post, index);
+  image.className = "product-image";
+  image.addEventListener("click", () =>
+    track("merchant_click", { merchant_id: shop.id, query }),
+  );
+  const copy = document.createElement("div");
+  copy.className = "product-copy";
+  const label = document.createElement("p");
+  label.textContent = shop.category_label || categoryLabel(shop.category_code);
+  const source = document.createElement("button");
+  source.type = "button";
+  source.textContent = shop.name;
+  source.setAttribute("aria-label", `نمایش فروشگاه ${shop.name}`);
+  source.addEventListener("click", () => openMerchantProfile(shop.id));
+  copy.append(label, source);
+  card.append(image, postSaveButton(shop, post), copy);
+  return card;
+}
+
 function renderShops() {
   reelStops.forEach((stop) => stop());
   reelStops = [];
-  shopGrid.innerHTML = "";
-  emptyState.hidden = shops.length > 0;
-  shops.forEach((shop, index) => shopGrid.append(shopCard(shop, index)));
+  const products = browseMode === "products",
+    entries = products ? productEntries() : shops;
+  shopGrid.classList.toggle("product-grid", products);
+  shopGrid.replaceChildren(
+    ...entries.map((entry, index) =>
+      products ? productCard(entry) : shopCard(entry, index),
+    ),
+  );
+  emptyState.hidden = entries.length > 0;
+  emptyState.querySelector("h3").textContent = products
+    ? "محصولی پیدا نشد"
+    : "فروشگاهی پیدا نشد";
   resultTitle.textContent = query
     ? `نتایج «${query}»`
-    : selectedLabel || "همه فروشگاه‌ها";
-  document.querySelector("#result-count").textContent =
-    `${faNumber(shops.length)} فروشگاه`;
+    : [...selectedCategories.values()].join("، ") ||
+      (products ? "محصولات برای کشف کردن" : "همه فروشگاه‌ها");
+  const count = document.querySelector("#result-count");
+  count.hidden = !products;
+  count.textContent = products ? `${faNumber(entries.length)} پست محصول` : "";
+  document
+    .querySelectorAll("[data-browse-mode]")
+    .forEach((button) =>
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset.browseMode === browseMode),
+      ),
+    );
   renderDiscovery();
 }
 
+document.querySelectorAll("[data-browse-mode]").forEach((button) => {
+  button.addEventListener("click", () => {
+    browseMode = button.dataset.browseMode;
+    renderShops();
+  });
+});
+
 function selectCategory(node) {
-  const fromMenu = categoryPopover.contains(document.activeElement);
-  selectedCategory = node.code;
-  selectedLabel = node.label_fa;
+  if (selectedCategories.has(node.code)) selectedCategories.delete(node.code);
+  else selectedCategories.set(node.code, node.label_fa);
   renderTree();
-  closeCategoryMenu();
-  if (fromMenu) categoryMenu.focus();
+  renderQuickCategories();
   loadShops();
 }
 
 function browseCategories() {
-  return categoryTree.filter((node) => node.count > 0).slice(0, 6);
+  return categoryTree.filter((node) => node.count > 0);
 }
 
 const browseCategoryLabels = Object.freeze({
@@ -331,13 +374,30 @@ function browseCategoryLabel(node) {
 function renderQuickCategories() {
   const navigation = document.querySelector("#quick-categories");
   navigation.replaceChildren();
-  browseCategories().forEach((node) => {
+  if (!selectedCategories.size) {
+    const all = document.createElement("button");
+    all.type = "button";
+    all.textContent = "همه";
+    all.classList.add("active");
+    all.setAttribute("aria-pressed", "true");
+    all.addEventListener("click", () =>
+      document.querySelector("#reset-category").click(),
+    );
+    navigation.append(all);
+  }
+  const categories = selectedCategories.size
+    ? [...selectedCategories].map(([code, label_fa]) => ({ code, label_fa }))
+    : browseCategories();
+  categories.forEach((node) => {
     const button = document.createElement("button");
     button.type = "button";
     button.dataset.category = node.code;
-    button.classList.toggle("active", selectedCategory === node.code);
-    button.setAttribute("aria-pressed", String(selectedCategory === node.code));
-    button.innerHTML = `<span>${escapeHtml(browseCategoryLabel(node))}</span><small>${faNumber(node.count)}</small>`;
+    button.classList.toggle("active", selectedCategories.has(node.code));
+    button.setAttribute(
+      "aria-pressed",
+      String(selectedCategories.has(node.code)),
+    );
+    button.innerHTML = `<span>${escapeHtml(selectedCategories.size ? node.label_fa : browseCategoryLabel(node))}</span>`;
     button.addEventListener("click", () => selectCategory(node));
     navigation.append(button);
   });
@@ -380,7 +440,7 @@ function discoveryCollection(node, merchants) {
   button.setAttribute("aria-label", `دیدن فروشگاه‌های ${node.label_fa}`);
   const copy = document.createElement("span");
   copy.className = "collection-copy";
-  copy.innerHTML = `<span class="eyebrow">در این دسته بگرد</span><span class="collection-title">${escapeHtml(browseCategoryLabel(node))}</span><span class="collection-total">${faNumber(node.count)} فروشگاه</span><span class="collection-action">دیدن فروشگاه‌ها</span>`;
+  copy.innerHTML = `<span class="eyebrow">در این دسته بگرد</span><span class="collection-title">${escapeHtml(browseCategoryLabel(node))}</span><span class="collection-action">دیدن فروشگاه‌ها</span>`;
   const photos = document.createElement("span");
   photos.className = "collection-photos";
   const candidates = merchants
@@ -406,17 +466,15 @@ function discoveryCollection(node, merchants) {
 }
 
 function renderDiscovery() {
-  const filtered = Boolean(query || selectedCategory),
+  const filtered = Boolean(query || selectedCategories.size),
     section = document.querySelector("#discovery"),
     grid = document.querySelector("#discovery-grid");
   document.querySelector(".catalog").classList.toggle("is-filtered", filtered);
   document.querySelector("#browse-intro").hidden = filtered;
   document.querySelector("#clear-filters").hidden = !filtered;
-  document.querySelector("#result-context").textContent =
-    selectedLabel || "فروشگاه‌ها و آخرین پست‌ها";
   renderQuickCategories();
   grid.replaceChildren();
-  if (!filtered) {
+  if (!filtered && browseMode === "shops") {
     browseCategories().forEach((node) => {
       const merchants = shops.filter(
         (shop) => shopInCategory(shop, node) && shop.posts.length,
@@ -429,8 +487,7 @@ function renderDiscovery() {
 }
 
 function resetFilters() {
-  selectedCategory = null;
-  selectedLabel = "";
+  selectedCategories.clear();
   query = "";
   searchInput.value = "";
   clearTimeout(searchTimer);
@@ -439,6 +496,7 @@ function resetFilters() {
   suggestionItems = [];
   closeSuggestions();
   renderTree();
+  renderQuickCategories();
   closeCategoryMenu();
   loadShops();
 }
@@ -597,6 +655,7 @@ function paintSave(button, saved, compact = false) {
   }
 }
 function saveStatus(message) {
+  document.querySelector("#catalog-save-status").textContent = message;
   let status = document.querySelector("#save-status");
   if (!status) {
     status = document.createElement("p");
@@ -848,7 +907,7 @@ async function loadEmptySuggestions() {
 async function loadShops() {
   const request = ++shopRequest,
     params = new URLSearchParams();
-  if (selectedCategory) params.set("category", selectedCategory);
+  selectedCategories.forEach((_label, code) => params.append("category", code));
   if (query) params.set("q", query);
   emptyState.hidden = true;
   emptyState.querySelector("h3").textContent = "فروشگاهی پیدا نشد";
@@ -900,9 +959,9 @@ async function bootstrap() {
 }
 
 document.querySelector("#reset-category").addEventListener("click", () => {
-  selectedCategory = null;
-  selectedLabel = "";
+  selectedCategories.clear();
   renderTree();
+  renderQuickCategories();
   closeCategoryMenu();
   loadShops();
 });
@@ -1082,9 +1141,31 @@ loginTrigger.addEventListener("click", () => {
     location.href = "/saved.html";
     return;
   }
-  track("login_started");
-  loginDialog.showModal();
+  openLogin();
 });
+function openLogin() {
+  track("login_started");
+  if (!loginDialog.open) loginDialog.showModal();
+  phoneInput.focus();
+}
+
+document.querySelectorAll('a[href="/saved.html"]').forEach((link) => {
+  link.addEventListener("click", async (event) => {
+    if (loginTrigger.classList.contains("logged-in")) return;
+    event.preventDefault();
+    try {
+      const { user } = await initializeSession();
+      if (user) {
+        location.href = link.href;
+        return;
+      }
+    } catch {
+      // Keep the sign-in entry available if session bootstrap needs a retry.
+    }
+    openLogin();
+  });
+});
+
 document
   .querySelector(".login-close")
   .addEventListener("click", () => loginDialog.close());

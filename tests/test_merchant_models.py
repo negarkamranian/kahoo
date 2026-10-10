@@ -34,6 +34,7 @@ class MerchantModelsTests(unittest.TestCase):
                         "permalink": "https://instagram.com/p/abc/",
                         "position": 1,
                         "collection_key": "abc",
+                        "caption": "کفش زنانه",
                         "media_position": 1,
                     }
                 ]
@@ -62,6 +63,7 @@ class MerchantModelsTests(unittest.TestCase):
                 "permalink": "https://instagram.com/p/abc/",
                 "position": i,
                 "collection_key": "abc",
+                "caption": "کفش زنانه",
                 "media_position": i,
             }
             for i, image in enumerate(("one.jpg", "one.jpg", "two.jpg"), 1)
@@ -80,6 +82,7 @@ class MerchantModelsTests(unittest.TestCase):
                 "permalink": f"https://instagram.com/p/abc{i}/",
                 "position": i,
                 "collection_key": str(i),
+                "caption": "",
                 "media_position": 1,
             }
             for i in (1, 2)

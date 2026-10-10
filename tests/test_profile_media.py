@@ -82,8 +82,9 @@ class ProfileMediaTests(unittest.TestCase):
             ["child-1", "child-2"], [item.instagram_media_id for item in posts[0].media]
         )
 
+    @patch("backend.services.media.enqueue_products")
     @patch("backend.services.media.download_image", return_value=(b"jpeg", "image/jpeg"))
-    def test_profile_posts_are_downloaded_and_inserted(self, _download):
+    def test_profile_posts_are_downloaded_and_inserted(self, _download, enqueue):
         database = Mock()
         profile = InstagramProfile(
             name="shop",
@@ -105,6 +106,12 @@ class ProfileMediaTests(unittest.TestCase):
         self.assertEqual(2, saved)
         self.assertEqual(4, database.execute.call_count)
         self.assertIn("DELETE FROM merchant_posts", database.execute.call_args_list[0].args[0])
+        enqueue.assert_called_once_with(database, 3)
+
+    def test_profile_without_posts_keeps_the_gallery_and_product_queue_unchanged(self):
+        database = Mock()
+        self.assertEqual(0, replace_profile_posts(database, 3, InstagramProfile(name="Shop")))
+        database.execute.assert_not_called()
 
     @patch("backend.services.media.download_image", side_effect=OSError("offline"))
     def test_failed_downloads_preserve_posts_and_sync_version(self, download):

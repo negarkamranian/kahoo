@@ -1,0 +1,50 @@
+# Free local inference. Start with compose.yaml and this file together.
+services:
+  embeddings:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.9
+    command:
+      [
+        "--model-id",
+        "intfloat/multilingual-e5-large",
+        "--max-client-batch-size",
+        "100",
+        "--max-batch-tokens",
+        "4096",
+        "--auto-truncate",
+      ]
+    volumes:
+      - kahoo-models:/data
+    ports:
+      - "127.0.0.1:8081:80"
+
+  reranker:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.9
+    command:
+      [
+        "--model-id",
+        "BAAI/bge-reranker-v2-m3",
+        "--max-client-batch-size",
+        "40",
+        "--max-batch-tokens",
+        "4096",
+        "--auto-truncate",
+      ]
+    volumes:
+      - kahoo-models:/data
+    ports:
+      - "127.0.0.1:8082:80"
+
+  app:
+    environment:
+      EMBEDDING_API_URL: http://embeddings:80/v1/embeddings
+      EMBEDDING_API_KEY: ""
+      EMBEDDING_MODEL: intfloat/multilingual-e5-large
+      RERANK_API_URL: http://reranker:80/rerank
+    depends_on:
+      embeddings:
+        condition: service_started
+      reranker:
+        condition: service_started
+
+volumes:
+  kahoo-models:

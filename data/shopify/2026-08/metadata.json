@@ -1,0 +1,11 @@
+{
+  "version": "2026-08",
+  "locale": "en",
+  "source_url": "https://shopify.github.io/product-taxonomy/releases/2026-08/",
+  "download_url": "https://raw.githubusercontent.com/Shopify/product-taxonomy/2e9aa2e9b882383952c63d212add13eb80f46cf9/dist/en/taxonomy.json",
+  "source_commit": "2e9aa2e9b882383952c63d212add13eb80f46cf9",
+  "source_sha256": "b306676ad9af75eba3d5bf6d936c5dedea81838435cae7407f58974c2ffe04da",
+  "categories": 14606,
+  "attributes": 8240,
+  "values": 74820
+}

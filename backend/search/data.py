@@ -19,7 +19,8 @@ def load_category_assignments(db):
 def load_search_terms(db):
     terms_by_merchant = {}
     for item in db.execute(
-        "SELECT merchant_id,normalized_term,weight,confidence FROM merchant_search_terms"
+        """SELECT merchant_id,normalized_term,weight,confidence FROM merchant_search_terms
+         WHERE source NOT IN ('description','biography')"""
     ):
         terms_by_merchant.setdefault(item["merchant_id"], []).append(
             (item["normalized_term"], item["weight"] * item["confidence"])

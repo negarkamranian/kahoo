@@ -159,7 +159,7 @@ def get_suggestions(q: str = "") -> list[SearchSuggestion]:
 @router.get("/api/merchants", response_model_exclude_unset=True)
 def get_merchants(
     q: str = "",
-    category: str | None = None,
+    category: Annotated[list[str] | None, Query(max_length=30)] = None,
     session_id: Annotated[str | None, Header(alias="X-Kahoo-Session")] = None,
 ) -> list[Merchant]:
     result = merchants(category, q)
@@ -168,7 +168,7 @@ def get_merchants(
             event_type="search" if q else "category_view",
             session_id=session_id,
             query=q,
-            category_code=category or "",
+            category_code=category[0] if category else "",
             merchant_id=0,
             result_count=len(result),
         )

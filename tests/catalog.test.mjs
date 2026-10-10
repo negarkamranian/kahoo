@@ -15,7 +15,9 @@ async function loadPage(
   stored = {},
   {
     finePointer = false,
+    browseMode = "shops",
     savedAPI = () => undefined,
+    sessionUser = null,
     coordinateTabs = true,
   } = {},
 ) {
@@ -55,7 +57,7 @@ async function loadPage(
     requests.push({ path, options });
     const data =
       path === "/api/session"
-        ? { session_id: "server-session", user: null }
+        ? { session_id: "server-session", user: sessionUser }
         : path.startsWith("/api/saved")
           ? (savedAPI(path, options, serverSaved) ??
             savedResponse(path, options, serverSaved))
@@ -67,6 +69,8 @@ async function loadPage(
     `${shared.replaceAll("export ", "")}\n${source.replace(/^import[\s\S]*?;\s*/, script === "admin.js" ? "const fa = faNumber;" : "")}`,
   );
   await new Promise((resolve) => setImmediate(resolve));
+  if (script === "catalog.js" && browseMode === "products")
+    window.document.querySelector('[data-browse-mode="products"]').click();
   return { dom, window, requests, serverSaved };
 }
 
@@ -449,7 +453,7 @@ test("discovery omits empty categories and does not invent shop imagery", async 
   }
 });
 
-test("quick category navigation stays bounded and touch menu opens after focus", async (t) => {
+test("quick category navigation exposes all populated categories and opens by click", async (t) => {
   const categories = [
     categoryTree[2],
     ...Array.from({ length: 8 }, (_, index) => ({
@@ -466,7 +470,7 @@ test("quick category navigation stays bounded and touch menu opens after focus",
   const document = window.document;
   assert.equal(
     document.querySelectorAll("#quick-categories button[data-category]").length,
-    6,
+    8,
   );
   assert.equal(
     document.querySelector(
@@ -487,29 +491,27 @@ test("quick category navigation stays bounded and touch menu opens after focus",
   assert.equal(trigger.getAttribute("aria-expanded"), "false");
 });
 
-test("touch category expansion keeps the menu open and preserves the focused parent", async (t) => {
+test("touch category expansion uses a separate button and preserves focus", async (t) => {
   const { dom, window } = await loadPage("index.html", "catalog.js", (path) =>
     path === "/api/categories" ? categoryTree : [merchant],
   );
   t.after(() => dom.window.close());
   const document = window.document;
   document.querySelector("#category-menu-trigger").click();
-  const parent = document.querySelector(
-    '.tree-select[data-category="67000000"]',
-  );
+  const parent = document.querySelector('[data-branch="67000000"]');
   parent.focus();
   parent.click();
   assert.equal(document.querySelector("#category-popover").hidden, false);
-  assert.equal(document.querySelectorAll(".tree-column").length, 2);
-  assert.equal(document.activeElement.dataset.category, "67000000");
+  assert.equal(document.querySelectorAll(".tree-children").length, 1);
+  assert.equal(document.activeElement.dataset.branch, "67000000");
   const child = document.querySelector(
     '.tree-select[data-category="67010300"]',
   );
   child.focus();
   child.click();
   await settlePage();
-  assert.equal(document.querySelector("#category-popover").hidden, true);
-  assert.equal(document.activeElement.id, "category-menu-trigger");
+  assert.equal(document.querySelector("#category-popover").hidden, false);
+  assert.equal(document.activeElement.dataset.category, "67010300");
   assert.equal(document.querySelector("#result-title").textContent, "کفش");
 });
 
@@ -560,8 +562,8 @@ test("desktop category branches keep focus and allow choosing a child without se
     ),
     "67010300",
   );
-  assert.equal(popover.hidden, true);
-  assert.equal(document.activeElement, trigger);
+  assert.equal(popover.hidden, false);
+  assert.equal(document.activeElement.dataset.category, "67010300");
 });
 
 test("a failed catalog request leaves a retry that restores browsing", async (t) => {
@@ -823,4 +825,429 @@ test("admin dashboard renders metrics and managed merchants independently", asyn
   assert.equal(window.document.querySelectorAll("#trend-chart svg").length, 1);
   assert.equal(window.document.querySelectorAll(".managed-row").length, 1);
   assert.equal(window.document.querySelectorAll("#funnel em").length, 5);
+});
+
+test("admin product assessment shows evidence and unknowns, saves notes and retries extraction", async (t) => {
+  const product = {
+    id: 42,
+    collection_key: "carousel-1",
+    merchant_name: "فروشگاه",
+    merchant_handle: "@shop",
+    caption: "<script>unsafe()</script> کفش آبی",
+    permalink: "https://instagram.com/p/abc/",
+    images: [],
+    status: "ready",
+    review_status: "pending",
+    review_note: "",
+    model: "vision-model",
+    taxonomy_version: "2026-08",
+    attempts: 1,
+    processed_at: "2026-10-10T10:00:00Z",
+    error: null,
+    result: {
+      title: "<img src=x onerror=unsafe()> کفش",
+      category_code: "aa-1",
+      category_name: "Apparel > Shoes",
+      confidence: 0.9,
+      evidence: "کپشن: کفش آبی",
+      description: "کفش آبی",
+      warnings: [],
+      attributes: [
+        {
+          name: "Color",
+          handle: "color",
+          value: null,
+          values: ["Blue"],
+          confidence: 0.8,
+          source: "image",
+          evidence: "رنگ آبی در تصویر ۲",
+        },
+        {
+          name: "Material",
+          handle: "material",
+          value: null,
+          values: [],
+          confidence: 0,
+          source: "unknown",
+          evidence: null,
+        },
+      ],
+    },
+  };
+  const { dom, window, requests } = await loadPage(
+    "admin.html",
+    "admin.js",
+    (path, options) => {
+      if (path.startsWith("/api/admin/products?"))
+        return { configured: true, total: 1, items: [product] };
+      if (path.endsWith("/review")) {
+        const review = JSON.parse(options.body);
+        product.review_status = review.status;
+        product.review_note = review.note;
+        return product;
+      }
+      if (path.endsWith("/retry")) {
+        product.status = "pending";
+        product.result = null;
+        return product;
+      }
+      if (path.startsWith("/api/admin/merchants"))
+        return { total: 0, items: [] };
+      return [];
+    },
+  );
+  t.after(() => dom.window.close());
+  const document = window.document;
+  assert.equal(document.querySelectorAll(".product-review-card").length, 1);
+  assert.equal(
+    document.querySelectorAll(
+      ".product-review-card script, .product-review-card img",
+    ).length,
+    0,
+  );
+  assert.match(
+    document.querySelector(".product-source-caption").textContent,
+    /<script>/,
+  );
+  assert.match(
+    document.querySelector(".product-attributes").textContent,
+    /Blue/,
+  );
+  assert.match(
+    document.querySelector(".product-attributes").textContent,
+    /نامشخص/,
+  );
+  assert.match(
+    document.querySelector(".product-provenance").textContent,
+    /vision-model/,
+  );
+  document.querySelector("#admin-token").value = "admin-secret";
+  document.querySelector(".product-assessment textarea").value = "رنگ درست است";
+  document.querySelector('[data-product-action="approved"]').click();
+  await settlePage();
+  const review = requests.find((request) => request.path.endsWith("/review"));
+  assert.deepEqual(JSON.parse(review.options.body), {
+    status: "approved",
+    note: "رنگ درست است",
+  });
+  assert.equal(
+    review.options.headers.get("X-Kahoo-Admin-Token"),
+    "admin-secret",
+  );
+  assert.match(
+    document.querySelector(".product-review-card summary").textContent,
+    /تأییدشده/,
+  );
+  document.querySelector('[data-product-action="retry"]').click();
+  await settlePage();
+  assert.match(
+    document.querySelector(".product-review-card summary").textContent,
+    /در صف/,
+  );
+  assert.equal(
+    document.querySelector('[data-product-action="approved"]').disabled,
+    true,
+  );
+  document.querySelector("#product-status").value = "pending";
+  document
+    .querySelector("#product-status")
+    .dispatchEvent(new window.Event("change"));
+  await settlePage();
+  assert.ok(
+    requests.some((request) => request.path.includes("status=pending")),
+  );
+});
+
+test("product browsing alternates shops, saves directly and retains filters across views", async (t) => {
+  const { dom, window, requests, serverSaved } = await loadPage(
+    "index.html",
+    "catalog.js",
+    (path) => {
+      if (path === "/api/categories") return categoryTree;
+      if (path.includes("category=67000000")) return [merchant];
+      return [merchant, homeMerchant];
+    },
+    {},
+    { browseMode: "products" },
+  );
+  t.after(() => dom.window.close());
+  const document = window.document;
+  const products = [...document.querySelectorAll(".product-card")];
+  assert.equal(products.length, 8);
+  assert.deepEqual(
+    products.map((card) => card.dataset.merchant),
+    ["1", "2", "1", "2", "1", "2", "1", "2"],
+  );
+  assert.equal(
+    products[0].querySelector("a").href,
+    merchant.posts[0].permalink,
+  );
+  products[0].querySelector(".post-save").click();
+  await settlePage();
+  assert.equal(serverSaved.posts[0].key, "post-1");
+  assert.equal(serverSaved.posts[0].merchant_id, 1);
+  assert.equal(
+    products[0].querySelector(".post-save").getAttribute("aria-pressed"),
+    "true",
+  );
+  document
+    .querySelector('#quick-categories [data-category="67000000"]')
+    .click();
+  await settlePage();
+  const requestCount = requests.length;
+  document.querySelector('[data-browse-mode="shops"]').click();
+  assert.equal(document.querySelectorAll(".shop-card").length, 1);
+  assert.equal(document.querySelector("#result-title").textContent, "پوشاک");
+  document.querySelector('[data-browse-mode="products"]').click();
+  assert.equal(requests.length, requestCount);
+  assert.equal(document.querySelectorAll(".product-card").length, 4);
+});
+
+test("product feed handles shops without posts and a parent category selects on the first tap", async (t) => {
+  const { dom, window, requests } = await loadPage(
+    "index.html",
+    "catalog.js",
+    (path) =>
+      path === "/api/categories" ? categoryTree : [{ ...merchant, posts: [] }],
+    {},
+    { browseMode: "products", finePointer: true },
+  );
+  t.after(() => dom.window.close());
+  const document = window.document;
+  assert.equal(document.querySelector("#empty-state").hidden, false);
+  document.querySelector("#category-menu-trigger").click();
+  document.querySelector('.tree-select[data-category="67000000"]').click();
+  await settlePage();
+  assert.equal(document.querySelector("#category-popover").hidden, false);
+  assert.ok(
+    requests.some(
+      (request) => request.path === "/api/merchants?category=67000000",
+    ),
+  );
+  document.querySelector('[data-browse-mode="shops"]').click();
+  assert.equal(document.querySelectorAll(".shop-card").length, 1);
+  assert.equal(document.querySelector("#empty-state").hidden, true);
+});
+
+test("shops are the default and shop totals and the old subtitle are omitted", async (t) => {
+  const { dom, window } = await loadPage("index.html", "catalog.js", (path) =>
+    path === "/api/categories" ? categoryTree : [merchant, homeMerchant],
+  );
+  t.after(() => dom.window.close());
+  const document = window.document;
+  assert.equal(document.querySelectorAll(".shop-card").length, 2);
+  assert.equal(document.querySelectorAll(".product-card").length, 0);
+  assert.equal(
+    document
+      .querySelector('[data-browse-mode="shops"]')
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  assert.equal(document.querySelector("#result-count").hidden, true);
+  assert.equal(document.querySelector("#result-count").textContent, "");
+  assert.equal(document.querySelector("#result-context"), null);
+  assert.equal(document.querySelector(".collection-total"), null);
+  assert.equal(document.querySelector("#quick-categories small"), null);
+  assert.equal(
+    document
+      .querySelector(".header-actions [data-open-connect]")
+      .textContent.trim(),
+    "برای فروشگاه‌ها",
+  );
+  assert.equal(document.querySelector(".browse-nav [data-open-connect]"), null);
+  assert.equal(
+    document
+      .querySelector("#browse-heading")
+      .textContent.replace(/\s+/g, " ")
+      .trim(),
+    "کاهو، کشف چیزهای دوست‌داشتنی",
+  );
+  document.querySelector('[data-browse-mode="products"]').click();
+  assert.equal(document.querySelector("#result-count").hidden, false);
+  document.querySelector('[data-browse-mode="shops"]').click();
+  assert.equal(document.querySelector("#result-count").hidden, true);
+});
+
+test("guest bookmark navigation opens login from the header and footer", async (t) => {
+  const { dom, window, requests } = await loadPage(
+    "index.html",
+    "catalog.js",
+    () => [],
+  );
+  t.after(() => dom.window.close());
+  const document = window.document;
+  for (const link of document.querySelectorAll('a[href="/saved.html"]')) {
+    const event = new window.MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+    });
+    link.dispatchEvent(event);
+    assert.equal(event.defaultPrevented, true);
+    await settlePage();
+    assert.equal(document.querySelector("#login-dialog").open, true);
+    assert.equal(document.activeElement.id, "phone-input");
+    assert.equal(window.location.pathname, "/");
+    document.querySelector("#login-dialog").close();
+  }
+  assert.equal(
+    requests.filter(
+      (request) =>
+        request.path === "/api/analytics/event" &&
+        JSON.parse(request.options.body).event_type === "login_started",
+    ).length,
+    2,
+  );
+});
+
+test("signed-in bookmark navigation follows the saved page link", async (t) => {
+  const { dom, window } = await loadPage(
+    "index.html",
+    "catalog.js",
+    () => [],
+    {},
+    {
+      sessionUser: { id: 1, phone: "09121234567" },
+    },
+  );
+  t.after(() => dom.window.close());
+  const document = window.document;
+  const link = document.querySelector(".saved-link");
+  let intercepted;
+  link.addEventListener("click", (event) => {
+    intercepted = event.defaultPrevented;
+    event.preventDefault(); // Avoid jsdom navigation after checking the app handler.
+  });
+  link.click();
+  await settlePage();
+  assert.equal(intercepted, false);
+  assert.equal(link.pathname, "/saved.html");
+  assert.equal(document.querySelector("#login-dialog").open, false);
+  assert.equal(document.querySelector("#login-trigger").textContent, "حساب من");
+});
+
+test("category filters select multiple branches, toggle independently and clear together", async (t) => {
+  const { dom, window, requests } = await loadPage(
+    "index.html",
+    "catalog.js",
+    (path) =>
+      path === "/api/categories" ? categoryTree : [merchant, homeMerchant],
+  );
+  t.after(() => dom.window.close());
+  const document = window.document;
+  document.querySelector("#category-menu-trigger").click();
+  const select = (code) =>
+    document.querySelector(`.tree-select[data-category="${code}"]`);
+  select("67000000").focus();
+  select("67000000").click();
+  await settlePage();
+  select("73000000").focus();
+  select("73000000").click();
+  await settlePage();
+  const lastCategories = () =>
+    new URL(requests.at(-1).path, "https://kahoo.test").searchParams.getAll(
+      "category",
+    );
+  assert.deepEqual(lastCategories(), ["67000000", "73000000"]);
+  assert.equal(select("67000000").getAttribute("aria-pressed"), "true");
+  assert.equal(select("73000000").getAttribute("aria-pressed"), "true");
+  assert.equal(document.querySelector("#category-popover").hidden, false);
+  select("67000000").click();
+  await settlePage();
+  assert.deepEqual(lastCategories(), ["73000000"]);
+  assert.equal(select("67000000").getAttribute("aria-pressed"), "false");
+  document.querySelector("#reset-category").click();
+  await settlePage();
+  assert.deepEqual(lastCategories(), []);
+});
+
+test("quick categories show selected subcategories and restore suggestions when cleared", async (t) => {
+  const categories = [
+    ...categoryTree,
+    {
+      code: "50000000",
+      level: 1,
+      label_fa: "مصالح ساختمان",
+      count: 0,
+      children: [],
+    },
+  ];
+  const { dom, window } = await loadPage("index.html", "catalog.js", (path) =>
+    path === "/api/categories" ? categories : [merchant, homeMerchant],
+  );
+  t.after(() => dom.window.close());
+  const document = window.document;
+  const chips = () => [
+    ...document.querySelectorAll("#quick-categories [data-category]"),
+  ];
+  const codes = () => chips().map((button) => button.dataset.category);
+  assert.deepEqual(codes(), ["67000000", "73000000"]);
+  document.querySelector('#category-tree [data-branch="67000000"]').click();
+  document.querySelector('.tree-select[data-category="67010300"]').click();
+  assert.deepEqual(codes(), ["67010300"]);
+  await settlePage();
+  document.querySelector('#category-tree [data-branch="73000000"]').click();
+  document.querySelector('.tree-select[data-category="73010300"]').click();
+  await settlePage();
+  assert.deepEqual(codes(), ["67010300", "73010300"]);
+  assert.deepEqual(
+    chips().map((button) => button.textContent),
+    ["کفش", "دکور"],
+  );
+  assert.ok(
+    chips().every((button) => button.getAttribute("aria-pressed") === "true"),
+  );
+  document.querySelector('.tree-select[data-category="50000000"]').click();
+  await settlePage();
+  assert.deepEqual(codes(), ["67010300", "73010300", "50000000"]);
+  assert.deepEqual(
+    [...document.querySelectorAll("#quick-categories button")].map(
+      (button) => button.textContent,
+    ),
+    ["کفش", "دکور", "مصالح ساختمان"],
+  );
+  chips()[2].click();
+  await settlePage();
+  chips()[0].click();
+  await settlePage();
+  assert.deepEqual(codes(), ["73010300"]);
+  chips()[0].click();
+  await settlePage();
+  assert.deepEqual(codes(), ["67000000", "73000000"]);
+  chips()[0].click();
+  await settlePage();
+  assert.deepEqual(codes(), ["67000000"]);
+  document.querySelector("#reset-category").click();
+  assert.deepEqual(codes(), ["67000000", "73000000"]);
+  await settlePage();
+});
+
+test("follower badge belongs to shop identity and preserves missing and zero counts", async (t) => {
+  const { dom, window } = await loadPage("index.html", "catalog.js", (path) =>
+    path === "/api/categories"
+      ? categoryTree
+      : [
+          { ...merchant, followers_count: 1234567, following_count: 1234 },
+          { ...merchant, id: 2, followers_count: 0, following_count: 0 },
+          { ...merchant, id: 3, followers_count: null, following_count: null },
+        ],
+  );
+  t.after(() => dom.window.close());
+  const badges = [
+    ...window.document.querySelectorAll(".shop-info .shop-activity"),
+  ];
+  assert.equal(badges.length, 3);
+  assert.ok(badges[0].textContent.includes("دنبال‌کننده"));
+  assert.equal(badges[0].title, "۱٬۲۳۴٬۵۶۷ دنبال‌کننده");
+  const following = [...window.document.querySelectorAll(".shop-following")];
+  assert.equal(following[0].title, "۱٬۲۳۴ دنبال‌شونده");
+  assert.equal(following[0].hidden, false);
+  assert.equal(following[1].textContent, "۰ دنبال‌شونده");
+  assert.equal(following[2].hidden, true);
+  assert.equal(badges[0].hidden, false);
+  assert.equal(badges[1].hidden, false);
+  assert.equal(badges[2].hidden, true);
+  assert.equal(
+    window.document.querySelectorAll(".shop-card > .shop-activity").length,
+    0,
+  );
 });

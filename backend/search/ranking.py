@@ -1,5 +1,6 @@
 import math
 from difflib import SequenceMatcher
+from functools import lru_cache
 
 from backend.models.merchants import Merchant
 from backend.models.search import SearchField, TextMatch
@@ -25,6 +26,32 @@ def query_coverage(tokens, *texts):
     return sum(
         any(term_match_strength(token, text) > 0 for text in texts) for token in tokens
     ) / len(tokens)
+
+
+def compact_query_match(tokens, text):
+    """Require concepts to occur together, rather than in unrelated product lists."""
+    if len(tokens) < 2:
+        return True
+    words = normalize_search(text).split()
+    events = [
+        (position, token)
+        for position, word in enumerate(words)
+        for token in tokens
+        if term_match_strength(token, word) >= FUZZY_TERM_STRENGTH
+    ]
+    counts = {}
+    start = 0
+    for position, token in events:
+        counts[token] = counts.get(token, 0) + 1
+        while position - events[start][0] >= max(6, len(tokens) + 3):
+            previous = events[start][1]
+            counts[previous] -= 1
+            if counts[previous] == 0:
+                del counts[previous]
+            start += 1
+        if len(counts) == len(tokens):
+            return True
+    return False
 
 
 def phrase_proximity_bonus(phrase, text):
@@ -55,6 +82,7 @@ def phrase_proximity_bonus(phrase, text):
     return max(0.0, 0.8 - 0.1 * max(0, span - len(tokens)))
 
 
+@lru_cache(maxsize=32768)
 def term_match_strength(term, text):
     """Return 0..1 for exact, prefix, or conservative typo-tolerant matching."""
     term = normalize_search(term)
@@ -66,7 +94,7 @@ def term_match_strength(term, text):
     if " " in term:
         return 0.0
     words = text.split()
-    if token_variants(term).intersection(words):
+    if any(token_variants(term) & token_variants(word) for word in words):
         return EXACT_TERM_STRENGTH
     if prefix_term_match(term, words):
         return PREFIX_TERM_STRENGTH
@@ -75,9 +103,7 @@ def term_match_strength(term, text):
 
 def prefix_term_match(term, words):
     return len(term) >= MIN_PREFIX_LENGTH and any(
-        word.startswith(term) or term.startswith(word)
-        for word in words
-        if min(len(word), len(term)) >= MIN_PREFIX_LENGTH
+        word.startswith(term) for word in words if min(len(word), len(term)) >= MIN_PREFIX_LENGTH
     )
 
 
@@ -108,7 +134,7 @@ def searchable_fields(merchant, category_labels):
         ),
         SearchField(name="biography", text=merchant.biography, token_weight=5, phrase_weight=9),
         SearchField(
-            name="category", text=" ".join(category_labels), token_weight=9, phrase_weight=14
+            name="category", text=" ".join(category_labels), token_weight=4, phrase_weight=6
         ),
         SearchField(name="city", text=merchant.city, token_weight=3, phrase_weight=0),
     ]
@@ -124,10 +150,11 @@ def searchable_fields(merchant, category_labels):
 
 
 def score_token(match, token, fields, stored_terms):
-    token_score = 0
+    # A concept contributes once: repeating it across generated text is not evidence.
+    scores = []
     for content in fields:
         strength = term_match_strength(token, content.text)
-        token_score += content.token_weight * strength
+        scores.append(content.token_weight * strength)
         if strength >= STRONG_TERM_THRESHOLD:
             match.fields.add(content.name)
         match.fuzzy |= 0 < strength < STRONG_TERM_THRESHOLD
@@ -136,7 +163,8 @@ def score_token(match, token, fields, stored_terms):
     )
     if metadata >= STRONG_TERM_THRESHOLD:
         match.fields.add("metadata")
-    token_score += METADATA_WEIGHT * metadata
+    scores.append(METADATA_WEIGHT * metadata)
+    token_score = max(scores)
     match.score += token_score
     match.matched_tokens += token_score > 0
 
@@ -164,8 +192,14 @@ def match_content(
     for token in tokens:
         score_token(match, token, fields, stored_terms)
     match.phrase_bonus = content_phrase_bonus(phrase, fields)
-    match.coverage = query_coverage(
-        tokens, *(content.text for content in fields), " ".join(term for term, _ in stored_terms)
+    match.coverage = match.matched_tokens / len(tokens) if tokens else 0
+    product_tokens = [token for token in tokens if term_match_strength(token, merchant.city) == 0]
+    match.coherent = any(
+        compact_query_match(product_tokens, text)
+        for text in [
+            *(field.text for field in fields if field.name != "city"),
+            *(term for term, _ in stored_terms),
+        ]
     )
     return match
 
