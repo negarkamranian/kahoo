@@ -22,7 +22,7 @@ from backend.services.media import cache_merchant_avatar, replace_profile_posts
 def merchant_posts(db, merchant_id: int) -> list[PostCollection]:
     rows = list(
         db.execute(
-            "SELECT id,image_url,permalink,position,collection_key,media_position FROM merchant_posts "
+            "SELECT id,image_url,permalink,position,collection_key,media_position,caption FROM merchant_posts "
             "WHERE merchant_id=%s AND image_blob IS NOT NULL ORDER BY position,media_position",
             (merchant_id,),
         )
@@ -49,6 +49,7 @@ def post_collection(collection_key, collection_rows, position):
         post_id=first["id"],
         key=collection_key,
         permalink=first["permalink"],
+        caption=first["caption"],
         position=position,
         media=collection,
     )

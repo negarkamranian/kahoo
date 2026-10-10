@@ -1,0 +1,187 @@
+{
+  "notes": "Specific product and attribute judgments based on the existing sourced merchant enrichment. These complement the broad commerce benchmark; they are not exhaustive judgments of unseen shop inventory.",
+  "queries": [
+    {
+      "query": "بوت بالای زانو",
+      "relevance": {
+        "@kif_kafsh_onlinee": 3
+      }
+    },
+    {
+      "query": "نیم بوت زیپ دار",
+      "relevance": {
+        "@kif_kafsh_onlinee": 3
+      }
+    },
+    {
+      "query": "کفش پاشنه باریک",
+      "relevance": {
+        "@tehran_stiletto": 3,
+        "@kif_kafsh_onlinee": 2
+      }
+    },
+    {
+      "query": "صندل بند مچ",
+      "relevance": {
+        "@tehran_stiletto": 3
+      }
+    },
+    {
+      "query": "کالج بدون بند",
+      "relevance": {
+        "@kajjshoe": 3,
+        "@kif.kafsh.traffic": 2
+      }
+    },
+    {
+      "query": "جامدادی یونیکورن",
+      "relevance": {
+        "@fantasy_markett": 3
+      }
+    },
+    {
+      "query": "چراغ خواب اردک",
+      "relevance": {
+        "@koocheh_tahrir": 3
+      }
+    },
+    {
+      "query": "ماگ طرح گربه",
+      "relevance": {
+        "@kadopich.shops": 3
+      }
+    },
+    {
+      "query": "ظرف غذای محفظه دار",
+      "relevance": {
+        "@kadopich.shops": 3
+      }
+    },
+    {
+      "query": "چای ساز سیج",
+      "relevance": {
+        "@hihome_opal": 3
+      }
+    },
+    {
+      "query": "وافل ساز نوتریکوک",
+      "relevance": {
+        "@hihome_opal": 3
+      }
+    },
+    {
+      "query": "قوری زعفران",
+      "relevance": {
+        "@haghgoo_galleri": 3
+      }
+    },
+    {
+      "query": "بانکه طرح لیمو",
+      "relevance": {
+        "@forough_homegallery": 3
+      }
+    },
+    {
+      "query": "خانه عروسکی چراغ دار",
+      "relevance": {
+        "@home.bazi": 3
+      }
+    },
+    {
+      "query": "گوشواره طرح کاشی",
+      "relevance": {
+        "@vartan_gallery": 3
+      }
+    },
+    {
+      "query": "کلاه پشت توری",
+      "relevance": {
+        "@iranclothings": 3
+      }
+    },
+    {
+      "query": "گل رز مصنوعی",
+      "relevance": {
+        "@khaneariaee": 3
+      }
+    },
+    {
+      "query": "لیبل شیشه ادویه",
+      "relevance": {
+        "@luxe_organizer": 3
+      }
+    },
+    {
+      "query": "نظم دهنده کابینت",
+      "relevance": {
+        "@luxe_organizer": 3
+      }
+    },
+    {
+      "query": "کیف دوشی قهوه ای",
+      "relevance": {
+        "@kajjshoe": 3
+      }
+    },
+    {
+      "query": "عروسک کوالا",
+      "relevance": {
+        "@hyper.toy": 3
+      }
+    },
+    {
+      "query": "ریمل کالیستا",
+      "relevance": {
+        "@khanoumi_shop": 3
+      }
+    },
+    {
+      "query": "عطر اجمل",
+      "relevance": {
+        "@rojashop": 3
+      }
+    },
+    {
+      "query": "سنگ خام",
+      "relevance": {
+        "@noghre_rose": 3
+      }
+    },
+    {
+      "query": "بونسای جینسینگ",
+      "relevance": {
+        "@sarinaland_com": 3
+      }
+    },
+    {
+      "query": "پلیور نیم زیپ",
+      "relevance": {
+        "@asenwear": 3
+      }
+    },
+    {
+      "query": "کیک طرح گربه",
+      "relevance": {
+        "@bibi_confectionery": 3
+      }
+    },
+    {
+      "query": "سشوار دیفیوزر",
+      "relevance": {
+        "@vidasco.ir": 3
+      }
+    },
+    {
+      "query": "بازسازی ویلا",
+      "relevance": {
+        "@decotarhco": 3
+      }
+    },
+    {
+      "query": "مینی پرینتر",
+      "relevance": {
+        "@favstor": 3
+      }
+    }
+  ]
+}

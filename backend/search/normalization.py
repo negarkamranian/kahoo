@@ -47,15 +47,18 @@ def normalize_search(value: str) -> str:
 
 
 def query_tokens(value: str) -> list[str]:
-    return [
-        token
-        for token in normalize_search(value).split()
-        if len(token) > 1 and token not in SEARCH_STOPWORDS
-    ]
+    return list(
+        dict.fromkeys(
+            token
+            for token in normalize_search(value).split()
+            if len(token) > 1 and token not in SEARCH_STOPWORDS
+        )
+    )
 
 
-def token_variants(token: str) -> set[str]:
+@lru_cache(maxsize=8192)
+def token_variants(token: str) -> frozenset[str]:
     stem = _STEMMER.stem(token)
     if len(stem) > 2:
-        return {token, stem}
-    return {token}
+        return frozenset((token, stem))
+    return frozenset((token,))

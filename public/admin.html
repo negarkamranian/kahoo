@@ -12,7 +12,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./assets/css/foundation.css" />
-    <link rel="stylesheet" href="./assets/css/admin.css" />
+    <link rel="stylesheet" href="./assets/css/admin.css?v=product-review-1" />
   </head>
   <body>
     <aside class="admin-sidebar">
@@ -30,6 +30,7 @@
         <a class="active" href="#overview">نمای کلی</a>
         <a href="#queries">جستجوها</a>
         <a href="#merchant-management">مدیریت فروشگاه‌ها</a>
+        <a href="#product-review">ارزیابی محصولات</a>
         <a href="#catalog">سلامت داده</a>
       </nav>
       <a class="back-link" href="/">بازگشت به کاهو <span>←</span></a>
@@ -212,6 +213,63 @@
           <div class="managed-list" id="managed-merchant-list"></div>
         </section>
 
+        <section class="panel" id="product-review">
+          <div class="panel-head">
+            <div>
+              <h2>ارزیابی محصولات</h2>
+              <p>
+                نوع محصول و ویژگی‌های استخراج‌شده از کپشن و تصاویر اینستاگرام
+              </p>
+            </div>
+            <span id="product-total"></span>
+          </div>
+          <div class="product-review-tools">
+            <label
+              >جستجو<input id="product-search" placeholder="محصول یا فروشگاه…"
+            /></label>
+            <label
+              >پردازش<select id="product-status">
+                <option value="">همه</option>
+                <option value="pending">در صف</option>
+                <option value="processing">در حال پردازش</option>
+                <option value="ready">آماده</option>
+                <option value="failed">ناموفق</option>
+                <option value="not_product">غیرمحصولی</option>
+              </select></label
+            >
+            <label
+              >ارزیابی<select id="product-review-status">
+                <option value="">همه</option>
+                <option value="pending">بررسی‌نشده</option>
+                <option value="approved">تأییدشده</option>
+                <option value="rejected">ردشده</option>
+              </select></label
+            >
+            <button id="product-refresh" type="button">به‌روزرسانی</button>
+            <button id="product-enqueue" type="button">
+              افزودن پست‌های قبلی به صف
+            </button>
+          </div>
+          <p
+            id="product-pipeline-status"
+            class="manager-status"
+            role="status"
+            aria-live="polite"
+          ></p>
+          <p
+            id="product-action-status"
+            class="manager-status"
+            role="status"
+            aria-live="polite"
+          ></p>
+          <div id="product-review-list"></div>
+          <div class="product-pagination">
+            <button id="product-prev" type="button" disabled>قبلی</button>
+            <span id="product-page-label"></span>
+            <button id="product-next" type="button" disabled>بعدی</button>
+          </div>
+        </section>
+
         <section class="panel" id="catalog">
           <div class="panel-head">
             <div>
@@ -239,6 +297,9 @@
         <p class="updated-at" id="updated-at"></p>
       </div>
     </main>
-    <script type="module" src="./assets/js/admin.js"></script>
+    <script
+      type="module"
+      src="./assets/js/admin.js?v=product-review-1"
+    ></script>
   </body>
 </html>

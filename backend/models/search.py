@@ -109,6 +109,9 @@ class SearchBenchmark(InputModel):
 
 
 class LexicalMatch(BaseModel):
+    coherent: bool = False
+    content: str = ""
+    coverage: float = Field(default=0, ge=0, le=1)
     score: float
     entity_type: SearchEntityType
     entity_id: int
@@ -152,6 +155,7 @@ class EnrichmentResult(BaseModel):
 
 
 class TextMatch(BaseModel):
+    coherent: bool = True
     score: float = 0
     phrase_bonus: float = 0
     coverage: float = 0
@@ -187,7 +191,7 @@ class SearchEvidence(BaseModel):
 
     @property
     def has_post(self):
-        return self.lexical is not None and self.lexical.entity_type == "post"
+        return self.has_document_match and self.lexical.entity_type == "post"
 
     @property
     def has_semantic_match(self):
@@ -195,4 +199,9 @@ class SearchEvidence(BaseModel):
 
     @property
     def has_document_match(self):
-        return self.lexical is not None and self.lexical.score >= DOCUMENT_MATCH_THRESHOLD
+        return (
+            self.lexical is not None
+            and self.lexical.coverage == 1
+            and self.lexical.coherent
+            and self.lexical.score >= DOCUMENT_MATCH_THRESHOLD
+        )

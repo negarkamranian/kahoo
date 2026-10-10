@@ -178,7 +178,7 @@ class MerchantCatalogTests(unittest.TestCase):
             f"@{handle.lower()}"
             for handle in re.findall(
                 r"instagram\.com/([A-Za-z0-9._]+)",
-                (PROJECT_ROOT / "docs" / "shops.txt").read_text(encoding="utf-8"),
+                (PROJECT_ROOT / "data" / "shops.txt").read_text(encoding="utf-8"),
             )
         }
         self.assertEqual(131, len(submitted))

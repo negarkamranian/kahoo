@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from backend.cli import catalog, media, merchants, search
+from backend.cli import catalog, media, merchants, products, search, taxonomy
 from backend.config import PROJECT_ROOT, settings
 from backend.database import initialize_database
 from backend.models.media import MINIMUM_POST_IMAGES
@@ -110,6 +110,20 @@ def register_catalog(commands):
     build.add_argument("--policy", type=Path, default=PROJECT_ROOT / "data/gpc_policy.json")
     build.add_argument("--output", type=Path, default=PROJECT_ROOT / "data/categories.sql")
     build.add_argument("--download", action="store_true")
+    register_taxonomy(catalogs)
+
+
+def register_taxonomy(catalogs):
+    sync = action(
+        catalogs,
+        "sync-shopify",
+        "Download and index the complete Shopify 2026-08 product taxonomy locally",
+        taxonomy.sync,
+        False,
+    )
+    sync.add_argument("--source", type=Path, help="Use an upstream JSON or JSON.gz file offline")
+    sync.add_argument("--license", type=Path, help="Use a local upstream LICENSE file offline")
+    sync.add_argument("--output", type=Path, default=PROJECT_ROOT / "data/shopify/2026-08")
 
 
 def register_media(commands):
@@ -175,6 +189,15 @@ def register_enrichment(index):
     batch.add_argument("source", type=Path)
 
 
+def register_products(commands):
+    commands = group(commands, "products", "Classify Instagram products and extract attributes")
+    action(commands, "enqueue", "Queue existing Instagram post collections", products.enqueue)
+    worker = action(commands, "worker", "Process the durable product queue", products.worker)
+    worker.add_argument("--once", action="store_true")
+    worker.add_argument("--limit", type=positive_integer, default=50)
+    worker.add_argument("--poll-seconds", type=positive_integer, default=5)
+
+
 def parser():
     root = argparse.ArgumentParser(
         prog="python -m backend", description="Kahoo server and maintenance CLI"
@@ -187,6 +210,7 @@ def parser():
         register_catalog,
         register_media,
         register_search,
+        register_products,
     ):
         register(commands)
     return root

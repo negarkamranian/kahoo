@@ -20,6 +20,7 @@ from backend.search.ranking import (
     merchant_quality_score,
     reciprocal_rank_fusion,
 )
+from backend.search.reranking import rerank_merchants
 from backend.search.retrieval import lexical_merchant_matches
 from backend.services.merchants import merchant_avatar_url, merchant_posts
 
@@ -43,13 +44,13 @@ MATCH_REASONS = (
 DEFAULT_MATCH_REASON = "عبارت مشابه"
 
 
-def load_search_context(db, query):
+def load_search_context(db, query, merchant_ids=None):
     phrase = normalize_search(query)[:MAX_QUERY_LENGTH]
     categories = load_categories(db)
     assignments = load_category_assignments(db)
     terms = load_search_terms(db)
-    lexical = lexical_merchant_matches(db, phrase) if phrase else {}
-    semantic = semantic_merchant_scores(db, phrase) if phrase else {}
+    lexical = lexical_merchant_matches(db, phrase, merchant_ids=merchant_ids) if phrase else {}
+    semantic = semantic_merchant_scores(db, phrase, merchant_ids=merchant_ids) if phrase else {}
     return SearchContext(
         phrase=phrase,
         tokens=query_tokens(phrase),
@@ -70,10 +71,11 @@ def merchant_rows(db, category):
     sql = "SELECT m.* FROM merchants m"
     params = []
     if category:
+        codes = [category] if isinstance(category, str) else category
         sql += """ WHERE EXISTS (SELECT 1 FROM merchant_categories mc WHERE mc.merchant_id=m.id
-          AND mc.category_code IN (WITH RECURSIVE branch(code) AS (SELECT %s UNION ALL
+          AND mc.category_code IN (WITH RECURSIVE branch(code) AS (SELECT unnest(%s::text[]) UNION
           SELECT c.code FROM categories c JOIN branch b ON c.parent_code=b.code) SELECT code FROM branch))"""
-        params.append(category)
+        params.append(codes)
     return db.execute(sql + " ORDER BY m.id DESC", params)
 
 
@@ -106,13 +108,11 @@ def merchant_evidence(merchant, context):
 def relevant_match(evidence, tokens):
     if not tokens:
         return False
-    if evidence.has_semantic_match or evidence.has_document_match:
-        return True
-    text = evidence.text
-    if text.score + text.phrase_bonus == 0:
-        return False
-    required_matches = max(2, (len(tokens) + 1) // 2)
-    return len(tokens) == 1 or text.matched_tokens >= required_matches
+    return (
+        (evidence.text.coverage == 1 and evidence.text.coherent)
+        or evidence.has_document_match
+        or evidence.has_semantic_match
+    )
 
 
 def relevance_score(merchant_id, evidence, context, quality):
@@ -121,10 +121,11 @@ def relevance_score(merchant_id, evidence, context, quality):
         MAX_CLICK_BOOST, math.log1p(context.query_clicks.get(merchant_id, 0)) * CLICK_WEIGHT
     )
     return (
-        text.score
+        text.score / max(1, len(context.tokens))
         + text.phrase_bonus
         + context.fused.get(merchant_id, 0) * FUSION_WEIGHT
-        + text.coverage * COVERAGE_WEIGHT
+        + max(text.coverage, evidence.lexical.coverage if evidence.lexical else 0) * COVERAGE_WEIGHT
+        + evidence.semantic * COVERAGE_WEIGHT
         + behavior
         + quality * QUALITY_WEIGHT
     )
@@ -152,7 +153,9 @@ def match_quality(evidence):
 def explain_match(merchant, evidence):
     merchant.match_reason = match_reason(evidence)
     merchant.match_quality = match_quality(evidence)
-    merchant.match_coverage = round(evidence.text.coverage, 2)
+    merchant.match_coverage = round(
+        max(evidence.text.coverage, evidence.lexical.coverage if evidence.lexical else 0), 2
+    )
     if evidence.has_post:
         merchant.matched_post_id = evidence.lexical.entity_id
 
@@ -169,6 +172,8 @@ def ranked_merchants(db, rows, context, query):
     results = []
     for row in rows:
         merchant = Merchant.model_validate(row)
+        if merchant.category_code in context.categories:
+            merchant.category_label = context.categories[merchant.category_code]["label_fa"]
         score = merchant_quality_score(merchant, context.clicks.get(merchant.id, 0))
         if query:
             evidence = merchant_evidence(merchant, context)
@@ -181,11 +186,19 @@ def ranked_merchants(db, rows, context, query):
         attach_media(db, merchant, row)
         merchant.search_score = round(score, 2)
         results.append(merchant)
-    return sorted(results, key=lambda merchant: (merchant.search_score, merchant.id), reverse=True)
+    return sorted(
+        results,
+        key=lambda merchant: (merchant.match_coverage == 1, merchant.search_score, merchant.id),
+        reverse=True,
+    )
 
 
 def merchants(category=None, query="") -> list[Merchant]:
     with connect() as db:
-        context = load_search_context(db, query)
-        ranked = ranked_merchants(db, merchant_rows(db, category), context, query)
-    return diversify_results(ranked) if not query and not category else ranked
+        rows = list(merchant_rows(db, category))
+        merchant_ids = [row["id"] for row in rows] if category else None
+        context = load_search_context(db, query, merchant_ids)
+        ranked = ranked_merchants(db, rows, context, query)
+    if query:
+        return rerank_merchants(context.phrase, ranked, context.terms)
+    return diversify_results(ranked) if not category else ranked

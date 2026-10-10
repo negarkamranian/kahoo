@@ -1,4 +1,5 @@
 import json
+import math
 from functools import lru_cache
 from urllib.request import Request, urlopen
 
@@ -8,9 +9,11 @@ from backend.search.normalization import normalize_search
 VECTOR_DIMENSIONS = 1024
 
 
-def embed_texts(texts):
+def embed_texts(texts, *, purpose="passage"):
     endpoint = settings.embedding_api_url
     model = settings.embedding_model
+    if model == "intfloat/multilingual-e5-large":
+        texts = [f"{purpose}: {text}" for text in texts]
     payload = json.dumps({"model": model, "input": texts}).encode("utf-8")
     headers = {"Content-Type": "application/json"}
     token = settings.embedding_api_key
@@ -23,6 +26,8 @@ def embed_texts(texts):
         raise ValueError("Embedding provider must return one vector per input")
     if any(len(vector) != VECTOR_DIMENSIONS for vector in vectors):
         raise ValueError(f"Embedding provider must return {VECTOR_DIMENSIONS} dimensions")
+    if any(not math.isfinite(value) for vector in vectors for value in vector):
+        raise ValueError("Embedding vectors must contain finite numbers")
     return vectors
 
 
@@ -33,7 +38,7 @@ def vector_literal(vector):
 @lru_cache(maxsize=512)
 def embed_query(query):
     """Cache repeated normalized query vectors across search-as-you-type calls."""
-    return tuple(embed_texts([normalize_search(query)])[0])
+    return tuple(embed_texts([normalize_search(query)], purpose="query")[0])
 
 
 def embed_pending_documents(database, limit=100):
@@ -60,7 +65,7 @@ def embed_pending_documents(database, limit=100):
     return len(rows)
 
 
-def semantic_merchant_scores(database, query, limit=50):
+def semantic_merchant_scores(database, query, limit=50, *, merchant_ids=None):
     if not settings.embedding_api_url:
         return {}
     vector = vector_literal(embed_query(query))
@@ -72,10 +77,20 @@ def semantic_merchant_scores(database, query, limit=50):
                ), nearest AS (
                  SELECT merchant_id,1-(embedding <=> %s::vector) score
                  FROM search_documents,candidates WHERE embedding IS NOT NULL
+                   AND embedding_model=%s
+                   AND (%s::bigint[] IS NULL OR merchant_id=ANY(%s))
                  ORDER BY embedding <=> %s::vector LIMIT %s
                )
                SELECT merchant_id,MAX(score) score FROM nearest
                GROUP BY merchant_id ORDER BY score DESC LIMIT %s""",
-            (vector, vector, limit * 4, limit),
+            (
+                vector,
+                settings.embedding_model,
+                merchant_ids,
+                merchant_ids,
+                vector,
+                limit * 4,
+                limit,
+            ),
         )
     }
