@@ -29,6 +29,57 @@ Defaults are in [.env.example](.env.example); override them in `.env` and restar
 
 Phone login is a demo without SMS verification.
 
+## Connect a shop with Instagram
+
+The store connection button uses real **Instagram Login** for Business and Creator
+accounts, requesting only `instagram_business_basic`. It imports the authorized
+account's profile and latest posts, including carousel images and video thumbnails.
+It does not use the manually configured Business Discovery token.
+
+In your Meta app, enable **Instagram → API setup with Instagram login**. Use the
+**Instagram App ID** and **Instagram App Secret** shown there, then set these in `.env`:
+
+```dotenv
+INSTAGRAM_APP_ID=YOUR_INSTAGRAM_APP_ID
+INSTAGRAM_APP_SECRET=YOUR_INSTAGRAM_APP_SECRET
+INSTAGRAM_REDIRECT_URI=https://kahoo.ir/api/instagram/callback
+INSTAGRAM_TOKEN_ENCRYPTION_KEY=YOUR_FERNET_KEY
+```
+
+Generate the encryption key once with your Python environment:
+
+```bash
+python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
+```
+
+Keep the key outside version control and retain it across deployments; changing it
+makes existing tokens unreadable. Tokens stay encrypted in PostgreSQL and never
+go to browser storage or API responses.
+
+Register the exact `INSTAGRAM_REDIRECT_URI` in the Instagram product's **Business
+login settings**. Change this environment value when the public domain changes.
+Serve the app at that same HTTPS origin so its session cookie survives the return
+from Instagram. For local authorization tests, use a public HTTPS development URL
+and register its callback too; `localhost` cannot receive a callback to `kahoo.ir`.
+
+Rebuild to install dependencies and apply the connection migration:
+
+```bash
+docker compose --env-file .env.example --env-file .env up --build -d
+```
+
+During development, test with an Instagram account assigned an app/tester role.
+For shops outside those roles, complete Meta's required App Review/Advanced Access
+for `instagram_business_basic` and switch the app to Live mode. Follow Meta's
+[Instagram Login documentation](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login/)
+for app-dashboard requirements.
+
+When a shop's profile is refreshed through `media sync`, Kahoo uses its stored
+Instagram token and renews it when it has less than seven days remaining and is
+over one day old. Expired/revoked tokens require the owner to connect again.
+Authorization cancellation, failed imports and missing configuration show an error;
+they never create a demo shop or claim a successful connection.
+
 ## Development
 
 Python 3.13 and Node.js 22.13+.

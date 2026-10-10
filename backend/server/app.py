@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException
 from backend.config import PROJECT_ROOT
 from backend.database import initialize_database
 from backend.server.account_routes import router as account_router
+from backend.server.instagram_routes import router as instagram_router
 from backend.server.product_routes import router as product_router
 from backend.server.routes import http_error_response, router, validation_error_response
 from backend.server.saved_routes import router as saved_router
@@ -45,6 +46,7 @@ app = FastAPI(
 )
 app.include_router(router)
 app.include_router(account_router)
+app.include_router(instagram_router)
 app.include_router(saved_router)
 app.include_router(taxonomy_router)
 app.include_router(product_router)

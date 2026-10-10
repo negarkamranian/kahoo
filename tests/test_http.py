@@ -35,7 +35,7 @@ class HttpTests(unittest.TestCase):
         self.addCleanup(session.stop)
 
     def test_post_rejects_invalid_json_and_non_object_payloads(self):
-        for path in ("/api/login/request", "/api/merchants/import-demo"):
+        for path in ("/api/login/request", "/api/login/verify"):
             for body in (b"", b"{", b"[]", b"null", b'"text"', b"\xff"):
                 with self.subTest(path=path, body=body):
                     response = self.client.post(path, content=body)
@@ -406,10 +406,9 @@ class HttpTests(unittest.TestCase):
         self.assertEqual("09123456789", payload["phone"])
         self.assertEqual(4, UUID(payload["challenge_id"]).version)
 
-    def test_demo_import_returns_its_original_response_shape(self):
+    def test_demo_import_endpoint_is_removed(self):
         response = self.client.post("/api/merchants/import-demo", json={})
-        self.assertEqual(201, response.status_code)
-        self.assertEqual({"created": False, "mode": "oauth_demo"}, response.json())
+        self.assertEqual(405, response.status_code)
 
     @patch("backend.server.routes.remove_merchant")
     def test_removal_returns_a_nested_merchant_model(self, remove):

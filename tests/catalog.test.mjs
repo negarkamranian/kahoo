@@ -19,6 +19,7 @@ async function loadPage(
     savedAPI = () => undefined,
     sessionUser = null,
     coordinateTabs = true,
+    url = "https://kahoo.test/",
   } = {},
 ) {
   const html = await readFile(
@@ -30,7 +31,7 @@ async function loadPage(
     "utf8",
   );
   const dom = new JSDOM(html, {
-    url: "https://kahoo.test/",
+    url,
     runScripts: "outside-only",
   });
   const { window } = dom;
@@ -150,6 +151,98 @@ const merchant = {
     })),
   })),
 };
+
+test("store connection calls the real authorization endpoint and fails visibly", async (t) => {
+  const { dom, window, requests } = await loadPage(
+    "index.html",
+    "catalog.js",
+    (path) => {
+      if (path === "/api/categories") return [];
+      if (path === "/api/instagram/connect")
+        throw new Error("instagram_not_configured");
+      return [merchant];
+    },
+  );
+  t.after(() => dom.window.close());
+  const document = window.document;
+  document.querySelector("[data-open-connect]").click();
+  document.querySelector("#instagram-connect").click();
+  await settlePage();
+  const request = requests.find(
+    (item) => item.path === "/api/instagram/connect",
+  );
+  assert.equal(request.options.method, "POST");
+  assert.equal(request.options.headers.get("X-Kahoo-Saved"), "1");
+  assert.equal(document.querySelector("#connect-error").hidden, false);
+  assert.match(
+    document.querySelector("#connect-error").textContent,
+    /در دسترس نیست/,
+  );
+  assert.equal(document.querySelector("#instagram-connect").disabled, false);
+  assert.equal(
+    document.querySelector('[data-connect-state="done"]').hidden,
+    true,
+  );
+  assert.equal(
+    requests.some((item) => item.path.includes("import-demo")),
+    false,
+  );
+});
+
+test("Instagram return checks the session's connection before showing success", async (t) => {
+  for (const connected of [true, false]) {
+    await t.test(
+      connected ? "verified store" : "forged success marker",
+      async (t) => {
+        const { dom, window } = await loadPage(
+          "index.html",
+          "catalog.js",
+          (path) => {
+            if (path === "/api/categories") return [];
+            if (path === "/api/instagram/connection")
+              return {
+                configured: true,
+                connections: connected
+                  ? [
+                      {
+                        merchant_id: 1,
+                        name: merchant.name,
+                        handle: merchant.handle,
+                        needs_reconnect: false,
+                      },
+                    ]
+                  : [],
+              };
+            return [merchant];
+          },
+          {},
+          { url: "https://kahoo.test/?instagram=connected#connect" },
+        );
+        t.after(() => dom.window.close());
+        await settlePage();
+        const document = window.document;
+        assert.equal(document.querySelector("#connect-dialog").open, true);
+        assert.equal(
+          document.querySelector('[data-connect-state="done"]').hidden,
+          !connected,
+        );
+        assert.equal(
+          document.querySelector("#connect-error").hidden,
+          connected,
+        );
+        assert.equal(
+          new URL(window.location.href).searchParams.has("instagram"),
+          false,
+        );
+        if (connected)
+          assert.match(
+            document.querySelector("#connect-result").textContent,
+            /@shop/,
+          );
+      },
+    );
+  }
+});
 
 test("shop recommendations validate a handle, import it, and open the saved shop", async () => {
   const { window, requests } = await loadPage(
@@ -324,7 +417,7 @@ test("catalog cards keep click tracking, accessible reels and grouped post saves
     document.querySelectorAll("#detail-posts .saved-post-tile").length,
     4,
   );
-  assert.equal(document.querySelectorAll("#detail-posts img").length, 8);
+  assert.equal(document.querySelectorAll("#detail-posts img").length, 12);
   document.querySelector(".post-save").click();
   await settlePage();
   const saved = serverSaved.posts;
@@ -338,6 +431,73 @@ test("catalog cards keep click tracking, accessible reels and grouped post saves
   await settlePage();
   assert.equal(serverSaved.posts.length, 0);
   assert.equal(window.localStorage.getItem("kahoo_saved_posts"), null);
+});
+
+test("shop post galleries select thumbnails, wrap with arrows, and keep single images simple", async (t) => {
+  const profile = {
+    ...merchant,
+    posts: [
+      merchant.posts[0],
+      { ...merchant.posts[1], media: merchant.posts[1].media.slice(0, 1) },
+    ],
+  };
+  const { dom, window, requests } = await loadPage(
+    "index.html",
+    "catalog.js",
+    (path) => {
+      if (path === "/api/categories") return [];
+      if (path === "/api/merchants/1") return profile;
+      return [merchant];
+    },
+  );
+  t.after(() => dom.window.close());
+  await window.openMerchantProfile(1);
+  const document = window.document,
+    tiles = document.querySelectorAll("#detail-posts .saved-post-tile"),
+    tile = tiles[0],
+    image = tile.querySelector(".collection-preview > img"),
+    thumbnails = tile.querySelectorAll(".collection-thumbnail"),
+    count = tile.querySelector(".collection-count");
+  assert.equal(document.querySelector(".merchant-facts").tagName, "SECTION");
+  assert.ok(
+    document
+      .querySelector(".merchant-facts")
+      .compareDocumentPosition(document.querySelector("#detail-posts")) &
+      window.Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+  assert.equal(thumbnails[0].getAttribute("aria-pressed"), "true");
+  thumbnails[1].click();
+  assert.equal(image.getAttribute("src"), profile.posts[0].media[1].media_url);
+  assert.equal(thumbnails[1].getAttribute("aria-pressed"), "true");
+  assert.equal(count.textContent, "۲ / ۲");
+  tile.querySelector(".collection-next").click();
+  assert.equal(image.getAttribute("src"), profile.posts[0].media[0].media_url);
+  tile.querySelector(".collection-previous").click();
+  assert.equal(image.getAttribute("src"), profile.posts[0].media[1].media_url);
+  tile.dispatchEvent(
+    new window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+  );
+  assert.equal(image.getAttribute("src"), profile.posts[0].media[0].media_url);
+  const preview = tile.querySelector(".collection-preview");
+  for (const [type, clientX] of [
+    ["touchstart", 100],
+    ["touchend", 30],
+  ]) {
+    const event = new window.Event(type, { cancelable: true });
+    Object.defineProperty(event, "changedTouches", {
+      value: [{ clientX, clientY: 20 }],
+    });
+    preview.dispatchEvent(event);
+  }
+  assert.equal(image.getAttribute("src"), profile.posts[0].media[1].media_url);
+  assert.equal(tiles[1].querySelector(".collection-arrow"), null);
+  assert.equal(tiles[1].querySelector(".collection-thumbnails"), null);
+  assert.equal(tiles[1].querySelector("a").href, profile.posts[1].permalink);
+  assert.equal(
+    requests.filter((request) => request.path.startsWith("/api/saved/posts/"))
+      .length,
+    0,
+  );
 });
 
 test("shop profile facts distinguish observed zero from unavailable data", async (t) => {

@@ -742,7 +742,6 @@ function renderMerchantFacts(merchant) {
           new Date(merchant.account_created_at),
         )
       : "در دسترس نیست";
-  document.querySelector(".merchant-facts").open = false;
 }
 
 function configureMerchantSave(merchant) {
@@ -762,35 +761,111 @@ function configureMerchantSave(merchant) {
     toggleSaved("merchants", merchantItem, merchantSave);
 }
 
-function postImages(merchant, media, index) {
-  return media.map((item, mediaIndex) => {
-    const image = document.createElement("img");
-    image.src = item.media_url;
-    image.alt = `تصویر ${mediaIndex + 1} از پست ${index + 1} ${merchant.name}`;
-    image.loading = "lazy";
-    return image;
+function postPreview(merchant, post, index) {
+  const preview = document.createElement("span");
+  preview.className = "collection-preview";
+  const image = document.createElement("img");
+  image.src = post.media[0].media_url;
+  image.alt = `تصویر 1 از پست ${index + 1} ${merchant.name}`;
+  image.loading = "lazy";
+  preview.append(image);
+  return preview;
+}
+
+function galleryThumbnails(container, items, show) {
+  return items.map((media, position) => {
+    const button = document.createElement("button"),
+      thumbnail = document.createElement("img");
+    button.type = "button";
+    button.className = "collection-thumbnail";
+    button.setAttribute("aria-label", `نمایش تصویر ${faNumber(position + 1)}`);
+    thumbnail.src = media.media_url;
+    thumbnail.alt = "";
+    thumbnail.loading = "lazy";
+    button.append(thumbnail);
+    button.addEventListener("click", () => show(position));
+    container.append(button);
+    return button;
   });
 }
 
-function collectionThumbnails(images) {
-  const thumbnails = document.createElement("span"),
-    thumbnailCount = images.length,
-    rows = Math.min(3, Math.max(1, Math.round(Math.sqrt(thumbnailCount / 2)))),
-    columns = Math.ceil(thumbnailCount / rows);
-  thumbnails.className = "collection-thumbnails";
-  thumbnails.style.setProperty("--thumbnail-rows", rows);
-  thumbnails.style.setProperty("--thumbnail-columns", columns);
-  thumbnails.append(...images);
-  return thumbnails;
+function galleryControls(tile, move) {
+  for (const [direction, label, symbol, step] of [
+    ["previous", "تصویر قبلی", "‹", -1],
+    ["next", "تصویر بعدی", "›", 1],
+  ]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `collection-arrow collection-${direction}`;
+    button.setAttribute("aria-label", label);
+    button.textContent = symbol;
+    button.addEventListener("click", () => move(step));
+    tile.append(button);
+  }
+  tile.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    move(event.key === "ArrowRight" ? 1 : -1);
+  });
 }
 
-function postPreview(merchant, post, index) {
-  const preview = document.createElement("span");
-  preview.className = `collection-preview count-${Math.min(post.media.length, 4)}`;
-  const images = postImages(merchant, post.media, index);
-  preview.append(images[0]);
-  if (images.length > 1) preview.append(collectionThumbnails(images.slice(1)));
-  return preview;
+function gallerySwipe(preview, move) {
+  let touchStart;
+  preview.addEventListener(
+    "touchstart",
+    (event) => {
+      const touch = event.changedTouches[0];
+      touchStart = { x: touch.clientX, y: touch.clientY };
+    },
+    { passive: true },
+  );
+  preview.addEventListener(
+    "touchend",
+    (event) => {
+      if (!touchStart) return;
+      const touch = event.changedTouches[0],
+        dx = touch.clientX - touchStart.x,
+        dy = touch.clientY - touchStart.y;
+      touchStart = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+        event.preventDefault();
+        move(dx < 0 ? 1 : -1);
+      }
+    },
+    { passive: false },
+  );
+}
+
+function mountPostGallery(tile, merchant, post, index) {
+  if (post.media.length < 2) return;
+  const image = tile.querySelector(".collection-preview > img"),
+    count = tile.querySelector(".collection-count"),
+    thumbnails = document.createElement("div");
+  thumbnails.className = "collection-thumbnails";
+  thumbnails.setAttribute("role", "group");
+  thumbnails.setAttribute("aria-label", "تصاویر این پست");
+  let selected = 0;
+  const buttons = galleryThumbnails(thumbnails, post.media, show);
+  function show(position) {
+    selected = (position + post.media.length) % post.media.length;
+    image.src = post.media[selected].media_url;
+    image.alt = `تصویر ${selected + 1} از پست ${index + 1} ${merchant.name}`;
+    count.textContent = `${faNumber(selected + 1)} / ${faNumber(post.media.length)}`;
+    buttons.forEach((button, i) =>
+      button.setAttribute("aria-pressed", String(i === selected)),
+    );
+    const active = buttons[selected];
+    thumbnails.scrollTo?.({
+      left:
+        active.offsetLeft - (thumbnails.clientWidth - active.offsetWidth) / 2,
+      behavior: "auto",
+    });
+  }
+  const move = (step) => show(selected + step);
+  galleryControls(tile, move);
+  gallerySwipe(tile.querySelector(".collection-preview"), move);
+  tile.append(thumbnails);
+  show(0);
 }
 
 function savedPostItem(merchant, post) {
@@ -839,6 +914,7 @@ function postTile(merchant, post, index) {
   const tile = document.createElement("div");
   tile.className = `saved-post-tile${post.media.length > 1 ? " collection-tile" : ""}`;
   tile.append(postLink(merchant, post, index), postSaveButton(merchant, post));
+  mountPostGallery(tile, merchant, post, index);
   return tile;
 }
 
@@ -1138,15 +1214,32 @@ document.querySelector("#recommend-view").addEventListener("click", () => {
 const connectDialog = document.querySelector("#connect-dialog"),
   connectButton = document.querySelector("#instagram-connect"),
   importStatus = document.querySelector("#import-status"),
+  connectError = document.querySelector("#connect-error"),
   connectStates = [...document.querySelectorAll("[data-connect-state]")];
-let imported = false;
+let connectedMerchantId = null;
+const connectionErrors = {
+  instagram_not_configured: "اتصال به اینستاگرام فعلاً در دسترس نیست.",
+  instagram_permission_denied:
+    "دسترسی تأیید نشد. برای اتصال، اجازه خواندن پروفایل و پست‌ها را تأیید کن.",
+  instagram_invalid_state: "درخواست اتصال منقضی شده است. دوباره تلاش کن.",
+  instagram_rate_limited: "چند دقیقه دیگر دوباره تلاش کن.",
+  instagram_shop_excluded: "این فروشگاه امکان اضافه شدن به فهرست را ندارد.",
+  instagram_identity_conflict:
+    "اطلاعات این حساب با فروشگاه ثبت‌شده مطابقت ندارد.",
+};
 function showConnectState(name) {
   connectStates.forEach((state) => {
     state.hidden = state.dataset.connectState !== name;
   });
 }
+function showConnectionError(code) {
+  showConnectState("start");
+  connectError.textContent =
+    connectionErrors[code] || "اتصال انجام نشد. دوباره تلاش کن.";
+  connectError.hidden = false;
+}
 function openConnectDialog() {
-  showConnectState(imported ? "done" : "start");
+  showConnectState(connectedMerchantId ? "done" : "start");
   if (!connectDialog.open) connectDialog.showModal();
 }
 document
@@ -1164,37 +1257,59 @@ connectDialog.addEventListener("click", (event) => {
   if (event.target === connectDialog) connectDialog.close();
 });
 connectButton.addEventListener("click", async () => {
-  track("oauth_started");
+  if (connectButton.disabled) return;
+  connectButton.disabled = true;
+  connectError.hidden = true;
   showConnectState("loading");
-  for (const [index, step] of [
-    "دریافت پروفایل",
-    "دریافت آخرین پست‌ها",
-    "تشخیص دسته‌بندی",
-  ].entries()) {
-    setTimeout(() => {
-      importStatus.textContent = step;
-    }, index * 550);
-  }
+  importStatus.textContent = "در حال رفتن به صفحه تأیید دسترسی اینستاگرام";
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1700));
-    await api("/api/merchants/import-demo", {
+    await initializeSession();
+    const result = await api("/api/instagram/connect", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
+      headers: { "X-Kahoo-Saved": "1" },
     });
-    track("oauth_completed");
-    imported = true;
-    categoryTree = await api("/api/categories");
-    await loadShops();
-    renderTree();
-    showConnectState("done");
-  } catch {
-    showConnectState("start");
+    const url = new URL(result.authorization_url);
+    if (
+      url.origin !== "https://www.instagram.com" ||
+      url.pathname !== "/oauth/authorize"
+    )
+      throw new Error("invalid_authorization_url");
+    track("oauth_started");
+    window.location.assign(url.href);
+  } catch (error) {
+    showConnectionError(error.message);
+    connectButton.disabled = false;
   }
 });
+async function finishInstagramConnection() {
+  const url = new URL(location.href),
+    result = url.searchParams.get("instagram");
+  if (!result) return;
+  url.searchParams.delete("instagram");
+  history.replaceState(null, "", url.pathname + url.search + url.hash);
+  openConnectDialog();
+  if (result !== "connected") {
+    showConnectionError(result);
+    return;
+  }
+  showConnectState("loading");
+  importStatus.textContent = "در حال دریافت فروشگاه متصل‌شده";
+  try {
+    const status = await api("/api/instagram/connection"),
+      connection = status.connections?.find((item) => !item.needs_reconnect);
+    if (!connection) throw new Error("instagram_connection_failed");
+    connectedMerchantId = connection.merchant_id;
+    document.querySelector("#connect-result").textContent =
+      `${connection.name} (${connection.handle}) به کاهو اضافه شد.`;
+    showConnectState("done");
+  } catch (error) {
+    showConnectionError(error.message);
+  }
+}
+finishInstagramConnection();
 document.querySelector(".done-button").addEventListener("click", () => {
   connectDialog.close();
-  document.querySelector("#shops").scrollIntoView({ behavior: "smooth" });
+  if (connectedMerchantId) openMerchantProfile(connectedMerchantId);
 });
 
 const loginDialog = document.querySelector("#login-dialog"),

@@ -16,7 +16,7 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Cpath d='M5 1h2v2h2V2h2v3h2v5h-2v3H9v2H5v-2H3v-2H1V6h2V3h2z' fill='%232e9d62'/%3E%3Cpath d='M6 4h4v2H8v5H6zM3 7h3v2H3z' fill='%23247a4b'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="./assets/css/foundation.css?v=4a685e7e12f4" />
-    <link rel="stylesheet" href="./assets/css/catalog.css?v=a63cbd08e905" />
+    <link rel="stylesheet" href="./assets/css/catalog.css?v=shop-profile-8" />
     <link
       rel="stylesheet"
       href="./assets/css/marketplace-theme.css?v=compact-shops-7"
@@ -338,16 +338,8 @@
             >
           </div>
         </div>
-        <div class="merchant-dialog-bio">
-          <b>درباره فروشگاه</b>
-          <p id="detail-bio"></p>
-        </div>
-        <div class="merchant-dialog-posts-head">
-          <b>آخرین پست‌ها</b><small id="detail-sync"></small>
-        </div>
-        <div class="merchant-dialog-posts" id="detail-posts"></div>
-        <details class="merchant-facts">
-          <summary>اطلاعات حساب اینستاگرام</summary>
+        <section class="merchant-facts" aria-labelledby="merchant-facts-title">
+          <h3 id="merchant-facts-title">اطلاعات حساب کاربری</h3>
           <div class="merchant-trust-grid">
             <div>
               <span>تعداد دنبال‌کننده</span
@@ -370,7 +362,15 @@
               ><small id="detail-created-note"></small>
             </div>
           </div>
-        </details>
+        </section>
+        <div class="merchant-dialog-bio">
+          <b>درباره فروشگاه</b>
+          <p id="detail-bio"></p>
+        </div>
+        <div class="merchant-dialog-posts-head">
+          <b>آخرین پست‌ها</b><small id="detail-sync"></small>
+        </div>
+        <div class="merchant-dialog-posts" id="detail-posts"></div>
       </div>
     </dialog>
 
@@ -395,13 +395,14 @@
         </svg>
         <h2 id="connect-title">فروشگاهت را اضافه کن</h2>
         <p>
-          نام، پروفایل و پست‌های فروشگاه از اینستاگرام دریافت می‌شوند. اتصال
-          حساب در این نسخه نمایشی است.
+          با تأیید دسترسی در اینستاگرام، پروفایل و آخرین پست‌های فروشگاهت
+          به کاهو اضافه می‌شوند.
         </p>
         <button class="instagram-button" id="instagram-connect" type="button">
           <span class="instagram-glyph">◎</span> ادامه با Instagram
         </button>
-        <small>برای حساب‌های حرفه‌ای اینستاگرام</small>
+        <small>برای حساب‌های Business و Creator اینستاگرام</small>
+        <p id="connect-error" role="alert" hidden></p>
       </div>
       <div class="connect-state" data-connect-state="loading" hidden>
         <div class="kahoo-loader" role="status">
@@ -421,13 +422,13 @@
             </svg>
           </div>
         </div>
-        <h2>در حال ساخت فروشگاه…</h2>
-        <p id="import-status">دریافت پروفایل</p>
+        <h2>در حال اتصال به اینستاگرام…</h2>
+        <p id="import-status">آماده‌سازی اتصال امن</p>
       </div>
       <div class="connect-state" data-connect-state="done" hidden>
         <div class="success-check">✓</div>
-        <h2>اتصال نمایشی انجام شد</h2>
-        <p>این مرحله برای نمایش مسیر افزودن فروشگاه است.</p>
+        <h2>فروشگاهت متصل شد</h2>
+        <p id="connect-result"></p>
         <button class="done-button" type="button">دیدن فروشگاه</button>
       </div>
     </dialog>
@@ -513,7 +514,7 @@
     </template>
     <script
       type="module"
-      src="./assets/js/catalog.js?v=recommend-shop-6"
+      src="./assets/js/catalog.js?v=instagram-login-9"
     ></script>
   </body>
 </html>

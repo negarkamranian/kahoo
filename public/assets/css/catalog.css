@@ -584,7 +584,7 @@
 .site-footer button:hover {
   color: var(--green);
 }
-/* Profiles keep photos prominent and account facts optional. */
+/* Shop profiles pair account information with browsable photo galleries. */
 dialog {
   padding: 0;
   background: var(--surface);
@@ -618,7 +618,9 @@ dialog::backdrop {
   background: #eeede8;
 }
 .merchant-dialog {
-  width: min(940px, calc(100% - 32px));
+  width: min(1040px, calc(100% - 32px));
+  border-radius: 24px;
+  box-shadow: 0 24px 100px #182b2433;
   max-height: calc(100dvh - 40px);
   overflow: auto;
 }
@@ -630,7 +632,8 @@ dialog::backdrop {
   color: var(--muted);
 }
 .merchant-dialog-content {
-  padding: 36px;
+  padding: 40px;
+  background: linear-gradient(180deg, #f3f6ef 0, #fff 310px);
 }
 .merchant-dialog-head {
   display: flex;
@@ -639,8 +642,10 @@ dialog::backdrop {
   padding-left: 32px;
 }
 .merchant-dialog-head > img {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
+  border: 4px solid #fff;
+  box-shadow: 0 2px 12px #243b2010;
   flex-shrink: 0;
   object-fit: cover;
   border-radius: 50%;
@@ -650,7 +655,8 @@ dialog::backdrop {
 }
 .merchant-dialog-name h2 {
   margin: 0;
-  font-size: 23px;
+  overflow-wrap: anywhere;
+  font-size: 26px;
   font-weight: 600;
 }
 #detail-handle {
@@ -716,8 +722,8 @@ dialog::backdrop {
   background: var(--green-dark);
 }
 .merchant-dialog-bio {
-  margin: 22px 0 0;
-  max-width: 680px;
+  margin: 24px 0 0;
+  max-width: 720px;
 }
 .merchant-dialog-bio b {
   font-size: 12px;
@@ -750,52 +756,95 @@ dialog::backdrop {
 .merchant-dialog-posts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 14px;
+  gap: 20px;
+  margin-top: 18px;
 }
 .saved-post-tile {
   position: relative;
   min-width: 0;
-  aspect-ratio: 1;
+  align-self: start;
   overflow: hidden;
-  border-radius: var(--radius);
-  background: #eeede8;
+  border: 1px solid #e9ebe5;
+  border-radius: 16px;
+  background: #f6f7f3;
 }
 .saved-post-tile > a {
   display: block;
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1;
 }
 .collection-preview {
-  display: grid;
+  display: block;
   width: 100%;
   height: 100%;
-  gap: 3px;
+  touch-action: pan-y;
 }
 .collection-preview > img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  min-height: 0;
 }
 .collection-thumbnails {
-  display: grid;
-  grid-template-columns: repeat(var(--thumbnail-columns), minmax(0, 1fr));
-  grid-template-rows: repeat(var(--thumbnail-rows), minmax(0, 1fr));
-  gap: 3px;
-  min-height: 0;
+  display: flex;
+  direction: ltr;
+  overflow-x: auto;
+  gap: 6px;
+  padding: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5c6 transparent;
 }
-.collection-thumbnails img {
+.collection-thumbnail {
+  flex: 0 0 42px;
+  height: 42px;
+  padding: 2px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  opacity: 0.65;
+}
+.collection-thumbnail[aria-pressed="true"] {
+  border-color: var(--green);
+  opacity: 1;
+}
+.collection-thumbnail:hover {
+  opacity: 1;
+}
+.collection-thumbnail img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  min-height: 0;
-  min-width: 0;
+  border-radius: 4px;
 }
-.collection-preview:not(.count-1) {
-  grid-template-rows: minmax(0, 3fr) minmax(0, 1fr);
+.collection-arrow {
+  direction: ltr;
+  position: absolute;
+  top: calc(50% - 32px);
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0 0 3px;
+  border: 1px solid #ffffffa6;
+  border-radius: 50%;
+  background: #fffffff0;
+  color: #24382c;
+  font: 28px/1 sans-serif;
+  box-shadow: 0 2px 8px #00000014;
+}
+.collection-arrow:hover {
+  background: white;
+}
+.collection-previous {
+  left: 10px;
+}
+.collection-next {
+  right: 10px;
 }
 .collection-count {
+  direction: ltr;
   position: absolute;
   top: 9px;
   right: 9px;
@@ -823,20 +872,26 @@ dialog::backdrop {
   color: var(--green);
 }
 .merchant-facts {
-  margin-top: 24px;
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
+  margin-top: 28px;
+  padding: 20px 24px;
+  border: 1px solid #dfe6d9;
+  border-radius: 16px;
+  background: #ffffffb8;
 }
-.merchant-facts summary {
-  cursor: pointer;
-  color: var(--muted);
+.merchant-facts h3 {
+  margin: 0 0 14px;
+  color: var(--green);
   font-size: 12px;
+  font-weight: 600;
 }
 .merchant-trust-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  padding-top: 16px;
+}
+.merchant-trust-grid > div + div {
+  border-inline-start: 1px solid #e3e8de;
+  padding-inline-start: 20px;
 }
 .merchant-trust-grid span,
 .merchant-trust-grid strong,
@@ -848,13 +903,17 @@ dialog::backdrop {
   color: var(--muted);
   font-size: 11px;
 }
+.merchant-trust-grid small:empty {
+  display: none;
+}
 .merchant-trust-grid strong {
-  margin: 4px 0;
-  font-size: 18px;
+  margin: 6px 0 0;
+  font-size: 20px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .merchant-trust-grid .detail-date {
-  font-size: 13px;
+  font-size: 14px;
 }
 .profile-empty {
   grid-column: 1 / -1;
@@ -1054,6 +1113,7 @@ dialog::backdrop {
     padding: 26px 18px 20px;
   }
   .merchant-dialog-head {
+    padding-left: 18px;
     flex-wrap: wrap;
     align-items: flex-start;
   }
@@ -1073,6 +1133,30 @@ dialog::backdrop {
   }
   .merchant-dialog-posts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .merchant-facts {
+    padding: 16px;
+    margin-top: 20px;
+  }
+  .merchant-trust-grid > div + div {
+    padding-inline-start: 0;
+    border: 0;
+  }
+  .merchant-trust-grid strong {
+    font-size: 16px;
+  }
+  .collection-thumbnail {
+    flex-basis: 36px;
+    height: 36px;
+  }
+  .collection-thumbnails {
+    padding: 8px;
+  }
+  .collection-arrow {
+    width: 30px;
+    height: 30px;
+    top: calc(50% - 26px);
   }
   .merchant-dialog-posts-head {
     align-items: flex-start;

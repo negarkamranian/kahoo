@@ -22,6 +22,10 @@ class Settings(BaseModel):
     meta_graph_version: str
     meta_ig_user_id: str
     meta_access_token: str = Field(repr=False)
+    instagram_app_id: str
+    instagram_app_secret: str = Field(repr=False)
+    instagram_redirect_uri: str
+    instagram_token_encryption_key: str = Field(repr=False)
     embedding_api_url: str
     embedding_api_key: str = Field(repr=False)
     embedding_model: str
@@ -43,6 +47,10 @@ class Settings(BaseModel):
             meta_graph_version=os.environ["META_GRAPH_VERSION"],
             meta_ig_user_id=os.environ["META_IG_USER_ID"],
             meta_access_token=os.environ["META_ACCESS_TOKEN"],
+            instagram_app_id=os.environ["INSTAGRAM_APP_ID"],
+            instagram_app_secret=os.environ["INSTAGRAM_APP_SECRET"],
+            instagram_redirect_uri=os.environ["INSTAGRAM_REDIRECT_URI"],
+            instagram_token_encryption_key=os.environ["INSTAGRAM_TOKEN_ENCRYPTION_KEY"],
             embedding_api_url=os.environ["EMBEDDING_API_URL"],
             embedding_api_key=os.environ["EMBEDDING_API_KEY"],
             embedding_model=os.environ["EMBEDDING_MODEL"],

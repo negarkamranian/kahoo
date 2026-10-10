@@ -49,6 +49,8 @@ class ConfigTests(unittest.TestCase):
             "database_url": "secret-db",
             "admin_token": "secret-admin",
             "meta_access_token": "secret-meta",
+            "instagram_app_secret": "secret-instagram",
+            "instagram_token_encryption_key": "secret-encryption",
             "embedding_api_key": "secret-embedding",
             "product_vision_api_key": "secret-vision",
         }

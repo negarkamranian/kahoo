@@ -2,11 +2,10 @@ import hmac
 from typing import Annotated
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from pydantic import JsonValue
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend.config import settings
@@ -22,7 +21,6 @@ from backend.models.categories import CategoryNode
 from backend.models.merchants import (
     AdminMerchantPage,
     AdminMerchantQuery,
-    DemoImportResult,
     ImportResult,
     Merchant,
     MerchantImport,
@@ -248,17 +246,6 @@ def post_analytics(
     )
     record_event(event)
     return AnalyticsResult(saved=True)
-
-
-def import_demo_merchant() -> DemoImportResult:
-    # A real OAuth callback would upsert the authenticated account. The demo must
-    # never create a made-up public identity in the directory.
-    return DemoImportResult(created=False, mode="oauth_demo")
-
-
-@router.post("/api/merchants/import-demo", status_code=201)
-def post_import_demo(_payload: Annotated[dict[str, JsonValue], Body()]) -> DemoImportResult:
-    return import_demo_merchant()
 
 
 @router.post(
