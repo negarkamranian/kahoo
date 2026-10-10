@@ -26,6 +26,7 @@ from backend.models.merchants import (
     ImportResult,
     Merchant,
     MerchantImport,
+    MerchantRecommendation,
     MerchantRemovalResult,
 )
 from backend.models.search import SearchSuggestion
@@ -37,6 +38,7 @@ from backend.services.merchants import (
     add_or_refresh_merchant,
     admin_merchants,
     merchant_detail,
+    recommend_merchant,
     remove_merchant,
 )
 
@@ -96,6 +98,7 @@ VALIDATION_CODES = {
     "/api/login/request": "invalid_login",
     "/api/login/verify": "invalid_code",
     "/api/admin/merchants": "merchant_import_failed",
+    "/api/merchants/recommend": "invalid_merchant_handle",
     "/api/admin/metrics": "invalid_period",
 }
 
@@ -256,6 +259,32 @@ def import_demo_merchant() -> DemoImportResult:
 @router.post("/api/merchants/import-demo", status_code=201)
 def post_import_demo(_payload: Annotated[dict[str, JsonValue], Body()]) -> DemoImportResult:
     return import_demo_merchant()
+
+
+@router.post(
+    "/api/merchants/recommend",
+    response_model_exclude_unset=True,
+)
+def post_merchant_recommendation(
+    payload: MerchantRecommendation, request: Request, response: Response
+) -> ImportResult:
+    require_private_mutation(request, "invalid_merchant_recommendation")
+    try:
+        result = recommend_merchant(payload)
+    except ValueError as error:
+        raise HTTPException(
+            400, detail={"error": "merchant_import_failed", "message": str(error)}
+        ) from error
+    except (OSError, RuntimeError) as error:
+        raise HTTPException(
+            502,
+            detail={
+                "error": "merchant_import_failed",
+                "message": "دریافت فروشگاه از اینستاگرام ممکن نشد. دوباره تلاش کن.",
+            },
+        ) from error
+    response.status_code = 201 if result.created else 200
+    return result
 
 
 @router.post(

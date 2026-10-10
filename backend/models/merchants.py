@@ -3,13 +3,26 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.models.categories import CategoryLink
 from backend.models.common import Count, InputModel, InstagramHandle, NonEmptyText
 from backend.models.media import PostCollection
 
 MerchantPageSize = Annotated[int, Field(strict=True, ge=1, le=100)]
+
+
+class MerchantRecommendation(InputModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    identifier: InstagramHandle
+
+    @field_validator("identifier", mode="before")
+    @classmethod
+    def normalize_handle(cls, value):
+        if isinstance(value, str):
+            return "@" + value.strip().lower().removeprefix("@")
+        return value
 
 
 class MerchantImport(InputModel):

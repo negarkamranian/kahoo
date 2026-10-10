@@ -19,8 +19,9 @@
     <link rel="stylesheet" href="./assets/css/catalog.css?v=a63cbd08e905" />
     <link
       rel="stylesheet"
-      href="./assets/css/marketplace-theme.css?v=shop-cards-6"
+      href="./assets/css/marketplace-theme.css?v=compact-shops-7"
     />
+    <link rel="stylesheet" href="./assets/css/brand-art.css?v=1" />
   </head>
   <body>
     <a class="skip-link" href="#shops">رفتن به نتایج</a>
@@ -126,7 +127,6 @@
             ></div>
           </aside>
         </div>
-        <span class="nav-note">خرید و گفتگو در اینستاگرام</span>
       </nav>
     </header>
     <main class="catalog">
@@ -135,18 +135,25 @@
         id="browse-intro"
         aria-labelledby="browse-heading"
       >
-        <div>
+        <div class="hero-title">
           <p class="eyebrow">یک گشت تازه، یک کشف تازه</p>
           <h1 id="browse-heading"><span>کاهو،</span> کشف چیزهای دوست‌داشتنی</h1>
         </div>
         <div class="hero-note">
-          <span class="hero-spark" aria-hidden="true">✳</span>
           <p>
             از دست‌سازهای خاص تا حال‌وهوای تازه برای خانه.<br />بگرد، ذخیره کن و
             در اینستاگرام بیشتر ببین.
           </p>
           <a href="#shops">شروع گشت‌وگذار <span aria-hidden="true">←</span></a>
         </div>
+        <img
+          class="hero-vegetables"
+          src="./assets/images/radish-lettuce.png"
+          alt="تربچه‌ای با چشم‌های قلبی که کاهوی خندان را پیدا کرده است"
+          width="320"
+          height="240"
+          fetchpriority="high"
+        />
       </section>
       <nav
         class="quick-categories"
@@ -157,13 +164,9 @@
       <section
         class="discovery"
         id="discovery"
-        aria-labelledby="discovery-heading"
+        aria-label="مجموعه‌های فروشگاه‌ها"
         hidden
       >
-        <div class="section-heading">
-          <h2 id="discovery-heading">چند مسیر برای گشتن</h2>
-          <span>از میان فروشگاه‌های کاهو</span>
-        </div>
         <div class="discovery-grid" id="discovery-grid"></div>
       </section>
       <section id="shops" aria-labelledby="result-title">
@@ -212,7 +215,15 @@
         </div>
       </section>
     </main>
-    <footer class="site-footer">
+    <footer class="site-footer art-footer">
+      <img
+        class="footer-vegetables"
+        src="./assets/images/lettuce-friends.png"
+        alt=""
+        width="126"
+        height="100"
+        loading="lazy"
+      />
       <a class="brand footer-brand" href="/"
         ><svg
           class="kahoo-icon"
@@ -230,7 +241,42 @@
       <p>پیدا کردن فروشگاه در کاهو؛ خرید در اینستاگرام.</p>
       <a href="/saved.html">ذخیره‌شده‌ها</a
       ><button type="button" data-open-connect>افزودن فروشگاه</button>
+      <button type="button" data-open-recommend>معرفی فروشگاه</button>
     </footer>
+
+    <dialog
+      class="recommend-dialog"
+      id="recommend-dialog"
+      aria-labelledby="recommend-title"
+    >
+      <button class="dialog-close" type="button" aria-label="بستن">×</button>
+      <form id="recommend-form" class="recommend-form">
+        <h2 id="recommend-title">معرفی فروشگاه</h2>
+        <p>
+          فروشگاهی می‌شناسی؟ آیدی اینستاگرامش را وارد کن تا به کاهو اضافه شود.
+        </p>
+        <label for="recommend-handle">آیدی اینستاگرام فروشگاه</label>
+        <input
+          id="recommend-handle"
+          name="identifier"
+          dir="ltr"
+          placeholder="@shopname"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          maxlength="31"
+          required
+          aria-describedby="recommend-status"
+        />
+        <p id="recommend-status" role="status" aria-live="polite"></p>
+        <button class="recommend-submit" type="submit">معرفی فروشگاه</button>
+      </form>
+      <div id="recommend-done" class="recommend-done" hidden>
+        <h2>فروشگاه در کاهو است</h2>
+        <p id="recommend-result"></p>
+        <button id="recommend-view" type="button">دیدن فروشگاه</button>
+      </div>
+    </dialog>
 
     <dialog
       class="merchant-dialog"
@@ -467,7 +513,7 @@
     </template>
     <script
       type="module"
-      src="./assets/js/catalog.js?v=selected-categories-5"
+      src="./assets/js/catalog.js?v=recommend-shop-6"
     ></script>
   </body>
 </html>

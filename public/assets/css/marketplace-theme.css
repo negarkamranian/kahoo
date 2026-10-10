@@ -210,6 +210,7 @@
   font-size: 12px;
 }
 .shop-grid {
+  align-items: start;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 32px 24px;
@@ -509,7 +510,7 @@
 .shop-card {
   background: white;
   border: 1px solid var(--line);
-  padding: 0 0 16px;
+  padding: 0 0 12px;
   border-radius: 16px;
   box-shadow: 0 2px 8px #233c2406;
   transition:
@@ -526,7 +527,7 @@
 }
 .shop-card .shop-info {
   align-items: flex-start;
-  margin: 16px 16px 12px;
+  margin: 12px 14px 8px;
   gap: 10px;
 }
 .shop-card .shop-avatar {
@@ -552,7 +553,7 @@
   border-radius: 10px;
 }
 .shop-card .shop-category-line {
-  margin: 0 16px;
+  margin: 0 14px;
   flex-wrap: nowrap;
   gap: 0;
   font-size: 12px;
@@ -573,13 +574,13 @@
   content: none;
 }
 .shop-card .shop-description {
-  margin: 8px 16px 0;
+  margin: 6px 14px 0;
   color: var(--ink);
   font-size: 13px;
   line-height: 1.8;
 }
 .shop-card .match-reason {
-  margin: 8px 16px 0;
+  margin: 6px 14px 0;
 }
 .result-status {
   align-items: center;
@@ -934,11 +935,6 @@
 .shop-copy .shop-activity[hidden] {
   display: none;
 }
-.tree-select[aria-pressed="true"]::before {
-  content: "✓";
-  color: var(--green);
-  margin-inline-end: 6px;
-}
 
 .shop-social-stats {
   display: flex;
@@ -963,4 +959,65 @@
   color: var(--muted);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
+}
+
+.shop-card .post-grid.no-posts {
+  aspect-ratio: auto;
+  min-height: 64px;
+  padding: 12px 14px;
+  align-items: start;
+  justify-items: start;
+  background: #f4f6f0;
+}
+.shop-card .shop-category-line:has(.shop-category:empty):has(.location:empty) {
+  display: none;
+}
+.recommend-dialog {
+  width: min(440px, calc(100% - 32px));
+}
+.recommend-form,
+.recommend-done {
+  padding: 38px 28px 28px;
+}
+.recommend-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+.recommend-dialog p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.9;
+}
+.recommend-form label {
+  display: block;
+  margin: 24px 0 8px;
+  font-size: 13px;
+}
+.recommend-form input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+}
+.recommend-submit,
+#recommend-view {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--green);
+  color: white;
+  font-weight: 600;
+}
+.recommend-submit:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+#recommend-status:empty {
+  display: none;
+}
+.recommend-submit {
+  margin-top: 16px;
 }

@@ -151,6 +151,62 @@ const merchant = {
   })),
 };
 
+test("shop recommendations validate a handle, import it, and open the saved shop", async () => {
+  const { window, requests } = await loadPage(
+    "index.html",
+    "catalog.js",
+    (path) => {
+      if (path === "/api/categories") return categoryTree;
+      if (path === "/api/merchants/recommend")
+        return {
+          created: true,
+          merchant_id: 1,
+          name: merchant.name,
+          handle: merchant.handle,
+        };
+      if (path === "/api/merchants/1") return merchant;
+      return [merchant];
+    },
+  );
+  const doc = window.document;
+  doc.querySelector("[data-open-recommend]").click();
+  assert.equal(doc.querySelector("#recommend-dialog").open, true);
+  const input = doc.querySelector("#recommend-handle");
+  const submit = () =>
+    doc
+      .querySelector("#recommend-form")
+      .dispatchEvent(
+        new window.Event("submit", { bubbles: true, cancelable: true }),
+      );
+  input.value = "bad/id";
+  submit();
+  assert.match(
+    doc.querySelector("#recommend-status").textContent,
+    /آیدی معتبر/,
+  );
+  assert.equal(
+    requests.filter((request) => request.path === "/api/merchants/recommend")
+      .length,
+    0,
+  );
+  input.value = " Shop ";
+  submit();
+  assert.equal(doc.querySelector(".recommend-submit").disabled, true);
+  await new Promise((resolve) => setImmediate(resolve));
+  const request = requests.find(
+    (request) => request.path === "/api/merchants/recommend",
+  );
+  assert.deepEqual(JSON.parse(request.options.body), { identifier: "@shop" });
+  assert.equal(request.options.headers.get("X-Kahoo-Saved"), "1");
+  assert.equal(doc.querySelector("#recommend-done").hidden, false);
+  assert.equal(doc.querySelector(".recommend-submit").disabled, false);
+  doc.querySelector("#recommend-view").click();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(doc.querySelector("#recommend-dialog").open, false);
+  assert.equal(doc.querySelector("#merchant-dialog").open, true);
+  window.close();
+});
+
 const categoryTree = [
   {
     code: "67000000",

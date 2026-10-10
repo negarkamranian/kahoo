@@ -13,6 +13,7 @@ from backend.models.merchants import (
     ImportResult,
     Merchant,
     MerchantImport,
+    MerchantRecommendation,
     MerchantSummary,
 )
 from backend.search.indexing import sync_search_index
@@ -260,6 +261,49 @@ def save_imported_avatar(db, merchant_id, profile):
         return False
     cache_merchant_avatar(db, merchant_id, profile.avatar_url, profile.avatar_url)
     return True
+
+
+def recommend_merchant(request: MerchantRecommendation) -> ImportResult:
+    """Import a public recommendation without changing existing or excluded shops."""
+    with connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (request.identifier,))
+        excluded = db.execute(
+            "SELECT handle FROM merchant_exclusions WHERE handle=%s", (request.identifier,)
+        ).fetchone()
+        if excluded:
+            raise ValueError("این فروشگاه امکان اضافه شدن به فهرست را ندارد.")
+        existing = db.execute(
+            "SELECT id,name,category_code FROM merchants WHERE handle=%s", (request.identifier,)
+        ).fetchone()
+        if existing:
+            return ImportResult(
+                handle=request.identifier,
+                merchant_id=existing["id"],
+                name=existing["name"],
+                category_code=existing["category_code"],
+            )
+        profile = instagram_profile(request.identifier)
+        category_code = "unclassified"
+        db.execute(
+            """INSERT INTO categories(code,level,label_fa,label_en,sort_order)
+            VALUES(%s,1,'دسته‌بندی نشده','Unclassified',9999) ON CONFLICT(code) DO NOTHING""",
+            (category_code,),
+        )
+        imported = MerchantImport(identifier=request.identifier, category_code=category_code)
+        merchant_id = create_imported_merchant(db, imported, profile, category_code)
+        avatar_saved = save_imported_avatar(db, merchant_id, profile)
+        images_saved = replace_profile_posts(db, merchant_id, profile)
+        sync_search_index(db)
+    return ImportResult(
+        handle=request.identifier,
+        created=True,
+        merchant_id=merchant_id,
+        name=profile.name,
+        category_code=category_code,
+        avatar_saved=avatar_saved,
+        post_images_saved=images_saved,
+        followers_count=profile.followers_count,
+    )
 
 
 def category_breadcrumb(category_code, category_rows):

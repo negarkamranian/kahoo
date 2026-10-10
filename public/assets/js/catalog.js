@@ -1057,6 +1057,84 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest("#search-form")) closeSuggestions();
 });
 
+const recommendDialog = document.querySelector("#recommend-dialog"),
+  recommendForm = document.querySelector("#recommend-form"),
+  recommendStatus = document.querySelector("#recommend-status"),
+  recommendDone = document.querySelector("#recommend-done"),
+  recommendSubmit = document.querySelector(".recommend-submit");
+let recommendedMerchantId = null;
+document.querySelectorAll("[data-open-recommend]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!recommendSubmit.disabled) {
+      recommendForm.hidden = false;
+      recommendDone.hidden = true;
+      recommendStatus.textContent = "";
+    }
+    recommendDialog.showModal();
+  });
+});
+recommendDialog.querySelector(".dialog-close").addEventListener("click", () => {
+  recommendDialog.close();
+});
+recommendDialog.addEventListener("click", (event) => {
+  if (event.target === recommendDialog) recommendDialog.close();
+});
+function showRecommendedShop(result) {
+  recommendedMerchantId = result.merchant_id;
+  document.querySelector("#recommend-result").textContent = result.created
+    ? `${result.name || result.handle} به فهرست فروشگاه‌ها اضافه شد.`
+    : `${result.name || result.handle} قبلاً به کاهو اضافه شده است.`;
+  recommendForm.hidden = true;
+  recommendDone.hidden = false;
+}
+async function refreshRecommendedShops() {
+  await loadShops();
+  try {
+    categoryTree = await api("/api/categories");
+    renderTree();
+  } catch {
+    // The shop is saved even if category refresh is unavailable.
+  }
+}
+recommendForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (recommendSubmit.disabled) return;
+  const identifier =
+    "@" +
+    document
+      .querySelector("#recommend-handle")
+      .value.trim()
+      .toLowerCase()
+      .replace(/^@/, "");
+  if (!/^@[a-z0-9._]{1,30}$/.test(identifier)) {
+    recommendStatus.textContent =
+      "آیدی معتبر اینستاگرام را وارد کن؛ مثل @shopname.";
+    return;
+  }
+  recommendSubmit.disabled = true;
+  recommendStatus.textContent = "در حال دریافت فروشگاه از اینستاگرام…";
+  try {
+    const result = await api("/api/merchants/recommend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Kahoo-Saved": "1" },
+      body: JSON.stringify({ identifier }),
+    });
+    showRecommendedShop(result);
+    await refreshRecommendedShops();
+  } catch (error) {
+    recommendStatus.textContent =
+      error.message === "invalid_merchant_handle"
+        ? "آیدی معتبر اینستاگرام را وارد کن."
+        : "فروشگاه اضافه نشد. آیدی و عمومی بودن حساب را بررسی کن و دوباره تلاش کن.";
+  } finally {
+    recommendSubmit.disabled = false;
+  }
+});
+document.querySelector("#recommend-view").addEventListener("click", () => {
+  recommendDialog.close();
+  if (recommendedMerchantId) openMerchantProfile(recommendedMerchantId);
+});
+
 const connectDialog = document.querySelector("#connect-dialog"),
   connectButton = document.querySelector("#instagram-connect"),
   importStatus = document.querySelector("#import-status"),
