@@ -13,7 +13,7 @@ from backend.services.product_vision import extract_product, request_json, valid
 from backend.services.product_worker import finish_product, process_next_product
 from backend.services.products import enqueue_products, source_hash
 from backend.services.taxonomy import TaxonomyStore
-from tests.test_taxonomy import upstream_fixture
+from tests.factories import upstream_fixture
 
 
 def taxonomy_fixture():
@@ -272,15 +272,22 @@ class ProductRouteTests(unittest.TestCase):
     @patch("backend.server.product_routes.products.get_product_image")
     def test_product_images_return_snapshot_bytes_with_private_cache_control(self, image):
         image.return_value = {"image_blob": b"jpeg", "mime_type": "image/jpeg"}
-        with patch.object(settings, "admin_token", ""):
-            response = self.client.get("/api/admin/products/1/images/2")
+        with patch.object(settings, "admin_token", "secret"):
+            response = self.client.get(
+                "/api/admin/products/1/images/2", headers={"X-Kahoo-Admin-Token": "secret"}
+            )
         self.assertEqual(200, response.status_code)
         self.assertEqual(b"jpeg", response.content)
         self.assertEqual("private, no-store", response.headers["cache-control"])
 
-    @patch.object(settings, "admin_token", "")
+    @patch.object(settings, "admin_token", "secret")
     @patch("backend.server.product_routes.products.list_products")
     def test_invalid_filters_and_pagination_are_rejected_before_database_access(self, listing):
         for query in ("status=made-up", "review=made-up", "offset=-1", "limit=101"):
-            self.assertEqual(400, self.client.get(f"/api/admin/products?{query}").status_code)
+            self.assertEqual(
+                400,
+                self.client.get(
+                    f"/api/admin/products?{query}", headers={"X-Kahoo-Admin-Token": "secret"}
+                ).status_code,
+            )
         listing.assert_not_called()

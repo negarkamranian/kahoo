@@ -1,11 +1,13 @@
 """Real Instagram authorization endpoints, with safe callback redirects."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 
 from backend.database import connect
 from backend.instagram.oauth import InstagramConnectionError, login_configured
-from backend.models.instagram.oauth import InstagramAuthorization, InstagramConnectionStatus
+from backend.instagram.schemas import InstagramAuthorization, InstagramConnectionStatus
 from backend.server.account_routes import (
     COOKIE_NAME,
     Session,
@@ -22,6 +24,7 @@ from backend.services.instagram_connections import (
 )
 
 router = APIRouter(prefix="/api/instagram", route_class=RequestRoute)
+logger = logging.getLogger(__name__)
 SAFE_CALLBACK_ERRORS = {
     "instagram_invalid_state",
     "instagram_not_configured",
@@ -76,8 +79,9 @@ def instagram_callback(request: Request):
     except InstagramConnectionError as error:
         result = str(error) if str(error) in SAFE_CALLBACK_ERRORS else "instagram_connection_failed"
         return callback_redirect(result)
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception as error:  # pylint: disable=broad-exception-caught
         # Provider, image or database failures must never leak tokens to the browser.
+        logger.warning("Instagram authorization failed: %s", type(error).__name__)
         return callback_redirect("instagram_connection_failed")
     return callback_redirect("connected")
 

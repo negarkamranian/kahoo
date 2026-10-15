@@ -4,7 +4,7 @@ import math
 
 from backend.database import connect
 from backend.models.merchants import Merchant
-from backend.models.search import SearchContext, SearchEvidence
+from backend.models.search import SearchContext, SearchEvidence, TextMatch
 from backend.search.data import (
     load_categories,
     load_category_assignments,
@@ -31,7 +31,6 @@ QUALITY_WEIGHT = 0.15
 CLICK_WEIGHT = 0.7
 MAX_CLICK_BOOST = 2.0
 
-# Priority follows the strongest user-facing explanation, independent of scores.
 MATCH_REASONS = (
     ({"name"}, "نام فروشگاه"),
     ({"post"}, "محصول یا پست مرتبط"),
@@ -91,6 +90,12 @@ def category_labels(merchant, context):
 
 
 def merchant_evidence(merchant, context):
+    if identity_match(merchant, context.phrase):
+        return SearchEvidence(
+            text=TextMatch(score=100, coverage=1, coherent=True, fields={"name"}),
+            lexical=None,
+            semantic=0,
+        )
     text = match_content(
         merchant,
         category_labels(merchant, context),
@@ -103,6 +108,14 @@ def merchant_evidence(merchant, context):
         lexical=context.lexical.get(merchant.id),
         semantic=context.semantic.get(merchant.id, 0),
     )
+
+
+def identity_match(merchant, phrase):
+    def compact(value):
+        return "".join(character for character in normalize_search(value) if character.isalnum())
+
+    query = compact(phrase)
+    return bool(query) and query in (compact(merchant.handle), compact(merchant.name))
 
 
 def relevant_match(evidence, tokens):
@@ -188,7 +201,12 @@ def ranked_merchants(db, rows, context, query):
         results.append(merchant)
     return sorted(
         results,
-        key=lambda merchant: (merchant.match_coverage == 1, merchant.search_score, merchant.id),
+        key=lambda merchant: (
+            identity_match(merchant, query) if query else False,
+            merchant.match_coverage == 1,
+            merchant.search_score,
+            merchant.id,
+        ),
         reverse=True,
     )
 
@@ -200,5 +218,9 @@ def merchants(category=None, query="") -> list[Merchant]:
         context = load_search_context(db, query, merchant_ids)
         ranked = ranked_merchants(db, rows, context, query)
     if query:
-        return rerank_merchants(context.phrase, ranked, context.terms)
+        identities = [merchant for merchant in ranked if identity_match(merchant, context.phrase)]
+        candidates = [
+            merchant for merchant in ranked if not identity_match(merchant, context.phrase)
+        ]
+        return identities + rerank_merchants(context.phrase, candidates, context.terms)
     return diversify_results(ranked) if not category else ranked

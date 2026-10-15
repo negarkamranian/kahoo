@@ -1,12 +1,11 @@
-"""Import the pinned Shopify release, preserving the original and a compact local index."""
-
 import gzip
 import hashlib
 import json
 from urllib.request import Request, urlopen
 
 from backend.models.taxonomy import ProductCategory, ProductTaxonomy, TaxonomyMetadata
-from backend.services.taxonomy import TaxonomyStore, product_taxonomy
+from backend.services.taxonomy import TaxonomyStore
+from backend.services.taxonomy_repository import persist_taxonomy
 
 VERSION = "2026-08"
 COMMIT = "2e9aa2e9b882383952c63d212add13eb80f46cf9"
@@ -58,6 +57,8 @@ def validate_links(taxonomy):
         raise ValueError("Duplicate Shopify category IDs")
     if len(store.attributes_by_id) != len(taxonomy.attributes):
         raise ValueError("Duplicate Shopify attribute IDs")
+    if len(store.attributes) != len(taxonomy.attributes):
+        raise ValueError("Duplicate Shopify attribute handles")
     for category in taxonomy.categories:
         validate_category(category, category_ids, store)
 
@@ -90,22 +91,9 @@ def sync(args):
     else:
         source = fetch(DOWNLOAD_URL)
     taxonomy = normalize(source)
-    license_text = args.license.read_bytes() if args.license else fetch(LICENSE_URL)
-    args.output.mkdir(parents=True, exist_ok=True)
-    write_atomic(args.output / "upstream-taxonomy.json.gz", gzip.compress(source, mtime=0))
-    write_atomic(
-        args.output / "taxonomy.json.gz",
-        gzip.compress(taxonomy.model_dump_json().encode(), mtime=0),
+    license_text = (
+        args.license.read_text(encoding="utf-8")
+        if args.license
+        else fetch(LICENSE_URL).decode("utf-8")
     )
-    write_atomic(args.output / "LICENSE", license_text)
-    write_atomic(
-        args.output / "metadata.json", taxonomy.metadata.model_dump_json(indent=2).encode()
-    )
-    product_taxonomy.cache_clear()
-    return taxonomy.metadata
-
-
-def write_atomic(path, content):
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_bytes(content)
-    temporary.replace(path)
+    return persist_taxonomy(taxonomy, source, license_text)

@@ -134,13 +134,13 @@ async def http_error_response(_request: Request, error: StarletteHTTPException):
 
 def admin_mutation_authorized(headers):
     configured = settings.admin_token
-    if not configured:
-        return True
     supplied = headers.get("X-Kahoo-Admin-Token", "")
-    return bool(supplied) and hmac.compare_digest(configured, supplied)
+    return bool(configured and supplied) and hmac.compare_digest(configured, supplied)
 
 
 def require_admin(request: Request):
+    if not settings.admin_token:
+        raise HTTPException(503, detail={"error": "admin_not_configured"})
     if not admin_mutation_authorized(request.headers):
         raise HTTPException(
             401, detail={"error": "unauthorized", "message": "کلید مدیریت نادرست است."}
@@ -185,14 +185,18 @@ def get_merchant_detail(merchant_id: int) -> Merchant:
     return result
 
 
-@router.get("/api/admin/metrics", response_model_exclude_unset=True)
+@router.get(
+    "/api/admin/metrics", response_model_exclude_unset=True, dependencies=[Depends(require_admin)]
+)
 def get_admin_metrics(
     days: Annotated[str, Query(pattern=r"^(7|30|90)$")] = str(MetricsPeriod.MONTH.value),
 ) -> AdminMetrics:
     return admin_metrics(MetricsPeriod(int(days)))
 
 
-@router.get("/api/admin/merchants", response_model_exclude_unset=True)
+@router.get(
+    "/api/admin/merchants", response_model_exclude_unset=True, dependencies=[Depends(require_admin)]
+)
 def get_admin_merchants(
     q: str = "",
     limit: Annotated[int, Query(ge=1, le=100)] = ADMIN_DEFAULTS.limit,

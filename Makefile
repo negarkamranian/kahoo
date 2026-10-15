@@ -1,5 +1,5 @@
-PYTHON = .venv/bin/python
-
+PYTHON ?= .venv/bin/python
+CLI = $(PYTHON) -m backend
 .PHONY: check lint format format-check test run db-backup db-restore shop-enrich
 
 BACKUP_DIR ?= backups
@@ -27,12 +27,12 @@ run:
 	docker compose up -d app
 
 db-backup:
-	bash scripts/db-backup.sh --directory "$(BACKUP_DIR)"
+	$(CLI) db backup --directory "$(BACKUP_DIR)"
 
 db-restore:
 	@test -n "$(RESTORE_DB)" || { echo 'Set RESTORE_DB to a new database name.' >&2; exit 2; }
 	@test -n "$(BACKUP_FILE)" || { echo 'Set BACKUP_FILE to a backup archive.' >&2; exit 2; }
-	bash scripts/db-restore.sh --database "$(RESTORE_DB)" "$(BACKUP_FILE)"
+	$(CLI) db restore --database "$(RESTORE_DB)" "$(BACKUP_FILE)"
 
 shop-enrich: db-backup
 	docker compose --env-file .env.example --env-file .env up --build -d app

@@ -4,7 +4,7 @@ from enum import IntEnum
 
 from backend.database import connect
 from backend.models.search import SearchSuggestion
-from backend.search.normalization import normalize_search
+from backend.search.normalization import normalize_search, query_tokens
 from backend.search.ranking import term_match_strength
 
 MIN_QUERY_LENGTH = 2
@@ -40,7 +40,6 @@ def substring_match(phrase, text):
     return phrase in text
 
 
-# First matching rule wins; specific matches rank above broader matches.
 MATCH_RULES = (
     (exact_match, MatchScore.EXACT),
     (phrase_prefix, MatchScore.PHRASE_PREFIX),
@@ -55,30 +54,48 @@ def suggestion_score(phrase, normalized):
     for matches, score in MATCH_RULES:
         if matches(phrase, normalized):
             return float(score)
-    return MatchScore.TERM_MATCH * term_match_strength(phrase, normalized)
+    tokens = query_tokens(phrase)
+    strength = min((term_match_strength(token, normalized) for token in tokens), default=0)
+    return MatchScore.TERM_MATCH * strength
 
 
 def merchant_suggestions(db):
-    for row in db.execute("SELECT name,handle FROM merchants"):
+    for row in db.execute("SELECT id,name,handle FROM merchants"):
         label = f"{row['name']} · {row['handle']}"
-        yield SearchSuggestion(value=row["name"], label=label, type="merchant"), MERCHANT_NAME_BOOST
         yield (
-            SearchSuggestion(value=row["handle"].lstrip("@"), label=label, type="merchant"),
+            SearchSuggestion(
+                value=row["name"], label=label, type="merchant", merchant_id=row["id"]
+            ),
+            MERCHANT_NAME_BOOST,
+        )
+        yield (
+            SearchSuggestion(
+                value=row["handle"].lstrip("@"), label=label, type="merchant", merchant_id=row["id"]
+            ),
             MERCHANT_HANDLE_BOOST,
         )
 
 
-def category_suggestions(db, phrase):
-    pattern = f"%{phrase}%"
-    rows = db.execute(
-        """SELECT label_fa FROM categories
-          WHERE level>=2 AND (label_fa ILIKE %s OR label_en ILIKE %s)
-          ORDER BY level,sort_order LIMIT 100""",
-        (pattern, pattern),
-    )
-    for row in rows:
+def category_suggestions(db):
+    categories = {
+        row["code"]: row
+        for row in db.execute("SELECT code,parent_code,label_fa,label_en FROM categories")
+    }
+    populated = set()
+    for row in db.execute("SELECT merchant_id,category_code FROM merchant_categories"):
+        code = row["category_code"]
+        while code in categories and code not in populated:
+            populated.add(code)
+            code = categories[code]["parent_code"]
+    for code in populated:
+        row = categories[code]
         yield (
-            SearchSuggestion(value=row["label_fa"], label=row["label_fa"], type="category"),
+            SearchSuggestion(
+                value=f"{row['label_fa']} {row['label_en']}",
+                label=row["label_fa"],
+                type="category",
+                category_code=code,
+            ),
             CATEGORY_BOOST,
         )
 
@@ -110,7 +127,7 @@ def popular_suggestions(db):
 
 def collect_suggestions(db, phrase):
     yield from merchant_suggestions(db)
-    yield from category_suggestions(db, phrase)
+    yield from category_suggestions(db)
     yield from term_suggestions(db, phrase)
     yield from popular_suggestions(db)
 
@@ -123,11 +140,20 @@ def rank_suggestions(phrase, suggestions, limit):
         if not match:
             continue
         score = match + boost
-        previous = candidates.get(normalized)
+        key = suggestion_destination(item, normalized)
+        previous = candidates.get(key)
         if previous is None or score > previous[0]:
-            candidates[normalized] = (score, item)
+            candidates[key] = (score, item)
     ranked = sorted(candidates.values(), key=lambda pair: (pair[0], pair[1].value), reverse=True)
     return [item for _, item in ranked[: max(1, min(limit, MAX_SUGGESTIONS))]]
+
+
+def suggestion_destination(item, normalized):
+    if item.merchant_id is not None:
+        return "merchant", item.merchant_id
+    if item.category_code is not None:
+        return "category", item.category_code
+    return "query", normalized
 
 
 def search_suggestions(query: str, limit: int = 8) -> list[SearchSuggestion]:

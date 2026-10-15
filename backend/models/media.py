@@ -60,7 +60,8 @@ class InstagramProfile(BaseModel):
     followers_count: int | None = None
     following_count: int | None = None
     media_count: int | None = None
-    instagram_verified: bool = False
+    instagram_verified: bool | None = None
+    website_url: str | None = None
     source: str = "instagram_public_embed"
     media_grouping_version: int = INSTAGRAM_MEDIA_SYNC_VERSION
 

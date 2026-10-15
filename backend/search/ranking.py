@@ -19,15 +19,6 @@ METADATA_WEIGHT = 6
 PROXIMITY_WEIGHT = 10
 
 
-def query_coverage(tokens, *texts):
-    """Fraction of meaningful query tokens matched by any searchable field."""
-    if not tokens:
-        return 0.0
-    return sum(
-        any(term_match_strength(token, text) > 0 for text in texts) for token in tokens
-    ) / len(tokens)
-
-
 def compact_query_match(tokens, text):
     """Require concepts to occur together, rather than in unrelated product lists."""
     if len(tokens) < 2:
@@ -212,23 +203,6 @@ def reciprocal_rank_fusion(*rankings, k=60):
         for rank, merchant_id in enumerate(ordered, 1):
             fused[merchant_id] = fused.get(merchant_id, 0.0) + 1 / (k + rank)
     return fused
-
-
-def discounted_cumulative_gain(relevances, limit=10):
-    return sum(
-        (2**relevance - 1) / math.log2(rank + 2)
-        for rank, relevance in enumerate(relevances[:limit])
-    )
-
-
-def ndcg_at_k(relevances, ideal_relevances=None, limit=10):
-    if ideal_relevances is None:
-        ideal_relevances = relevances
-    ideal = sorted(ideal_relevances, reverse=True)
-    denominator = discounted_cumulative_gain(ideal, limit)
-    if denominator == 0:
-        return 0.0
-    return discounted_cumulative_gain(relevances, limit) / denominator
 
 
 def merchant_quality_score(merchant: Merchant, clicks: int = 0) -> float:

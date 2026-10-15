@@ -176,9 +176,9 @@ class AdminMetricsTests(unittest.TestCase):
         self.assertIsNone(page.items[1].avatar_url)
         self.assertEqual(("%shop%", "%shop%", 2, 3), database.execute.call_args.args[1])
 
-    def test_admin_token_is_required_only_when_configured(self):
+    def test_administration_requires_an_explicitly_configured_token(self):
         with patch.multiple("backend.server.routes.settings", admin_token=""):
-            self.assertTrue(admin_mutation_authorized({}))
+            self.assertFalse(admin_mutation_authorized({}))
         with patch.multiple("backend.server.routes.settings", admin_token="secret"):
             self.assertFalse(admin_mutation_authorized({}))
             self.assertFalse(admin_mutation_authorized({"X-Kahoo-Admin-Token": "wrong"}))
@@ -208,7 +208,3 @@ class AdminMetricsTests(unittest.TestCase):
         statements = [query for query, _ in database.queries]
         self.assertIn("INSERT INTO merchant_exclusions", statements[1])
         self.assertIn("DELETE FROM merchants", statements[2])
-
-
-if __name__ == "__main__":
-    unittest.main()

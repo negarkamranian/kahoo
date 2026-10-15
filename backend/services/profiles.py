@@ -153,6 +153,7 @@ def refresh_instagram_avatars(
 
 
 def save_profile_details(db, merchant, profile):
+    save_account_facts(db, merchant.id, profile)
     db.execute(
         """UPDATE merchants SET name=%s,
           biography=%s,biography_source=%s,
@@ -170,4 +171,15 @@ def save_profile_details(db, merchant, profile):
             profile_url(merchant.handle),
             merchant.id,
         ),
+    )
+
+
+def save_account_facts(db, merchant_id, profile):
+    if profile.instagram_verified is None and profile.website_url is None:
+        return
+    db.execute(
+        """UPDATE merchants SET instagram_verified=COALESCE(%s,instagram_verified),
+             website_url=COALESCE(%s,website_url),profile_facts_source=%s,
+             profile_facts_updated_at=CURRENT_TIMESTAMP WHERE id=%s""",
+        (profile.instagram_verified, profile.website_url, profile.source, merchant_id),
     )

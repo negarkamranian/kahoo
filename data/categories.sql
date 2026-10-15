@@ -1,5 +1,3 @@
--- Generated from GS1 GPC May 2026; do not edit manually.
-BEGIN;
 CREATE TEMP TABLE _category_seed(code TEXT PRIMARY KEY,parent_code TEXT,level INTEGER,label_fa TEXT,label_en TEXT,sort_order INTEGER);
 INSERT INTO _category_seed VALUES('70000000',NULL,'1','هنر، صنایع دستی و خیاطی','Arts/Crafts/Needlework','10');
 INSERT INTO _category_seed VALUES('70010000','70000000','2','وسایل و ملزومات هنرها/صنایع دستی/گلدوزی','Arts/Crafts/Needlework Supplies','10');
@@ -6045,4 +6043,3 @@ INSERT INTO category_metadata(key,value) VALUES('category_count','6031') ON CONF
 INSERT INTO category_metadata(key,value) VALUES('excluded_branch_count','33') ON CONFLICT(key) DO UPDATE SET value=excluded.value;
 INSERT INTO category_metadata(key,value) VALUES('english_fallback_count','375') ON CONFLICT(key) DO UPDATE SET value=excluded.value;
 DROP TABLE _category_seed;
-COMMIT;

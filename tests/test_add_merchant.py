@@ -1,4 +1,5 @@
 import io
+import json
 import unittest
 from contextlib import redirect_stdout
 from unittest.mock import Mock, patch
@@ -35,7 +36,7 @@ class AddMerchantTests(unittest.TestCase):
         import_merchant.assert_called_once_with(
             MerchantImport(identifier="@shop", category_code="66010100")
         )
-        self.assertIn("created=True", output.getvalue())
+        self.assertTrue(json.loads(output.getvalue())["created"])
 
     @patch("backend.services.merchants.instagram_profile")
     @patch("backend.services.merchants.connect")

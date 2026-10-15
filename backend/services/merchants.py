@@ -207,7 +207,7 @@ def create_imported_merchant(db, request, profile, category_code):
       VALUES(%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP,%s,%s,%s,CURRENT_TIMESTAMP,%s,%s,%s,
       'داده عمومی',0,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP) RETURNING id""",
         (
-            f"import_{request.identifier[1:]}",
+            None,
             profile.name,
             request.identifier,
             profile.biography,

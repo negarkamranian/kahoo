@@ -5,11 +5,9 @@ from unittest.mock import patch
 
 from pydantic import ValidationError
 
-from backend.instagram.embed import extract_embed_posts
-from backend.models.instagram.embed import EmbedPosts
-from backend.models.instagram.meta import MetaProfile
+from backend.instagram.embed import _embed_context
+from backend.instagram.schemas import EmbedPosts, MetaProfile
 from backend.models.media import InstagramImage, InstagramPost
-from backend.models.search import SearchBenchmark
 from backend.services.media import download_image
 
 
@@ -88,7 +86,7 @@ class WireContractTests(unittest.TestCase):
     def test_ambiguous_media_contexts_fail_instead_of_picking_the_first(self):
         payload = json.dumps({"contexts": [{"graphql_media": []}, {"graphql_media": []}]})
         with self.assertRaisesRegex(ValueError, "exactly one"):
-            extract_embed_posts(f"<script>server.handle({payload});</script>")
+            _embed_context(f"<script>server.handle({payload});</script>")
 
     def test_post_identity_is_required_and_cannot_be_overridden(self):
         fields = {
@@ -103,21 +101,6 @@ class WireContractTests(unittest.TestCase):
             InstagramPost(**fields)
         with self.assertRaises(ValidationError):
             InstagramPost(**fields, instagram_media_id="post-id", collection_key="other")
-
-    def test_benchmark_has_one_input_shape(self):
-        with self.assertRaises(ValidationError):
-            SearchBenchmark.model_validate(
-                {"queries": [{"query": "shop", "expected_handles": ["@shop"]}]}
-            )
-        for relevance in ({}, {"@shop": -1}, {"@shop": True}):
-            with self.subTest(relevance=relevance), self.assertRaises(ValidationError):
-                SearchBenchmark.model_validate(
-                    {"queries": [{"query": "shop", "relevance": relevance}]}
-                )
-        benchmark = SearchBenchmark.model_validate(
-            {"queries": [{"query": "shop", "relevance": {"@shop": 3}}]}
-        )
-        self.assertEqual({"@shop": 3}, benchmark.queries[0].relevance)
 
     @patch("backend.services.media.urlopen")
     def test_image_bytes_are_authoritative_and_non_images_fail(self, urlopen):

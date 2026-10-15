@@ -1,4 +1,5 @@
 import io
+import json
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
@@ -14,7 +15,7 @@ class CliTests(unittest.TestCase):
             status = main(["db", "migrate"])
         self.assertEqual(0, status)
         initialize.assert_called_once_with()
-        self.assertEqual("{'migrated': True}\n", output.getvalue())
+        self.assertEqual({"migrated": True}, json.loads(output.getvalue()))
 
     @patch.multiple("backend.cli.settings", host="localhost", port=4174)
     @patch("backend.server.app.uvicorn.run")
@@ -44,6 +45,10 @@ class CliTests(unittest.TestCase):
         actions = [
             ["serve"],
             ["db", "migrate"],
+            ["db", "backup"],
+            ["db", "restore"],
+            ["instagram", "generate-key"],
+            ["instagram", "status"],
             ["merchants", "list"],
             ["merchants", "add"],
             ["merchants", "remove"],
@@ -54,7 +59,6 @@ class CliTests(unittest.TestCase):
             ["media", "sync"],
             ["media", "cache"],
             ["search", "reindex"],
-            ["search", "evaluate"],
             ["search", "enrich"],
             ["search", "enrich-file"],
         ]
@@ -101,6 +105,10 @@ class CliTests(unittest.TestCase):
             ["merchants", "list", "--limit", "0"],
             ["merchants", "list", "--limit", "101"],
             ["merchants", "list", "--limit", "invalid"],
+            ["merchants", "remove", "0"],
+            ["merchants", "remove", "invalid"],
+            ["serve", "--port", "0"],
+            ["serve", "--port", "65536"],
             ["merchants", "add", "@shop", "--name", "Manual"],
             ["merchants", "add", "@shop", "--description", "Manual"],
         ):

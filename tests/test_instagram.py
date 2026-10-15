@@ -7,7 +7,6 @@ from pydantic import ValidationError
 
 from backend.instagram.embed import public_embed_profile
 from backend.instagram.meta import business_discovery_profile
-from backend.instagram.urls import instagram_shortcode
 
 
 def embed_html(profile, posts=None):
@@ -152,8 +151,3 @@ class InstagramTests(unittest.TestCase):
         self.assertEqual("parent", profile.posts[0].collection_key)
         self.assertEqual([1, 2], [image.media_position for image in profile.posts[0].media])
         self.assertEqual(2026, profile.posts[0].published_at.year)
-
-    def test_shortcode_uses_url_path_not_query_or_fragment(self):
-        self.assertEqual("abc", instagram_shortcode("https://instagram.com/reel/abc/?hl=fa#x"))
-        self.assertEqual("", instagram_shortcode("https://instagram.com/shop/?next=/p/abc"))
-        self.assertEqual("", instagram_shortcode(None))

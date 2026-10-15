@@ -18,8 +18,8 @@ from backend.instagram.oauth import (
     login_configured,
     provider_request,
 )
+from backend.instagram.schemas import AuthorizedProfile, InstagramToken
 from backend.models.auth import SessionContext
-from backend.models.instagram.oauth import AuthorizedProfile, InstagramToken
 from backend.server.app import app
 from backend.services.instagram_connections import (
     begin_authorization,
@@ -369,8 +369,10 @@ class InstagramOAuthHttpTests(unittest.TestCase):
         side_effect=OSError("secret-token-in-provider-url"),
     )
     def test_provider_failure_cannot_leak_credentials_or_claim_success(self, _complete, _consume):
-        response = self.client.get(
-            "/api/instagram/callback?state=state&code=code", follow_redirects=False
-        )
+        with self.assertLogs("backend.server.instagram_routes", level="WARNING") as logs:
+            response = self.client.get(
+                "/api/instagram/callback?state=state&code=code", follow_redirects=False
+            )
+        self.assertNotIn("secret-token", " ".join(logs.output))
         self.assertIn("instagram_connection_failed", response.headers["Location"])
         self.assertNotIn("secret-token", str(response.headers) + response.text)

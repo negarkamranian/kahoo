@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from backend.config import settings
-from backend.models.instagram.meta import MetaProfile
+from backend.instagram.schemas import MetaProfile
 from backend.models.media import MAX_PROFILE_POSTS, InstagramProfile
 
 

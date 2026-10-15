@@ -2,7 +2,8 @@ import json
 import unittest
 from unittest.mock import Mock, patch
 
-from backend.instagram.embed import extract_embed_posts
+from backend.instagram.embed import _embed_context
+from backend.instagram.schemas import EmbedPosts
 from backend.models.media import InstagramImage, InstagramPost, InstagramProfile, MerchantMedia
 from backend.services.media import replace_profile_posts
 
@@ -73,7 +74,7 @@ class ProfileMediaTests(unittest.TestCase):
         server_data = {"require": [{"contextJSON": json.dumps(media)}]}
         payload = f"<script>server.handle({json.dumps(server_data)});</script>"
 
-        posts = extract_embed_posts(payload)
+        posts = EmbedPosts.model_validate(_embed_context(payload)).posts()
 
         self.assertEqual(1, len(posts))
         self.assertEqual("parent-1", posts[0].collection_key)
@@ -163,7 +164,3 @@ class ProfileMediaTests(unittest.TestCase):
         with self.assertRaisesRegex(OSError, "download failed"):
             replace_profile_posts(database, 3, profile)
         database.execute.assert_not_called()
-
-
-if __name__ == "__main__":
-    unittest.main()

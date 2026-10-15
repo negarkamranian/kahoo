@@ -7,9 +7,7 @@ from backend.search.normalization import normalize_search, query_tokens
 from backend.search.ranking import (
     diversify_results,
     merchant_quality_score,
-    ndcg_at_k,
     phrase_proximity_bonus,
-    query_coverage,
     reciprocal_rank_fusion,
     term_match_strength,
 )
@@ -91,22 +89,9 @@ class SearchQualityTests(unittest.TestCase):
         )
         self.assertEqual([1, 3, 2], [item.id for item in ranked])
 
-    def test_query_coverage_requires_distinct_query_concepts(self):
-        tokens = query_tokens("کفش زنانه چرمی")
-        self.assertEqual(1, query_coverage(tokens, "فروش کفش زنانه چرمی"))
-        self.assertAlmostEqual(1 / 3, query_coverage(tokens, "فروشگاه کفش"))
-
     def test_phrase_proximity_rewards_exact_and_ordered_matches(self):
         exact = phrase_proximity_bonus("کفش زنانه", "خرید کفش زنانه چرمی")
         spread = phrase_proximity_bonus("کفش زنانه", "کفش چرمی بسیار راحت زنانه")
         reversed_order = phrase_proximity_bonus("کفش زنانه", "زنانه کفش")
         self.assertGreater(exact, spread)
         self.assertGreater(spread, reversed_order)
-
-    def test_ndcg_rewards_relevant_results_near_the_top(self):
-        self.assertGreater(ndcg_at_k([2, 1, 0]), ndcg_at_k([0, 1, 2]))
-        self.assertEqual(1, ndcg_at_k([2, 1, 0]))
-
-
-if __name__ == "__main__":
-    unittest.main()

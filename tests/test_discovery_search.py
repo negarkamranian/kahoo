@@ -3,8 +3,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from backend.models.instagram.embed import EmbedProfile
-from backend.models.instagram.meta import MetaProfile
+from backend.instagram.schemas import EmbedProfile, MetaProfile
 from backend.models.media import InstagramProfile
 from backend.models.merchants import Merchant
 from backend.models.search import SearchSuggestion
@@ -13,7 +12,7 @@ from backend.search.ranking import term_match_strength
 from backend.search.retrieval import lexical_merchant_matches
 from backend.search.service import identity_match
 from backend.search.suggestions import category_suggestions, rank_suggestions, suggestion_score
-from backend.services.profile_facts import save_account_facts
+from backend.services.profiles import save_account_facts
 
 
 class DiscoverySearchTests(unittest.TestCase):

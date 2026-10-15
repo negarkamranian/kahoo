@@ -13,8 +13,8 @@ from backend.instagram.oauth import (
     login_configured,
     token_cipher,
 )
+from backend.instagram.schemas import InstagramConnection, InstagramConnectionStatus
 from backend.instagram.urls import profile_url
-from backend.models.instagram.oauth import InstagramConnection, InstagramConnectionStatus
 from backend.models.media import MerchantMedia
 from backend.models.merchants import MerchantImport
 from backend.search.indexing import sync_search_index

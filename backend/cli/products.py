@@ -6,6 +6,7 @@ from backend.services.product_worker import (
     process_next_product,
     run_product_worker,
 )
+from backend.services.taxonomy import product_taxonomy
 
 
 def enqueue(_args):
@@ -16,6 +17,7 @@ def worker(args):
     if not vision_configured():
         raise ValueError("Configure PRODUCT_VISION_API_URL and PRODUCT_VISION_MODEL first")
     if args.once:
+        product_taxonomy()
         enqueue_existing_products()
         processed = []
         for _ in range(args.limit):

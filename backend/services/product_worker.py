@@ -1,6 +1,5 @@
 """Leased PostgreSQL queue; model calls happen outside ingestion transactions."""
 
-import logging
 import uuid
 
 from pydantic import ValidationError
@@ -11,17 +10,21 @@ from backend.services.product_vision import PIPELINE_VERSION, extract_product, v
 from backend.services.products import enqueue_products, serialized_result
 from backend.services.taxonomy import product_taxonomy
 
-logger = logging.getLogger(__name__)
-
 
 def claim_product():
     token = uuid.uuid4()
     with connect() as db:
+        db.execute(
+            """UPDATE products SET status='failed',claim_token=NULL,
+                 error='Processing lease expired after maximum attempts',updated_at=CURRENT_TIMESTAMP
+               WHERE status='processing' AND attempts>=3
+                 AND started_at<CURRENT_TIMESTAMP-INTERVAL '30 minutes'"""
+        )
         row = db.execute(
             """WITH candidate AS (
                  SELECT id FROM products WHERE
-                   (status IN ('pending','failed') AND attempts<3 AND next_attempt_at<=CURRENT_TIMESTAMP)
-                   OR (status='processing' AND started_at<CURRENT_TIMESTAMP-INTERVAL '30 minutes')
+                   attempts<3 AND ((status IN ('pending','failed') AND next_attempt_at<=CURRENT_TIMESTAMP)
+                   OR (status='processing' AND started_at<CURRENT_TIMESTAMP-INTERVAL '30 minutes'))
                  ORDER BY next_attempt_at,id FOR UPDATE SKIP LOCKED LIMIT 1
                )
                UPDATE products p SET status='processing',attempts=p.attempts+1,
@@ -100,9 +103,6 @@ def process_next_product():
         error = "Vision output failed schema validation"
     except ValueError as failure:
         error = str(failure)[:500]
-    except Exception as failure:  # pylint: disable=broad-exception-caught
-        # A failed model job must not stop the queue.
-        error = f"Product extraction failed ({type(failure).__name__})"
     return {"id": row["id"], "status": finish_product(row, token, result, error)}
 
 
@@ -113,15 +113,9 @@ def enqueue_existing_products():
 
 def run_product_worker(stop, poll_seconds=5):
     """Recover pending work after restarts and retry transient failures at most three times."""
-    try:
-        enqueue_existing_products()
-    except Exception:  # pylint: disable=broad-exception-caught
-        logger.exception("Could not backfill the product queue")
+    product_taxonomy()
+    enqueue_existing_products()
     while not stop.is_set():
-        try:
-            result = process_next_product()
-        except Exception:  # pylint: disable=broad-exception-caught
-            logger.exception("Product queue unavailable; retrying on the next poll")
-            result = None
+        result = process_next_product()
         if result is None:
             stop.wait(poll_seconds)

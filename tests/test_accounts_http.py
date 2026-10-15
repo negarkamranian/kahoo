@@ -194,7 +194,3 @@ class AccountHttpTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(413, response.status_code)
         self.assertEqual({"error": "request_too_large"}, response.json())
         self.session_service.assert_not_called()
-
-
-if __name__ == "__main__":
-    unittest.main()

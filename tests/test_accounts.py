@@ -183,7 +183,3 @@ class AccountTests(unittest.TestCase):
         self.assertIn("consumed_at timestamptz", migration)
         self.assertNotIn("phone text UNIQUE", migration)
         self.assertNotIn("UNIQUE(phone)", migration)
-
-
-if __name__ == "__main__":
-    unittest.main()

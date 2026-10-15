@@ -10,6 +10,10 @@ docs
 *.png
 *.log
 .env
+node_modules
+backups
+tests
+scripts
 data/*.db
 data/*.db-shm
 data/*.db-wal

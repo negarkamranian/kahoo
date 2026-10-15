@@ -1,12 +1,7 @@
-"""Offline product taxonomy access, including category-specific extended attributes."""
-
-import gzip
 from functools import lru_cache
 
-from backend.config import PROJECT_ROOT
-from backend.models.taxonomy import CategoryAttribute, ProductCategoryTree, ProductTaxonomy
-
-TAXONOMY_PATH = PROJECT_ROOT / "data/shopify/2026-08/taxonomy.json.gz"
+from backend.models.taxonomy import CategoryAttribute, ProductCategoryTree
+from backend.services.taxonomy_repository import active_taxonomy_id, load_taxonomy
 
 
 class TaxonomyStore:
@@ -53,7 +48,10 @@ class TaxonomyStore:
         return roots
 
 
-@lru_cache(maxsize=1)
 def product_taxonomy():
-    with gzip.open(TAXONOMY_PATH, "rb") as source:
-        return TaxonomyStore(ProductTaxonomy.model_validate_json(source.read()))
+    return taxonomy_store(active_taxonomy_id())
+
+
+@lru_cache(maxsize=2)
+def taxonomy_store(release_id):
+    return TaxonomyStore(load_taxonomy(release_id))

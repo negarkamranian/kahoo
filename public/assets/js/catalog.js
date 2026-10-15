@@ -973,7 +973,7 @@ async function loadEmptySuggestions() {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = item.value;
-      button.addEventListener("click", () => applySuggestion(item.value));
+      button.addEventListener("click", () => applySuggestion(item));
       emptySuggestions.append(button);
     });
   } catch {
@@ -1055,10 +1055,23 @@ function paintSuggestionActive() {
     button.setAttribute("aria-selected", String(index === suggestionIndex));
   });
 }
-function applySuggestion(value) {
-  searchInput.value = value;
-  query = value;
+function applySuggestion(item) {
   closeSuggestions();
+  if (item.merchant_id != null) {
+    openMerchantProfile(item.merchant_id);
+    return;
+  }
+  if (item.category_code != null) {
+    selectedCategories.clear();
+    selectedCategories.set(item.category_code, item.label);
+    query = "";
+    searchInput.value = "";
+    renderTree();
+    renderQuickCategories();
+  } else {
+    searchInput.value = item.value;
+    query = item.value;
+  }
   loadShops();
   searchInput.focus();
 }
@@ -1083,7 +1096,7 @@ async function loadSuggestions() {
       button.dataset.index = index;
       button.innerHTML = `<span>${escapeHtml(item.label)}</span><small>${item.type === "merchant" ? "فروشگاه" : item.type === "category" ? "دسته‌بندی" : "جستجو"}</small>`;
       button.addEventListener("mousedown", (event) => event.preventDefault());
-      button.addEventListener("click", () => applySuggestion(item.value));
+      button.addEventListener("click", () => applySuggestion(item));
       searchSuggestions.append(button);
     });
     searchSuggestions.hidden = !items.length;
@@ -1095,7 +1108,7 @@ async function loadSuggestions() {
 searchForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (suggestionIndex >= 0 && suggestionItems[suggestionIndex]) {
-    applySuggestion(suggestionItems[suggestionIndex].value);
+    applySuggestion(suggestionItems[suggestionIndex]);
     return;
   }
   query = searchInput.value.trim();

@@ -1,4 +1,4 @@
-"""Search enrichment, retrieval, suggestions, benchmarks, and command reports."""
+"""Search enrichment, retrieval, suggestions, and command reports."""
 
 from datetime import datetime
 from typing import Annotated, Literal
@@ -14,7 +14,7 @@ from pydantic import (
     model_validator,
 )
 
-from backend.models.common import Count, InputModel, InstagramHandle, NonEmptyText
+from backend.models.common import Count, InputModel, InstagramHandle
 
 SearchEntityType = Literal["merchant", "post"]
 
@@ -93,19 +93,8 @@ class SearchSuggestion(BaseModel):
     value: str
     label: str
     type: SuggestionType
-
-
-class BenchmarkQuery(InputModel):
-    model_config = ConfigDict(strict=True, extra="forbid")
-
-    query: NonEmptyText
-    relevance: dict[InstagramHandle, Annotated[int, Field(strict=True, ge=1, le=3)]] = Field(
-        min_length=1
-    )
-
-
-class SearchBenchmark(InputModel):
-    queries: list[BenchmarkQuery] = Field(min_length=1)
+    merchant_id: int | None = None
+    category_code: str | None = None
 
 
 class LexicalMatch(BaseModel):
@@ -116,32 +105,6 @@ class LexicalMatch(BaseModel):
     entity_type: SearchEntityType
     entity_id: int
     published_at: datetime | None = None
-
-
-class QueryEvaluation(BaseModel):
-    query: str
-    passed_at_5: bool
-    first_relevant_rank: int | None
-    recall_at_10: float
-    ndcg_at_10: float
-    latency_ms: float
-    top_10: list[str]
-
-
-class LatencyMetrics(BaseModel):
-    p50: float
-    p95: float
-
-
-class SearchEvaluation(BaseModel):
-    queries: Count
-    success_at_5: float
-    mrr_at_5: float
-    recall_at_10: float
-    ndcg_at_10: float
-    zero_result_rate: float
-    latency_ms: LatencyMetrics
-    results: list[QueryEvaluation]
 
 
 class ReindexResult(BaseModel):

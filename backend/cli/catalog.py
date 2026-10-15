@@ -72,10 +72,8 @@ def category_rows(current, labels, policy):
     return rows, excluded
 
 
-def category_seed_rows(rows, policy):
+def category_seed_rows(rows):
     lines = [
-        f"-- Generated from {policy.source}; do not edit manually.",
-        "BEGIN;",
         "CREATE TEMP TABLE _category_seed(code TEXT PRIMARY KEY,parent_code TEXT,level INTEGER,label_fa TEXT,label_en TEXT,sort_order INTEGER);",
     ]
     for row in rows:
@@ -117,7 +115,6 @@ def category_seed_metadata(policy, category_count, excluded_count):
         f"INSERT INTO category_metadata(key,value) VALUES('category_count',{sql(category_count)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
         f"INSERT INTO category_metadata(key,value) VALUES('excluded_branch_count',{sql(excluded_count)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
         "DROP TABLE _category_seed;",
-        "COMMIT;",
         "",
     ]
 
@@ -135,7 +132,7 @@ def build(args):
     labels.update(policy.segment_labels_fa)
     rows, excluded = category_rows(current, labels, policy)
     lines = [
-        *category_seed_rows(rows, policy),
+        *category_seed_rows(rows),
         *category_upserts(),
         *category_deletions(),
         *category_seed_metadata(policy, len(rows), len(excluded)),

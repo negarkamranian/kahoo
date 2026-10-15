@@ -129,11 +129,18 @@ function render(data) {
 }
 async function load() {
   el("loading").hidden = false;
+  el("dashboard").hidden = true;
   try {
-    render(await api(`/api/admin/metrics?days=${el("period-select").value}`));
-  } catch {
+    render(
+      await api(`/api/admin/metrics?days=${el("period-select").value}`, {
+        headers: adminHeaders(),
+      }),
+    );
+  } catch (error) {
     el("loading").textContent =
-      "دریافت آمار ممکن نشد. سرور را دوباره بررسی کنید.";
+      error.message === "unauthorized"
+        ? "کلید مدیریت را وارد کنید."
+        : "دریافت آمار ممکن نشد. تنظیمات سرویس را بررسی کنید.";
   }
 }
 const adminHeaders = () => {
@@ -151,6 +158,7 @@ async function loadManagedMerchants() {
   try {
     const data = await api(
       `/api/admin/merchants?limit=100&q=${encodeURIComponent(query)}`,
+      { headers: adminHeaders() },
     );
     el("managed-merchant-count").textContent = `${fa(data.total)} فروشگاه`;
     renderList(
@@ -447,7 +455,11 @@ function resetProductPage() {
 }
 el("product-status").addEventListener("change", resetProductPage);
 el("product-review-status").addEventListener("change", resetProductPage);
-el("admin-token").addEventListener("change", resetProductPage);
+el("admin-token").addEventListener("change", () => {
+  load();
+  loadManagedMerchants();
+  resetProductPage();
+});
 el("product-search").addEventListener("input", () => {
   clearTimeout(productSearchTimer);
   productSearchTimer = setTimeout(resetProductPage, 250);

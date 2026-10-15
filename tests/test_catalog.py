@@ -183,7 +183,3 @@ class MerchantCatalogTests(unittest.TestCase):
         }
         self.assertEqual(131, len(submitted))
         self.assertTrue(submitted <= all_handles)
-
-
-if __name__ == "__main__":
-    unittest.main()

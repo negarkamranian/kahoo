@@ -53,6 +53,10 @@
         >
       </header>
 
+      <label class="admin-access" for="admin-token">
+        <span>کلید مدیریت</span>
+        <input id="admin-token" type="password" dir="ltr" autocomplete="current-password" />
+      </label>
       <div class="admin-loading" id="loading">در حال دریافت آمار…</div>
       <div id="dashboard" hidden>
         <section class="kpi-grid" id="overview" aria-label="شاخص‌های اصلی">
@@ -181,14 +185,6 @@
             <label
               ><span>شهر</span><input id="merchant-city" required value="ایران"
             /></label>
-            <label
-              ><span>کلید مدیریت (در صورت تنظیم)</span
-              ><input
-                id="admin-token"
-                type="password"
-                dir="ltr"
-                autocomplete="current-password"
-            /></label>
             <button id="merchant-submit" class="primary-button" type="submit">
               افزودن و دریافت اطلاعات
             </button>
@@ -313,7 +309,7 @@
     </main>
     <script
       type="module"
-      src="./assets/js/admin.js?v=product-review-1"
+      src="./assets/js/admin.js?v=review-product-review-1"
     ></script>
   </body>
 </html>

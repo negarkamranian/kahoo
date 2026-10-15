@@ -4,9 +4,9 @@ import json
 from html.parser import HTMLParser
 from urllib.request import Request, urlopen
 
+from backend.instagram.schemas import EmbedContext
 from backend.instagram.urls import profile_url
-from backend.models.instagram.embed import EmbedContext, EmbedPosts
-from backend.models.media import InstagramPost, InstagramProfile
+from backend.models.media import InstagramProfile
 
 
 class _EmbedScripts(HTMLParser):
@@ -66,10 +66,6 @@ def _embed_context(payload: str) -> dict:
     if len(contexts) != 1:
         raise ValueError("Expected exactly one Instagram media context")
     return contexts[0]
-
-
-def extract_embed_posts(payload: str) -> list[InstagramPost]:
-    return EmbedPosts.model_validate(_embed_context(payload)).posts()
 
 
 def public_embed_profile(handle: str) -> InstagramProfile:

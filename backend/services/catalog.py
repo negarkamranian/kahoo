@@ -79,7 +79,7 @@ def create_catalog_merchant(db, item):
           VALUES(%s,%s,%s,%s,%s,%s,%s,%s, %s,%s,%s,'داده عمومی',0,%s,%s,
             %s,%s,%s) RETURNING id""",
         (
-            f"catalog_{item.handle[1:]}",
+            None,
             item.name,
             item.handle,
             item.description,

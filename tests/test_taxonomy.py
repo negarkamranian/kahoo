@@ -1,8 +1,10 @@
 import gzip
 import hashlib
+import io
 import json
 import unittest
 from argparse import Namespace
+from contextlib import redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -10,49 +12,11 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from backend.cli import main
-from backend.cli.taxonomy import VERSION, normalize, sync
+from backend.cli.taxonomy import normalize, sync
+from backend.config import PROJECT_ROOT
 from backend.server.app import app
-from backend.services.taxonomy import TAXONOMY_PATH, TaxonomyStore, product_taxonomy
-
-
-def upstream_fixture():
-    attribute = {
-        "id": "gid://shopify/TaxonomyAttribute/1",
-        "name": "Color",
-        "handle": "color",
-        "description": "Product color",
-        "extended_attributes": [{"name": "Liner color", "handle": "liner-color"}],
-        "values": [
-            {"id": "gid://shopify/TaxonomyValue/1", "name": "Blue", "handle": "color__blue"}
-        ],
-    }
-    categories = []
-    for level in range(8):
-        code = "aa" + "-1" * level
-        categories.append(
-            {
-                "id": f"gid://shopify/TaxonomyCategory/{code}",
-                "level": level,
-                "name": f"Category {level}",
-                "full_name": f"Apparel > Category {level}",
-                "parent_id": categories[-1]["id"] if categories else None,
-                "attributes": [
-                    {
-                        "id": attribute["id"],
-                        "name": "Liner color",
-                        "handle": "liner-color",
-                        "description": "Category-specific color description",
-                        "extended": True,
-                    }
-                ],
-                "return_reasons": [{"name": "Retained only in upstream"}],
-            }
-        )
-    return {
-        "version": VERSION,
-        "verticals": [{"categories": categories}],
-        "attributes": [attribute],
-    }
+from backend.services.taxonomy import TaxonomyStore
+from tests.factories import upstream_fixture
 
 
 class TaxonomyTests(unittest.TestCase):
@@ -96,7 +60,8 @@ class TaxonomyTests(unittest.TestCase):
 
     @patch("backend.cli.initialize_database")
     @patch("backend.cli.taxonomy.fetch")
-    def test_offline_cli_preserves_original_export_and_needs_no_database(self, fetch, database):
+    @patch("backend.cli.taxonomy.persist_taxonomy")
+    def test_offline_cli_imports_validated_source_into_database(self, persist, fetch, database):
         source = json.dumps(upstream_fixture()).encode()
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -104,42 +69,35 @@ class TaxonomyTests(unittest.TestCase):
             source_path.write_bytes(gzip.compress(source))
             license_path = root / "LICENSE"
             license_path.write_text("Source license")
-            output = root / "output"
-            main(
-                [
-                    "catalog",
-                    "sync-shopify",
-                    "--source",
-                    str(source_path),
-                    "--license",
-                    str(license_path),
-                    "--output",
-                    str(output),
-                ]
-            )
-            self.assertEqual(
-                source, gzip.decompress((output / "upstream-taxonomy.json.gz").read_bytes())
-            )
-            self.assertEqual("Source license", (output / "LICENSE").read_text())
-            self.assertEqual(
-                hashlib.sha256(source).hexdigest(),
-                json.loads((output / "metadata.json").read_text())["source_sha256"],
-            )
+            persist.side_effect = lambda taxonomy, _source, _license: taxonomy.metadata
+            output = io.StringIO()
+            with redirect_stdout(output):
+                main(
+                    [
+                        "catalog",
+                        "sync-shopify",
+                        "--source",
+                        str(source_path),
+                        "--license",
+                        str(license_path),
+                    ]
+                )
+            self.assertEqual(8, json.loads(output.getvalue())["categories"])
+            taxonomy, original, license_text = persist.call_args.args
+            self.assertEqual(source, original)
+            self.assertEqual("Source license", license_text)
+            self.assertEqual(hashlib.sha256(source).hexdigest(), taxonomy.metadata.source_sha256)
             source_path.write_bytes(gzip.compress(b"not json"))
-            before = (output / "taxonomy.json.gz").read_bytes()
             with self.assertRaises(ValueError):
-                sync(Namespace(source=source_path, license=license_path, output=output))
-            self.assertEqual(before, (output / "taxonomy.json.gz").read_bytes())
+                sync(Namespace(source=source_path, license=license_path))
+            self.assertEqual(1, persist.call_count)
         fetch.assert_not_called()
-        database.assert_not_called()
+        database.assert_called_once_with()
 
     def test_checked_in_release_matches_original_counts_and_sha256(self):
-        store = product_taxonomy()
-        upstream = gzip.decompress(
-            TAXONOMY_PATH.with_name("upstream-taxonomy.json.gz").read_bytes()
-        )
-        expected = normalize(upstream)
-        self.assertEqual(expected, store.taxonomy)
+        source = PROJECT_ROOT / "data/shopify/2026-08/upstream-taxonomy.json.gz"
+        upstream = gzip.decompress(source.read_bytes())
+        store = TaxonomyStore(normalize(upstream))
         metadata = store.taxonomy.metadata
         self.assertEqual(
             (14606, 8240, 74820), (metadata.categories, metadata.attributes, metadata.values)

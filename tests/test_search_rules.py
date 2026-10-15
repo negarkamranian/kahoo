@@ -43,19 +43,21 @@ class SearchRuleTests(unittest.TestCase):
         self.assertEqual("exact", match_quality(strong))
 
     @patch("backend.search.suggestions.connect")
-    def test_autocomplete_prefers_specific_matches_and_deduplicates_normalized_text(self, connect):
+    def test_autocomplete_preserves_distinct_merchants_with_the_same_name(self, connect):
         def execute(sql, _params=None):
-            if "SELECT name,handle" in sql:
+            if "SELECT id,name,handle" in sql:
                 return [
-                    {"name": "کیف", "handle": "@exact"},
-                    {"name": "كیف", "handle": "@duplicate"},
-                    {"name": "کیف چرمی", "handle": "@prefix"},
-                    {"name": "فروش کیف چرمی", "handle": "@word"},
-                    {"name": "پارچه", "handle": "@unrelated"},
+                    {"name": "کیف", "id": 1, "handle": "@exact"},
+                    {"name": "كیف", "id": 2, "handle": "@duplicate"},
+                    {"name": "کیف چرمی", "id": 3, "handle": "@prefix"},
+                    {"name": "فروش کیف چرمی", "id": 4, "handle": "@word"},
+                    {"name": "پارچه", "id": 5, "handle": "@unrelated"},
                 ]
             return []
 
         connect.return_value.__enter__.return_value.execute.side_effect = execute
         results = search_suggestions("کیف")
-        self.assertEqual(["کیف", "کیف چرمی", "فروش کیف چرمی"], [item.value for item in results])
+        self.assertEqual(
+            ["کیف", "كیف", "کیف چرمی", "فروش کیف چرمی"], [item.value for item in results]
+        )
         self.assertEqual(["کیف"], [item.value for item in search_suggestions("کیف", limit=1)])

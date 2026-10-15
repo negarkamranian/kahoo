@@ -998,6 +998,40 @@ test("post save state uses merchant and collection together and failed writes ca
   assert.equal(serverSaved.posts.length, 2);
 });
 
+test("admin access stays visible while protected requests require a key", async (t) => {
+  const { dom, window, requests } = await loadPage(
+    "admin.html",
+    "admin.js",
+    (path) => {
+      if (path.startsWith("/api/admin/")) throw new Error("unauthorized");
+      return [];
+    },
+  );
+  t.after(() => dom.window.close());
+  const document = window.document,
+    key = document.querySelector("#admin-token");
+  assert.equal(key.closest("[hidden]"), null);
+  assert.equal(document.querySelector("#dashboard").hidden, true);
+  key.value = "private-admin-key";
+  key.dispatchEvent(new window.Event("change"));
+  await settlePage();
+  for (const path of [
+    "/api/admin/metrics",
+    "/api/admin/merchants",
+    "/api/admin/products",
+  ]) {
+    const request = requests
+      .filter((item) => item.path.startsWith(path))
+      .at(-1);
+    assert.equal(
+      request.options.headers.get("X-Kahoo-Admin-Token"),
+      "private-admin-key",
+    );
+  }
+  assert.equal(key.closest("[hidden]"), null);
+  assert.equal(document.querySelector("#dashboard").hidden, true);
+});
+
 test("admin dashboard renders metrics and managed merchants independently", async (t) => {
   const metrics = {
     kpis: {

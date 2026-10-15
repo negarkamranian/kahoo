@@ -44,7 +44,3 @@ class AvatarCacheTests(unittest.TestCase):
 
         self.assertNotEqual(first, second)
         self.assertTrue(first.startswith("/api/avatars/7?v="))
-
-
-if __name__ == "__main__":
-    unittest.main()

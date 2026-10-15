@@ -14,7 +14,6 @@ ignore-paths = ["^tests/", "^\\.venv/"]
 persistent = false
 
 [tool.pylint.messages_control]
-# Ruff owns formatting/import checks. Small models and CLI handlers need no boilerplate.
 disable = [
     "missing-module-docstring", "missing-class-docstring", "missing-function-docstring",
     "too-few-public-methods", "line-too-long", "wrong-import-order", "ungrouped-imports",

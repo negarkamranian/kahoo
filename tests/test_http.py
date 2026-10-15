@@ -24,7 +24,12 @@ from backend.server.app import app
 
 class HttpTests(unittest.TestCase):
     def setUp(self):
-        self.client = TestClient(app, headers={"X-Kahoo-Saved": "1"})
+        configured = patch("backend.server.routes.settings.admin_token", "test-admin")
+        configured.start()
+        self.addCleanup(configured.stop)
+        self.client = TestClient(
+            app, headers={"X-Kahoo-Saved": "1", "X-Kahoo-Admin-Token": "test-admin"}
+        )
         self.addCleanup(self.client.close)
         context = SessionContext(owner_id=1, session_id="00000000-0000-4000-8000-000000000001")
         session = patch(
@@ -204,6 +209,17 @@ class HttpTests(unittest.TestCase):
                         self.assertEqual("unauthorized", response.json()["error"])
         add.assert_not_called()
         remove.assert_not_called()
+
+    @patch("backend.server.routes.settings.admin_token", "")
+    def test_unconfigured_administration_fails_closed(self):
+        for method, path in (
+            ("GET", "/api/admin/metrics"),
+            ("GET", "/api/admin/merchants"),
+            ("POST", "/api/admin/products/enqueue"),
+        ):
+            response = self.client.request(method, path)
+            self.assertEqual(503, response.status_code)
+            self.assertEqual("admin_not_configured", response.json()["error"])
 
     @patch("backend.server.routes.record_event")
     def test_invalid_event_types_are_rejected_at_the_http_boundary(self, record_event):

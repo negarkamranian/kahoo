@@ -1,4 +1,3 @@
-/* Catalog controls, merchant entities and dialogs. See foundation.css for tokens. */
 .site-header {
   position: sticky;
   top: 0;
@@ -584,7 +583,6 @@
 .site-footer button:hover {
   color: var(--green);
 }
-/* Shop profiles pair account information with browsable photo galleries. */
 dialog {
   padding: 0;
   background: var(--surface);
@@ -921,7 +919,6 @@ dialog::backdrop {
   color: var(--muted);
   font-size: 13px;
 }
-/* Authentication and shop listing use the same controls as browsing. */
 .connect-dialog,
 .login-dialog {
   width: min(420px, calc(100% - 32px));

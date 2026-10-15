@@ -17,7 +17,7 @@ def load_environment():
 class Settings(BaseModel):
     database_url: str = Field(repr=False)
     host: str
-    port: int
+    port: int = Field(ge=1, le=65535)
     admin_token: str = Field(repr=False)
     meta_graph_version: str
     meta_ig_user_id: str

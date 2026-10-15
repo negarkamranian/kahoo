@@ -37,14 +37,14 @@ raise SystemExit(2)
 """
 
 
-class DatabaseScriptTests(unittest.TestCase):
+class DatabaseArchiveCliTests(unittest.TestCase):
     def setUp(self):
         temporary = TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         tools = self.root / "bin"
         tools.mkdir()
-        for name in ("docker", "pg_dump", "pg_restore", "createdb"):
+        for name in ("pg_dump", "pg_restore", "createdb"):
             executable = tools / name
             executable.write_text(f"#!{sys.executable}\n{FAKE_DATABASE_TOOLS}")
             executable.chmod(0o700)
@@ -52,17 +52,18 @@ class DatabaseScriptTests(unittest.TestCase):
         self.environment = {
             **os.environ,
             "PATH": f"{tools}:{os.defpath}",
-            "POSTGRES_USER": "test_user",
-            "POSTGRES_DB": "live",
+            "DATABASE_URL": "postgresql://test_user:private-password@localhost/live",
             "FAKE_DATABASE_LOG": str(self.log),
         }
         self.archive = self.root / "source.dump"
         self.archive.write_bytes(b"PGDMP: test archive")
 
-    def run_script(self, script, *arguments, **environment):
+    def run_cli(self, action, *arguments, **environment):
         return subprocess.run(
-            ["bash", str(PROJECT_ROOT / "scripts" / script), *map(str, arguments)],
+            [sys.executable, "-m", "backend", "db", action, *map(str, arguments)],
             env={**self.environment, **environment},
+            cwd=PROJECT_ROOT,
+            timeout=30,
             capture_output=True,
             text=True,
             check=False,
@@ -73,33 +74,31 @@ class DatabaseScriptTests(unittest.TestCase):
         return [row for line in rows if (row := json.loads(line))[0] == tool]
 
     def test_help_needs_no_docker_or_database(self):
-        for script in ("db-backup.sh", "db-restore.sh"):
+        for script in ("backup", "restore"):
             with self.subTest(script=script):
-                result = self.run_script(script, "--help")
+                result = self.run_cli(script, "--help")
                 self.assertEqual(0, result.returncode, result.stderr)
-                self.assertIn("Usage:", result.stdout)
+                self.assertIn("usage:", result.stdout)
         self.assertFalse(self.log.exists())
 
     def test_backup_is_private_and_visible_only_after_validation(self):
         backups = self.root / "backups"
-        result = self.run_script("db-backup.sh", "--directory", backups)
+        result = self.run_cli("backup", "--directory", backups)
         self.assertEqual(0, result.returncode, result.stderr)
-        archive = Path(result.stdout.strip())
+        archive = Path(json.loads(result.stdout)["archive"])
         self.assertEqual(backups, archive.parent)
         self.assertEqual(b"PGDMP: test archive", archive.read_bytes())
         self.assertEqual(0o600, stat.S_IMODE(archive.stat().st_mode))
         self.assertEqual([archive], list(backups.iterdir()))
         self.assertIn("--format=custom", self.commands("pg_dump")[0])
         self.assertEqual(["pg_restore", "--list"], self.commands("pg_restore")[0])
-        for command in self.commands("docker"):
-            self.assertIn("--env-file", command)
-            self.assertIn(str(PROJECT_ROOT / ".env.example"), command)
+        self.assertNotIn("private-password", self.log.read_text())
 
     def test_failed_dump_or_validation_leaves_no_archive(self):
         for failure in ("FAIL_DUMP", "FAIL_VALIDATION"):
             with self.subTest(failure=failure):
                 backups = self.root / failure
-                result = self.run_script("db-backup.sh", "--directory", backups, **{failure: "1"})
+                result = self.run_cli("backup", "--directory", backups, **{failure: "1"})
                 self.assertNotEqual(0, result.returncode)
                 self.assertEqual([], list(backups.iterdir()))
 
@@ -111,13 +110,13 @@ class DatabaseScriptTests(unittest.TestCase):
             ["--database", "bad-name", self.archive],
         ):
             with self.subTest(arguments=arguments):
-                result = self.run_script("db-restore.sh", *arguments)
+                result = self.run_cli("restore", *arguments)
                 self.assertNotEqual(0, result.returncode)
         self.assertEqual([], [row for row in self.commands("pg_restore") if "--list" not in row])
         self.assertEqual(["existing"], [row[-1] for row in self.commands("createdb")])
 
     def test_restore_validates_archive_and_uses_one_transaction_in_new_database(self):
-        result = self.run_script("db-restore.sh", "--database", "restore_test", self.archive)
+        result = self.run_cli("restore", "--database", "restore_test", self.archive)
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("restore_test", self.commands("createdb")[0][-1])
         restore = self.commands("pg_restore")[1]
@@ -127,13 +126,13 @@ class DatabaseScriptTests(unittest.TestCase):
 
     def test_invalid_archive_never_creates_a_database(self):
         self.archive.write_bytes(b"invalid")
-        result = self.run_script("db-restore.sh", "--database", "restore_test", self.archive)
+        result = self.run_cli("restore", "--database", "restore_test", self.archive)
         self.assertNotEqual(0, result.returncode)
         self.assertEqual([], self.commands("createdb"))
 
     def test_restore_failure_is_reported_without_attempting_a_second_restore(self):
-        result = self.run_script(
-            "db-restore.sh", "--database", "restore_test", self.archive, FAIL_RESTORE="1"
+        result = self.run_cli(
+            "restore", "--database", "restore_test", self.archive, FAIL_RESTORE="1"
         )
         self.assertNotEqual(0, result.returncode)
         self.assertIn("left in place", result.stderr)

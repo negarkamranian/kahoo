@@ -8,9 +8,8 @@ from unittest.mock import Mock, patch
 from pydantic import ValidationError
 
 from backend.cli.catalog import build
-from backend.cli.search import evaluate, reindex
+from backend.cli.search import reindex
 from backend.models.categories import GpcPublication
-from backend.models.merchants import Merchant
 from backend.search.embeddings import embed_pending_documents, semantic_merchant_scores
 
 
@@ -80,21 +79,6 @@ class MaintenanceContractTests(unittest.TestCase):
         ):
             with self.subTest(node=node), self.assertRaises(ValidationError):
                 GpcPublication.model_validate({"Schema": [node]})
-
-    @patch("backend.cli.search.merchants")
-    def test_evaluation_uses_canonical_graded_relevance(self, merchants):
-        merchants.return_value = [
-            Merchant(id=1, name="Shop", handle="@shop", category_code="1", city="Tehran")
-        ]
-        with TemporaryDirectory() as directory:
-            benchmark = Path(directory) / "benchmark.json"
-            benchmark.write_text(
-                json.dumps({"queries": [{"query": "shop", "relevance": {"@shop": 3}}]})
-            )
-            report = evaluate(Namespace(benchmark=benchmark))
-        self.assertEqual(1, report.success_at_5)
-        self.assertEqual(1, report.ndcg_at_10)
-        self.assertEqual(["@shop"], report.results[0].top_10)
 
     @patch.multiple("backend.search.embeddings.settings", embedding_api_url="")
     @patch("backend.search.embeddings.embed_texts")

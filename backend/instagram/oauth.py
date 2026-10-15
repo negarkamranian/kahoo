@@ -11,7 +11,7 @@ from urllib.request import Request, urlopen
 from cryptography.fernet import Fernet
 
 from backend.config import settings
-from backend.models.instagram.oauth import AuthorizedProfile, InstagramToken
+from backend.instagram.schemas import AuthorizedProfile, InstagramToken
 from backend.models.media import MAX_PROFILE_POSTS
 
 SCOPE = "instagram_business_basic"
@@ -88,7 +88,6 @@ def exchange_code(code):
             "code": code,
         },
     )
-    # Meta's Instagram Login response wraps the grant in a data array.
     grant = result["data"][0] if "data" in result else result
     if SCOPE not in grant.get("permissions", []):
         raise InstagramConnectionError("instagram_permission_denied")
