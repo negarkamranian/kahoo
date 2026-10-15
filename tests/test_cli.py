@@ -5,9 +5,25 @@ from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
 from backend.cli import main, parser
+from backend.models.media import SyncResult
 
 
 class CliTests(unittest.TestCase):
+    @patch("backend.cli.initialize_database")
+    @patch("backend.cli.media.refresh_instagram_profiles")
+    def test_media_sync_reports_failed_merchants(self, refresh, migrate):
+        refresh.return_value = [
+            SyncResult(handle="@bad", updated=False, error="offline"),
+            SyncResult(handle="@good", updated=True, images_saved=3),
+        ]
+        output = io.StringIO()
+        with redirect_stdout(output):
+            main(["media", "sync", "--only-missing"])
+        report = json.loads(output.getvalue())
+        self.assertEqual(2, report["attempted"])
+        self.assertEqual(1, report["failed"])
+        self.assertEqual("@bad", report["profiles"][0]["handle"])
+
     @patch("backend.cli.initialize_database", return_value={"migrated": True})
     def test_migrate_initializes_database_once_and_reports_result(self, initialize):
         output = io.StringIO()

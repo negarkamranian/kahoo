@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.request import Request, urlopen
 
 from backend.models.media import ImageCacheResult, InstagramProfile, PostImage
+from backend.network import retry_network
 from backend.services.products import enqueue_products
 
 MAX_IMAGE_BYTES = 8_000_000
@@ -20,6 +21,7 @@ def detected_image_mime(data):
     return None
 
 
+@retry_network
 def download_image(url):
     request = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; KahooPrototype/1.0)"})
     with urlopen(request, timeout=20) as response:

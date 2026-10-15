@@ -1,6 +1,8 @@
 from collections.abc import Callable
 from functools import partial
 
+from pydantic import ValidationError
+
 from backend.database import connect
 from backend.instagram.service import instagram_profile
 from backend.instagram.urls import profile_url
@@ -103,11 +105,24 @@ def _refresh(
         selected = selected[:limit]
     results = []
     for merchant in selected:
-        profile = instagram_profile(merchant.handle)
-        with connect() as db:
-            result = save_profile(db, merchant, profile)
-        results.append(result)
+        results.append(_refresh_merchant(merchant, save_profile))
     return results
+
+
+def _refresh_merchant(merchant, save_profile):
+    try:
+        profile = instagram_profile(merchant.handle, existing_name=merchant.name)
+        with connect() as db:
+            return save_profile(db, merchant, profile)
+    except ValidationError as error:
+        fields = ", ".join(".".join(map(str, item["loc"])) for item in error.errors())
+        return SyncResult(
+            handle=merchant.handle,
+            updated=False,
+            error=f"Invalid Instagram response fields: {fields}",
+        )
+    except (OSError, ValueError) as error:
+        return SyncResult(handle=merchant.handle, updated=False, error=str(error))
 
 
 def refresh_instagram_profiles(

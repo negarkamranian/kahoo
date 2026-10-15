@@ -80,6 +80,19 @@ class EmbedCarouselPost(EmbedPost):
     kind: Literal["GraphSidecar"] = Field(alias="__typename")
     edge_sidecar_to_children: Connection[EmbedImage]
 
+    @field_validator("edge_sidecar_to_children", mode="before")
+    @classmethod
+    def skip_unavailable_images(cls, value):
+        if not isinstance(value, dict) or not isinstance(value.get("edges"), list):
+            return value
+        edges = []
+        for edge in value["edges"]:
+            node = edge.get("node") if isinstance(edge, dict) else None
+            if isinstance(node, dict) and "display_url" in node and not node["display_url"]:
+                continue
+            edges.append(edge)
+        return {**value, "edges": edges}
+
     def images(self) -> list[InstagramImage]:
         return [
             edge.node.to_image(position)
@@ -127,6 +140,13 @@ class EmbedProfile(SourceProfile):
 
 class EmbedContext(EmbedPosts):
     user: EmbedProfile
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_flat_profile(cls, value):
+        if isinstance(value, dict) and "user" not in value and "username" in value:
+            return {**value, "user": value}
+        return value
 
 
 class MetaImage(BaseModel):

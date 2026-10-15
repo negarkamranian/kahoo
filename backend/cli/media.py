@@ -33,6 +33,6 @@ def sync(args):
         )
     return SyncBatch(
         attempted=len(profiles),
-        failed=0,
+        failed=sum(profile.error is not None for profile in profiles),
         profiles=profiles,
     )

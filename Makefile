@@ -1,5 +1,5 @@
 PYTHON ?= .venv/bin/python
-.PHONY: check lint format format-check test run shop-enrich
+.PHONY: check lint format format-check test run shop-enrich media-sync
 
 check: lint format-check test
 
@@ -26,3 +26,6 @@ run:
 shop-enrich:
 	docker compose --env-file .env.example --env-file .env up --build -d app
 	docker compose --env-file .env.example --env-file .env run --rm app python3 -m backend search enrich-file data/merchant_enrichment.json
+
+media-sync:
+	docker compose --env-file .env.example --env-file .env run --build --rm app python3 -m backend media sync --only-missing

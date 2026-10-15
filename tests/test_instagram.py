@@ -16,6 +16,73 @@ def embed_html(profile, posts=None):
 
 
 class InstagramTests(unittest.TestCase):
+    @patch("backend.instagram.embed.urlopen")
+    def test_media_refresh_can_keep_existing_name_when_embed_omits_it(self, urlopen):
+        for name in (None, ""):
+            with self.subTest(name=name):
+                posts = [
+                    {
+                        "shortcode_media": {
+                            "__typename": "GraphImage",
+                            "id": "123",
+                            "shortcode": "abc",
+                            "display_url": "https://example.test/a.jpg",
+                        }
+                    }
+                ]
+                urlopen.return_value = io.BytesIO(
+                    embed_html({"username": "shop", "full_name": name}, posts)
+                )
+                result = public_embed_profile("@shop", existing_name="Stored shop name")
+                self.assertEqual("Stored shop name", result.name)
+                self.assertEqual(1, len(result.posts))
+
+    @patch("backend.instagram.embed.urlopen")
+    def test_unavailable_carousel_images_do_not_reject_other_images(self, urlopen):
+        posts = [
+            {
+                "shortcode_media": {
+                    "__typename": "GraphSidecar",
+                    "id": "parent",
+                    "shortcode": "abc",
+                    "edge_sidecar_to_children": {
+                        "edges": [
+                            {"node": {"id": "missing", "display_url": ""}},
+                            {
+                                "node": {
+                                    "id": "available",
+                                    "display_url": "https://example.test/a.jpg",
+                                }
+                            },
+                        ]
+                    },
+                }
+            },
+        ]
+        urlopen.return_value = io.BytesIO(
+            embed_html({"username": "shop", "full_name": "Shop"}, posts)
+        )
+        result = public_embed_profile("@shop")
+        self.assertEqual(1, len(result.posts))
+        self.assertEqual(
+            ["available"], [image.instagram_media_id for image in result.posts[0].media]
+        )
+
+    @patch("backend.instagram.embed.urlopen")
+    def test_unrelated_empty_or_invalid_contexts_do_not_hide_profile(self, urlopen):
+        unrelated = {
+            "require": [
+                {"contextJSON": None},
+                {"contextJSON": "not-json"},
+                {"contextJSON": {"unrelated": True}},
+            ]
+        }
+        urlopen.return_value = io.BytesIO(
+            f"<script>unrelated.handle(notJSON);</script><script>{json.dumps(unrelated)}</script>".encode()
+            + embed_html({"username": "shop", "full_name": "Shop"})
+        )
+        self.assertEqual("Shop", public_embed_profile("@shop").name)
+
     @patch.multiple(
         "backend.instagram.meta.settings", meta_ig_user_id="test", meta_access_token="test"
     )
@@ -42,6 +109,34 @@ class InstagramTests(unittest.TestCase):
     def test_profile_without_a_picture_keeps_avatar_empty(self, urlopen):
         urlopen.return_value = io.BytesIO(embed_html({"username": "shop", "full_name": "Shop"}))
         self.assertIsNone(public_embed_profile("@shop").avatar_url)
+
+    @patch("backend.instagram.embed.urlopen")
+    def test_flat_embed_profile_keeps_its_posts(self, urlopen):
+        context = {
+            "username": "shop",
+            "full_name": "Shop",
+            "graphql_media": [
+                {
+                    "shortcode_media": {
+                        "__typename": "GraphImage",
+                        "id": "123",
+                        "shortcode": "abc",
+                        "display_url": "https://example.test/post.jpg",
+                    }
+                }
+            ],
+        }
+        urlopen.return_value = io.BytesIO(
+            f'<script type="application/json">{json.dumps(context)}</script>'.encode()
+        )
+        result = public_embed_profile("@shop")
+        self.assertEqual("Shop", result.name)
+        self.assertEqual("123", result.posts[0].instagram_media_id)
+        urlopen.return_value = io.BytesIO(
+            f'<script type="application/json">{json.dumps(context)}</script>'.encode()
+        )
+        with self.assertRaisesRegex(ValueError, "profile not found"):
+            public_embed_profile("@other")
 
     @patch("backend.instagram.embed.urlopen")
     def test_public_embed_decodes_json_strings_and_keeps_carousel_children(self, urlopen):

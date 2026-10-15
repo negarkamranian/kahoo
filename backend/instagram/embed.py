@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 from backend.instagram.schemas import EmbedContext
 from backend.instagram.urls import profile_url
 from backend.models.media import InstagramProfile
+from backend.network import retry_network
 
 
 class _EmbedScripts(HTMLParser):
@@ -31,8 +32,11 @@ def walk_context(value):
     if isinstance(value, dict):
         yield value
         for key, child in value.items():
-            if key == "contextJSON":
-                child = json.loads(child)
+            if key == "contextJSON" and isinstance(child, str):
+                try:
+                    child = json.loads(child)
+                except json.JSONDecodeError:
+                    continue
             yield from walk_context(child)
     elif isinstance(value, list):
         for child in value:
@@ -56,7 +60,10 @@ def _embed_nodes(payload: str) -> list[dict]:
     nodes = []
     for script in parser.scripts:
         for candidate in script_json_candidates(script):
-            value, _ = decoder.raw_decode(candidate.lstrip())
+            try:
+                value, _ = decoder.raw_decode(candidate.lstrip())
+            except json.JSONDecodeError:
+                continue
             nodes.extend(walk_context(value))
     return nodes
 
@@ -68,11 +75,16 @@ def _embed_context(payload: str) -> dict:
     return contexts[0]
 
 
-def public_embed_profile(handle: str) -> InstagramProfile:
+@retry_network
+def public_embed_profile(handle: str, *, existing_name: str | None = None) -> InstagramProfile:
     request = Request(f"{profile_url(handle)}embed/", headers={"User-Agent": "Mozilla/5.0"})
     with urlopen(request, timeout=20) as response:
         payload = response.read(2_000_000).decode("utf-8")
-    context = EmbedContext.model_validate(_embed_context(payload))
+    data = _embed_context(payload)
+    user = data.get("user", data)
+    if existing_name and isinstance(user, dict) and user.get("full_name") in (None, ""):
+        data = {**data, "user": {**user, "full_name": existing_name}}
+    context = EmbedContext.model_validate(data)
     if context.user.username != handle[1:]:
         raise ValueError(f"Instagram profile not found: {handle}")
     return context.user.to_profile(context.posts())

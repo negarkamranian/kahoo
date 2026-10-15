@@ -30,6 +30,12 @@ python -m backend media sync --only-missing
 python -m backend search reindex --all
 ```
 
+To fetch missing post images in Docker, run `make media-sync` (or
+`sudo make media-sync` if Docker requires sudo). This rebuilds the image before
+syncing. `make shop-enrich` applies descriptions and search terms; it does not
+download post images. Media sync reports failures per merchant and continues;
+rerun it to retry missing media.
+
 ## Configuration
 
 See [.env.example](.env.example). Set Instagram App ID, secret, redirect URI, and
