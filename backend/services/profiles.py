@@ -55,7 +55,6 @@ def _save_profile(
             db,
             merchant.id,
             profile.avatar_url,
-            profile.avatar_url,
         )
         avatar_saved = True
     posts_saved = 0
@@ -82,7 +81,6 @@ def _save_avatar(db, merchant: MerchantMedia, profile: InstagramProfile) -> Sync
         db,
         merchant.id,
         profile.avatar_url,
-        profile.avatar_url,
     )
     return SyncResult(handle=merchant.handle, updated=True, mime_type=mime_type)
 
@@ -91,10 +89,8 @@ def _refresh(
     handles: list[str] | None,
     only_missing: bool,
     limit: int | None,
-    on_result: Callable[[SyncResult], None] | None,
     needs_refresh: Callable[[MerchantMedia], bool],
     save_profile: Callable,
-    on_start: Callable[[str], None] | None = None,
 ) -> list[SyncResult]:
     requested = set(handles or [])
     selected = [
@@ -107,21 +103,15 @@ def _refresh(
         selected = selected[:limit]
     results = []
     for merchant in selected:
-        if on_start:
-            on_start(merchant.handle)
         profile = instagram_profile(merchant.handle)
         with connect() as db:
             result = save_profile(db, merchant, profile)
         results.append(result)
-        if on_result:
-            on_result(result)
     return results
 
 
 def refresh_instagram_profiles(
     handles=None,
-    on_result=None,
-    on_start=None,
     only_missing=False,
     minimum_images=MINIMUM_POST_IMAGES,
     limit=None,
@@ -130,23 +120,18 @@ def refresh_instagram_profiles(
         handles,
         only_missing,
         limit,
-        on_result,
         needs_refresh=lambda merchant: merchant.needs_media(minimum_images),
         save_profile=partial(
             _save_profile, only_missing=only_missing, minimum_images=minimum_images
         ),
-        on_start=on_start,
     )
 
 
-def refresh_instagram_avatars(
-    handles=None, on_result=None, only_missing=False, limit=0
-) -> list[SyncResult]:
+def refresh_instagram_avatars(handles=None, only_missing=False, limit=0) -> list[SyncResult]:
     return _refresh(
         handles,
         only_missing,
         limit,
-        on_result,
         needs_refresh=lambda merchant: merchant.needs_avatar,
         save_profile=_save_avatar,
     )

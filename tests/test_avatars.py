@@ -12,9 +12,7 @@ class AvatarCacheTests(unittest.TestCase):
         database = Mock()
 
         with self.assertRaisesRegex(OSError, "temporary failure"):
-            cache_merchant_avatar(
-                database, 7, "https://example.test/avatar.jpg", "https://example.test/avatar.jpg"
-            )
+            cache_merchant_avatar(database, 7, "https://example.test/avatar.jpg")
         database.execute.assert_not_called()
 
     @patch("backend.services.merchants.connect")

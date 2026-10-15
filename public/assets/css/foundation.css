@@ -7,9 +7,6 @@
   --green: #276044;
   --green-dark: #19432e;
   --green-soft: #edf2ec;
-  --red: var(--green);
-  --red-dark: var(--green-dark);
-  --red-soft: var(--green-soft);
   --radius: 4px;
   --content-width: 1320px;
 }

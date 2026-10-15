@@ -2,7 +2,7 @@ const numberFormatter = new Intl.NumberFormat("fa-IR", {
   maximumFractionDigits: 1,
 });
 
-export const STORAGE_KEYS = Object.freeze({
+const STORAGE_KEYS = Object.freeze({
   merchants: "kahoo_saved_merchants",
   posts: "kahoo_saved_posts",
   session: "kahoo_session",

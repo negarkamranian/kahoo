@@ -25,7 +25,7 @@ def download_image(url):
     with urlopen(request, timeout=20) as response:
         data = response.read(MAX_IMAGE_BYTES + 1)
         mime = detected_image_mime(data)
-        if not mime or not data or len(data) > MAX_IMAGE_BYTES:
+        if not mime or len(data) > MAX_IMAGE_BYTES:
             raise ValueError("invalid image response")
         return data, mime
 
@@ -37,15 +37,14 @@ def cache_post_image(db, post_id, image_url):
           image_cached_at=CURRENT_TIMESTAMP WHERE id=%s""",
         (image_blob, mime_type, post_id),
     )
-    return True
 
 
-def cache_merchant_avatar(db, merchant_id, image_url, source_url):
+def cache_merchant_avatar(db, merchant_id, image_url):
     avatar_blob, mime_type = download_image(image_url)
     db.execute(
         """UPDATE merchants SET avatar_blob=%s,avatar_mime_type=%s,
       avatar_source_url=%s,avatar_updated_at=CURRENT_TIMESTAMP WHERE id=%s""",
-        (avatar_blob, mime_type, source_url, merchant_id),
+        (avatar_blob, mime_type, image_url, merchant_id),
     )
     return mime_type
 

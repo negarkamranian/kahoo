@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from backend.models.media import InstagramProfile, MerchantMedia
 from backend.services.profiles import refresh_instagram_avatars, refresh_instagram_profiles
@@ -18,12 +18,11 @@ class ProfileSyncTests(unittest.TestCase):
             MerchantMedia(id=2, name="Bad", handle="@bad"),
         ]
         profile.side_effect = [InstagramProfile(name="Good"), OSError("offline")]
-        callback = Mock()
         with self.assertRaisesRegex(OSError, "offline"):
-            refresh_instagram_profiles(on_result=callback)
+            refresh_instagram_profiles()
         index.assert_called_once_with(connect.return_value.__enter__.return_value)
         connect.return_value.__exit__.assert_called_once_with(None, None, None)
-        self.assertEqual("@good", callback.call_args.args[0].handle)
+        self.assertEqual(2, profile.call_count)
 
     @patch("backend.services.profiles.cache_merchant_avatar")
     @patch("backend.services.profiles.connect")
@@ -62,13 +61,15 @@ class ProfileSyncTests(unittest.TestCase):
         profile.return_value = InstagramProfile(
             name="Shop", avatar_url="https://example.test/a.jpg"
         )
-        callback = Mock()
         results = refresh_instagram_avatars(
-            ["@complete", "@missing", "@later"], callback, only_missing=True, limit=1
+            ["@complete", "@missing", "@later"], only_missing=True, limit=1
         )
         profile.assert_called_once_with("@missing")
         self.assertEqual("image/jpeg", results[0].mime_type)
-        callback.assert_called_once_with(results[0])
+        self.assertEqual(["@missing"], [result.handle for result in results])
+        cache.assert_called_once_with(
+            connect.return_value.__enter__.return_value, 2, "https://example.test/a.jpg"
+        )
         posts.assert_not_called()
         index.assert_not_called()
 
@@ -85,11 +86,8 @@ class ProfileSyncTests(unittest.TestCase):
             OSError("offline"),
             InstagramProfile(name="Good", biography="فروشگاه"),
         ]
-        on_start, on_result = Mock(), Mock()
         with self.assertRaisesRegex(OSError, "offline"):
-            refresh_instagram_profiles(on_start=on_start, on_result=on_result)
+            refresh_instagram_profiles()
         profile.assert_called_once_with("@bad")
-        on_start.assert_called_once_with("@bad")
-        on_result.assert_not_called()
         connect.assert_not_called()
         index.assert_not_called()

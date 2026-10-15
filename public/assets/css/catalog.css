@@ -176,11 +176,6 @@
 .merchant-trigger:hover {
   color: var(--green);
 }
-.nav-note {
-  margin-right: auto;
-  color: var(--muted);
-  font-size: 11px;
-}
 .category-dropdown {
   position: relative;
   align-self: stretch;
@@ -1068,9 +1063,6 @@ dialog::backdrop {
   .category-menu-trigger {
     max-width: 115px;
     gap: 8px;
-  }
-  .nav-note {
-    display: none;
   }
   .category-panel {
     position: fixed;

@@ -259,7 +259,7 @@ def add_or_refresh_merchant(request: MerchantImport) -> ImportResult:
 def save_imported_avatar(db, merchant_id, profile):
     if not profile.avatar_url:
         return False
-    cache_merchant_avatar(db, merchant_id, profile.avatar_url, profile.avatar_url)
+    cache_merchant_avatar(db, merchant_id, profile.avatar_url)
     return True
 
 
