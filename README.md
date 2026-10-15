@@ -28,12 +28,7 @@ python -m backend catalog import
 python -m backend catalog sync-shopify --source data/shopify/2026-08/upstream-taxonomy.json.gz --license data/shopify/2026-08/LICENSE
 python -m backend media sync --only-missing
 python -m backend search reindex --all
-python -m backend db backup --directory backups
-python -m backend db restore --database kahoo_restore_check backups/ARCHIVE.dump
 ```
-
-Backups need PostgreSQL client tools, included in the app image. Copy container
-backups to durable storage. Restore requires a new database name.
 
 ## Configuration
 

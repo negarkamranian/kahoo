@@ -45,8 +45,6 @@ class CliTests(unittest.TestCase):
         actions = [
             ["serve"],
             ["db", "migrate"],
-            ["db", "backup"],
-            ["db", "restore"],
             ["instagram", "generate-key"],
             ["instagram", "status"],
             ["merchants", "list"],

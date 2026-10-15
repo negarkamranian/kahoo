@@ -61,25 +61,8 @@ def register_server(commands):
 
 
 def register_database(commands):
-    db = group(commands, "db", "Migrate, back up and restore PostgreSQL")
+    db = group(commands, "db", "Apply database migrations")
     action(db, "migrate", "Apply migrations and the category seed", "backend.cli.migrate", False)
-    backup = action(
-        db,
-        "backup",
-        "Create and validate a private PostgreSQL archive",
-        "backend.cli.database.backup",
-        False,
-    )
-    backup.add_argument("--directory", type=Path, default=PROJECT_ROOT / "backups")
-    restore = action(
-        db,
-        "restore",
-        "Restore into a new database; never overwrite an existing database",
-        "backend.cli.database.restore",
-        False,
-    )
-    restore.add_argument("archive", type=Path)
-    restore.add_argument("--database", required=True)
 
 
 def register_instagram(commands):

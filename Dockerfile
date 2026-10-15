@@ -6,11 +6,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt ./
-RUN apk add --no-cache postgresql-client
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN addgroup -S kahoo && adduser -S kahoo -G kahoo \
-    && mkdir /app/backups && chown kahoo:kahoo /app/backups
+RUN addgroup -S kahoo && adduser -S kahoo -G kahoo
 
 COPY --chown=kahoo:kahoo backend ./backend
 COPY --chown=kahoo:kahoo db ./db
